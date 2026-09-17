@@ -3,8 +3,10 @@ import {
   CatalogUnavailableError,
   PostgresCatalogRepository,
   loadPublicCatalog,
+  calculateCartLineTotal,
   loadPublicProduct,
   normalizeCatalogListInput,
+  resolveCatalogUnitPrice,
 } from "../../packages/catalog/src/index.ts";
 import type {
   CatalogRepository,
@@ -151,5 +153,86 @@ describe("PostgresCatalogRepository", () => {
     expect(product?.priceCents).toBe(1299);
     expect(product?.tenantId).toBe(SCOPE.tenantId);
     expect(product?.storeId).toBe(SCOPE.storeId);
+  });
+});
+
+
+describe("catalog cart pricing", () => {
+  test("usa exatamente o preço da variante selecionada", () => {
+    const variants = [
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        tenantId: SCOPE.tenantId,
+        storeId: SCOPE.storeId,
+        productId: PRODUCT.id,
+        name: "P",
+        sku: "CAM-P",
+        priceCents: 1299,
+        active: true,
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666666",
+        tenantId: SCOPE.tenantId,
+        storeId: SCOPE.storeId,
+        productId: PRODUCT.id,
+        name: "G",
+        sku: "CAM-G",
+        priceCents: 1399,
+        active: true,
+      },
+    ];
+
+    expect(
+      resolveCatalogUnitPrice(SCOPE, PRODUCT, variants, variants[0]?.id),
+    ).toBe(1299);
+
+    expect(
+      resolveCatalogUnitPrice(SCOPE, PRODUCT, variants, variants[1]?.id),
+    ).toBe(1399);
+  });
+
+  test("produto com variantes exige uma variante válida", () => {
+    const variants = [
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        tenantId: SCOPE.tenantId,
+        storeId: SCOPE.storeId,
+        productId: PRODUCT.id,
+        name: "P",
+        sku: null,
+        priceCents: 1299,
+        active: true,
+      },
+    ];
+
+    expect(() => resolveCatalogUnitPrice(SCOPE, PRODUCT, variants)).toThrow(
+      "Selecione uma variante",
+    );
+    expect(() =>
+      resolveCatalogUnitPrice(SCOPE, PRODUCT, variants, "outra-variante"),
+    ).toThrow("Variante selecionada indisponível");
+  });
+
+  test("produto sem variantes usa o preço base e totaliza por quantidade", () => {
+    const unit = resolveCatalogUnitPrice(SCOPE, PRODUCT, []);
+    expect(unit).toBe(1299);
+    expect(calculateCartLineTotal(unit, 3)).toBe(3897);
+  });
+
+  test("rejeita variante de outra loja", () => {
+    const foreignVariant = {
+      id: "77777777-7777-4777-8777-777777777777",
+      tenantId: SCOPE.tenantId,
+      storeId: "88888888-8888-4888-8888-888888888888",
+      productId: PRODUCT.id,
+      name: "G",
+      sku: null,
+      priceCents: 999,
+      active: true,
+    };
+
+    expect(() =>
+      resolveCatalogUnitPrice(SCOPE, PRODUCT, [foreignVariant], foreignVariant.id),
+    ).toThrow("Variante fora do produto");
   });
 });
