@@ -32,3 +32,12 @@ export {
   loadPublicCatalog,
   loadPublicProduct,
 } from "./service.ts";
+
+export type {
+  ProductVariant,
+} from "./pricing.ts";
+export {
+  CatalogSelectionError,
+  calculateCartLineTotal,
+  resolveCatalogUnitPrice,
+} from "./pricing.ts";
