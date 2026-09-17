@@ -2,10 +2,17 @@ import { describe, expect, test } from "bun:test";
 import {
   CatalogUnavailableError,
   PostgresCatalogRepository,
-  loadPublicCatalog,
+  addItemToCart,
+  buildWhatsappCheckoutUrl,
   calculateCartLineTotal,
+  createEmptyCart,
+  getCartTotalCents,
+  loadPublicCatalog,
   loadPublicProduct,
   normalizeCatalogListInput,
+  normalizeMerchantBannerInput,
+  normalizeMerchantCatalogSettingsInput,
+  normalizeMerchantProductInput,
   resolveCatalogUnitPrice,
 } from "../../packages/catalog/src/index.ts";
 import type {
@@ -34,6 +41,8 @@ const PRODUCT = {
 function repository(available = true): CatalogRepository {
   return {
     isStorePubliclyAvailable: () => Promise.resolve(available),
+    getSettings: () => Promise.resolve(null),
+    listBanners: () => Promise.resolve([]),
     listCategories: () =>
       Promise.resolve([
         {
@@ -51,6 +60,8 @@ function repository(available = true): CatalogRepository {
     ) => Promise.resolve({ items: [PRODUCT], total: 1 }),
     findActiveProductBySlug: (_scope: CatalogScope, slug: string) =>
       Promise.resolve(slug === PRODUCT.slug ? PRODUCT : null),
+    listProductVariants: () => Promise.resolve([]),
+    listProductImages: () => Promise.resolve([]),
   };
 }
 
@@ -167,6 +178,7 @@ describe("catalog cart pricing", () => {
         productId: PRODUCT.id,
         name: "P",
         sku: "CAM-P",
+        attributes: { Tamanho: "P" },
         priceCents: 1299,
         active: true,
       },
@@ -177,6 +189,7 @@ describe("catalog cart pricing", () => {
         productId: PRODUCT.id,
         name: "G",
         sku: "CAM-G",
+        attributes: { Tamanho: "G" },
         priceCents: 1399,
         active: true,
       },
@@ -200,6 +213,7 @@ describe("catalog cart pricing", () => {
         productId: PRODUCT.id,
         name: "P",
         sku: null,
+        attributes: { Tamanho: "P" },
         priceCents: 1299,
         active: true,
       },
@@ -227,6 +241,7 @@ describe("catalog cart pricing", () => {
       productId: PRODUCT.id,
       name: "G",
       sku: null,
+      attributes: { Tamanho: "G" },
       priceCents: 999,
       active: true,
     };
@@ -234,5 +249,116 @@ describe("catalog cart pricing", () => {
     expect(() =>
       resolveCatalogUnitPrice(SCOPE, PRODUCT, [foreignVariant], foreignVariant.id),
     ).toThrow("Variante fora do produto");
+  });
+});
+
+
+describe("catalog cart and WhatsApp", () => {
+  test("carrinho mantém o preço exato da variante e soma corretamente", () => {
+    const variants = [
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        tenantId: SCOPE.tenantId,
+        storeId: SCOPE.storeId,
+        productId: PRODUCT.id,
+        name: "P",
+        sku: null,
+        attributes: { Tamanho: "P" },
+        priceCents: 1299,
+        active: true,
+      },
+    ];
+
+    const cart = addItemToCart(SCOPE, createEmptyCart(SCOPE), {
+      product: PRODUCT,
+      variants,
+      selectedVariantId: variants[0]?.id,
+      quantity: 2,
+    });
+
+    expect(cart.items[0]?.unitPriceCents).toBe(1299);
+    expect(getCartTotalCents(cart)).toBe(2598);
+  });
+
+  test("gera URL do WhatsApp sem aceitar checkout desativado", () => {
+    const cart = {
+      tenantId: SCOPE.tenantId,
+      storeId: SCOPE.storeId,
+      items: [
+        {
+          key: PRODUCT.id,
+          productId: PRODUCT.id,
+          productSlug: PRODUCT.slug,
+          productName: PRODUCT.name,
+          variantId: null,
+          variantName: null,
+          unitPriceCents: 1299,
+          quantity: 1,
+        },
+      ],
+    };
+
+    const settings = {
+      tenantId: SCOPE.tenantId,
+      storeId: SCOPE.storeId,
+      layout: "classic" as const,
+      primaryColor: "#111111",
+      accentColor: "#111111",
+      backgroundColor: "#ffffff",
+      fontKey: "system" as const,
+      showSearch: true,
+      showCategories: true,
+      showStock: false,
+      showPrices: true,
+      checkoutMode: "whatsapp" as const,
+      whatsappPhone: "+5562999999999",
+      whatsappMessageTemplate: "Olá! Gostaria de fazer este pedido:",
+      currency: "BRL" as const,
+      seoTitle: null,
+      seoDescription: null,
+      labels: {},
+    };
+
+    const url = buildWhatsappCheckoutUrl({
+      storeName: "Loja Teste",
+      cart,
+      settings,
+    });
+
+    expect(url.startsWith("https://wa.me/5562999999999?text=")).toBe(true);
+  });
+});
+
+describe("merchant catalog admin validation", () => {
+  test("normaliza produto e gera slug", () => {
+    const input = normalizeMerchantProductInput({
+      name: "Camiseta Ázul",
+      priceCents: 4990,
+    });
+    expect(input.slug).toBe("camiseta-azul");
+    expect(input.priceCents).toBe(4990);
+  });
+
+  test("valida configurações e WhatsApp E.164", () => {
+    const settings = normalizeMerchantCatalogSettingsInput({
+      layout: "modern",
+      whatsappPhone: "+5562999999999",
+      checkoutMode: "both",
+    });
+    expect(settings.layout).toBe("modern");
+    expect(settings.checkoutMode).toBe("both");
+  });
+
+  test("banner só aceita object key da própria loja", () => {
+    expect(() =>
+      normalizeMerchantBannerInput(SCOPE, {
+        objectKey: "tenants/outro/stores/outra/banner/x.webp",
+      }),
+    ).toThrow("fora do escopo");
+
+    const banner = normalizeMerchantBannerInput(SCOPE, {
+      objectKey: `tenants/${SCOPE.tenantId}/stores/${SCOPE.storeId}/brand/banner.webp`,
+    });
+    expect(banner.active).toBe(true);
   });
 });
