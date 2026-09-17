@@ -172,14 +172,16 @@ export const getPublicProductData = createServerFn({ method: "GET" })
     const scope = await resolvePublicCatalogScope();
     const repository = new PostgresCatalogRepository(createCatalogSqlExecutor());
 
-    const [store, detail] = await Promise.all([
+    const [store, detail, settings] = await Promise.all([
       getPublicStoreIdentity(scope.tenantId, scope.storeId),
       loadPublicProductDetail(scope, data.slug, repository),
+      repository.getSettings(scope),
     ]);
 
     return {
       store,
       detail,
+      settings,
       mediaBaseUrl: publicMediaBaseUrl(),
     };
   });
