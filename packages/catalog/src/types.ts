@@ -8,6 +8,11 @@ export interface Product {
   name: string;
   slug: string;
   priceCents: number;
+  compareAtPriceCents?: number | null;
+  sku?: string | null;
+  description?: string;
+  trackInventory?: boolean;
+  primaryImageObjectKey?: string | null;
   active: boolean;
   createdAt: string;
 }
