@@ -111,3 +111,8 @@ export {
 export type {
   CatalogAdminSqlExecutor,
 } from "./postgres-admin.ts";
+
+
+export {
+  buildCatalogMediaUrl,
+} from "./media.ts";
