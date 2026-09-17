@@ -103,7 +103,7 @@ export {
   normalizeMerchantProductInput,
   normalizeMerchantVariantInput,
   slugifyCatalogName,
-} from "./admin.ts";
+} from "./admin-validation.ts";
 
 export {
   PostgresCatalogAdminRepository,
