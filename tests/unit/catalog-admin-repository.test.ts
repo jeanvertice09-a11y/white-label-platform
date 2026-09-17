@@ -42,18 +42,19 @@ describe("catalog admin repository scope", () => {
     };
     const repository = createCatalogAdminRepository(sql);
     let rejected = false;
+    const write: Promise<unknown> = repository.createBanner(
+      { tenantId: "t1", storeId: "s1" },
+      {
+        title: null,
+        altText: null,
+        imageObjectKey: "tenants/t1/stores/s2/banner/x.png",
+        href: null,
+        active: true,
+        position: 0,
+      },
+    );
     try {
-      await repository.createBanner(
-        { tenantId: "t1", storeId: "s1" },
-        {
-          title: null,
-          altText: null,
-          imageObjectKey: "tenants/t1/stores/s2/banner/x.png",
-          href: null,
-          active: true,
-          position: 0,
-        },
-      );
+      await write;
     } catch {
       rejected = true;
     }
