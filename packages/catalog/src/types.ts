@@ -1,30 +1,117 @@
-export interface Product {
-  id: string;
+export type CatalogLayout = "classic" | "modern";
+export type CheckoutMode = "whatsapp" | "online" | "both";
+
+export interface CatalogScope {
   tenantId: string;
   storeId: string;
+}
+
+export interface Category extends CatalogScope {
+  id: string;
   name: string;
   slug: string;
-  priceCents: number;
+  description: string | null;
+  parentId: string | null;
   active: boolean;
+  position: number;
 }
 
-export interface Category {
+export interface ProductVariant extends CatalogScope {
   id: string;
-  tenantId: string;
-  storeId: string;
+  productId: string;
+  name: string;
+  sku: string | null;
+  attributes: Record<string, string>;
+  priceCents: number;
+  compareAtPriceCents: number | null;
+  costCents: number | null;
+  active: boolean;
+  stockQuantity: number;
+  position: number;
+}
+
+export interface ProductImage extends CatalogScope {
+  id: string;
+  productId: string;
+  variantId: string | null;
+  objectKey: string;
+  altText: string | null;
+  position: number;
+}
+
+export interface Product extends CatalogScope {
+  id: string;
   name: string;
   slug: string;
+  description: string | null;
+  sku: string | null;
+  categoryId: string | null;
+  priceCents: number;
+  compareAtPriceCents: number | null;
+  costCents: number | null;
+  active: boolean;
+  trackInventory: boolean;
+  stockQuantity: number;
+  position: number;
+  variants: ProductVariant[];
+  images: ProductImage[];
 }
 
-/** Catálogo público: leitura sempre via domínio resolvido (tenant/store scoped). */
-export interface CatalogQuery {
-  tenantId: string;
-  storeId: string;
+export interface CatalogSettings extends CatalogScope {
+  layout: CatalogLayout;
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  fontFamily: "system" | "inter" | "serif" | "sans";
+  showSearch: boolean;
+  showCategories: boolean;
+  showPrice: boolean;
+  showStock: boolean;
+  labels: Record<string, string>;
+  whatsappPhone: string | null;
+  whatsappMessage: string;
+  checkoutMode: CheckoutMode;
+  seoTitle: string | null;
+  seoDescription: string | null;
+}
+
+export interface StoreBanner extends CatalogScope {
+  id: string;
+  title: string | null;
+  altText: string | null;
+  imageObjectKey: string;
+  href: string | null;
+  active: boolean;
+  position: number;
+}
+
+export interface StorefrontStore extends CatalogScope {
+  name: string;
+  slug: string;
+  tenantStatus: "trial" | "active" | "suspended";
+  storeStatus: "draft" | "active" | "suspended";
+  trialEndsAt: string | null;
+}
+
+export interface CatalogQuery extends CatalogScope {
   page: number;
   pageSize: number;
+  search?: string;
+  categoryId?: string;
+  sort?: "position" | "name" | "price_asc" | "price_desc";
 }
 
-export function assertCatalogScope(q: CatalogQuery): void {
-  if (!q.tenantId || !q.storeId) throw new Error("Catálogo exige tenantId+storeId resolvidos");
-  if (q.page < 1 || q.pageSize < 1 || q.pageSize > 100) throw new Error("Paginação inválida");
+export interface CatalogPage {
+  items: Product[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface StorefrontSnapshot {
+  store: StorefrontStore;
+  settings: CatalogSettings;
+  categories: Category[];
+  banners: StoreBanner[];
+  products: CatalogPage;
 }

@@ -1,2 +1,54 @@
-export type { Product, Category, CatalogQuery } from "./types.ts";
-export { assertCatalogScope } from "./types.ts";
+export type {
+  CatalogLayout,
+  CheckoutMode,
+  CatalogScope,
+  Category,
+  ProductVariant,
+  ProductImage,
+  Product,
+  CatalogSettings,
+  StoreBanner,
+  StorefrontStore,
+  CatalogQuery,
+  CatalogPage,
+  StorefrontSnapshot,
+} from "./types.ts";
+export type {
+  ProductMutationInput,
+  VariantMutationInput,
+  CategoryMutationInput,
+  BannerMutationInput,
+  CatalogSettingsMutationInput,
+} from "./admin-types.ts";
+export {
+  CatalogScopeError,
+  assertCatalogScope,
+  assertSameCatalogScope,
+  assertCatalogQuery,
+} from "./scope.ts";
+export {
+  CatalogPricingError,
+  resolvePurchasableSelection,
+} from "./pricing.ts";
+export type { PurchasableSelection } from "./pricing.ts";
+export {
+  createCart,
+  addCartItem,
+  setCartItemQuantity,
+  removeCartItem,
+  cartTotalCents,
+} from "./cart.ts";
+export type { CartItem, CartState } from "./cart.ts";
+export { buildWhatsappMessage, buildWhatsappCheckoutUrl } from "./whatsapp.ts";
+export { assertCatalogSettings, assertProductInput, assertCategoryInput } from "./validation.ts";
+export { PUBLIC_MEDIA_ORIGIN, getCatalogPublicMediaUrl } from "./storage.ts";
+export {
+  StorefrontUnavailableError,
+  isStorefrontAvailable,
+  assertStorefrontAvailable,
+} from "./storefront.ts";
+export { defaultCatalogSettings } from "./defaults.ts";
+export { createCatalogReadRepository } from "./postgres-read.ts";
+export { createCatalogAdminRepository } from "./postgres-admin.ts";
+export type { CatalogReadRepository, CatalogSqlExecutor } from "./repository.ts";
+export type { CatalogAdminRepository } from "./admin-repository.ts";
