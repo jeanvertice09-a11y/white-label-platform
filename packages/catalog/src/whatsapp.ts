@@ -46,7 +46,7 @@ export function buildWhatsappOrderMessage(input: WhatsappCheckoutInput): string 
     const variant = item.variantName ? ` — ${item.variantName}` : "";
     const lineTotal = item.unitPriceCents * item.quantity;
     lines.push(
-      `• ${item.quantity}x ${item.productName}${variant} — ${formatMoney(lineTotal)}`,
+      `• ${String(item.quantity)}x ${item.productName}${variant} — ${formatMoney(lineTotal)}`,
     );
   }
 
