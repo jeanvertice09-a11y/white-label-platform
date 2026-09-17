@@ -3,9 +3,6 @@ function slug(value: string): string {
 }
 
 function randomObjectId(): string {
-  if (!globalThis.crypto?.randomUUID) {
-    throw new Error("Gerador seguro de UUID indisponível");
-  }
   return globalThis.crypto.randomUUID();
 }
 

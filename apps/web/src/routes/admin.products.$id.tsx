@@ -1,4 +1,4 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { ProductForm } from "../features/store-admin/product-form.tsx";
 import { VariantEditor } from "../features/store-admin/variant-editor.tsx";
@@ -13,13 +13,13 @@ export const Route = createFileRoute("/admin/products/$id")({
       getMerchantProduct({ data: { id: params.id } }),
       getMerchantCatalogOverview(),
     ]);
-    if (!product) throw notFound();
+    if (!product) throw new Error("Produto não encontrado");
     return { product, categories: overview.categories };
   },
   component: EditProductPage,
 });
 
-function EditProductPage() {
+function EditProductPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return (
     <div className="k-page">
