@@ -7,6 +7,7 @@ export interface ProductVariant {
   productId: string;
   name: string;
   sku: string | null;
+  attributes: Record<string, string>;
   priceCents: number;
   active: boolean;
 }
