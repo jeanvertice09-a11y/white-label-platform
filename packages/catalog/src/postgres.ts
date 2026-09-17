@@ -1,10 +1,20 @@
-import type { CatalogRepository, CatalogListResult } from "./repository.ts";
+import type { CatalogListResult, CatalogRepository } from "./repository.ts";
 import type {
   CatalogScope,
   Category,
   NormalizedCatalogListInput,
   Product,
 } from "./types.ts";
+import type {
+  CatalogBanner,
+  CatalogFontKey,
+  CatalogLayout,
+  CatalogSettings,
+  CheckoutMode,
+  ProductImage,
+} from "./storefront.ts";
+import { defaultCatalogSettings } from "./storefront.ts";
+import type { ProductVariant } from "./pricing.ts";
 
 export interface CatalogSqlExecutor {
   query(sql: string, params: unknown[]): Promise<Record<string, unknown>[]>;
@@ -18,7 +28,7 @@ function str(value: unknown, column: string): string {
 }
 
 function nullableStr(value: unknown, column: string): string | null {
-  if (value === null) return null;
+  if (value === null || value === undefined) return null;
   return str(value, column);
 }
 
@@ -49,6 +59,22 @@ function bool(value: unknown, column: string): boolean {
   return value;
 }
 
+function object(value: unknown, column: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`coluna inválida: ${column}`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function stringMap(value: unknown, column: string): Record<string, string> {
+  const raw = object(value, column);
+  const out: Record<string, string> = {};
+  for (const [key, val] of Object.entries(raw)) {
+    if (typeof val === "string") out[key] = val;
+  }
+  return out;
+}
+
 function mapProduct(row: Record<string, unknown>): Product {
   return {
     id: str(row["id"], "id"),
@@ -71,6 +97,78 @@ function mapCategory(row: Record<string, unknown>): Category {
     slug: str(row["slug"], "slug"),
     name: str(row["name"], "name"),
     createdAt: instant(row["created_at"], "created_at"),
+  };
+}
+
+function mapVariant(row: Record<string, unknown>): ProductVariant {
+  const attributesRaw = object(row["attributes"] ?? {}, "attributes");
+  const attributes: Record<string, string> = {};
+  for (const [key, value] of Object.entries(attributesRaw)) {
+    if (typeof value === "string") attributes[key] = value;
+  }
+
+  return {
+    id: str(row["id"], "id"),
+    tenantId: str(row["tenant_id"], "tenant_id"),
+    storeId: str(row["store_id"], "store_id"),
+    productId: str(row["product_id"], "product_id"),
+    name: str(row["name"], "name"),
+    sku: nullableStr(row["sku"], "sku"),
+    priceCents: int(row["price_cents"], "price_cents"),
+    active: bool(row["active"], "active"),
+    attributes,
+  };
+}
+
+function mapImage(row: Record<string, unknown>): ProductImage {
+  return {
+    id: str(row["id"], "id"),
+    tenantId: str(row["tenant_id"], "tenant_id"),
+    storeId: str(row["store_id"], "store_id"),
+    productId: str(row["product_id"], "product_id"),
+    objectKey: str(row["object_key"], "object_key"),
+    altText: nullableStr(row["alt_text"], "alt_text"),
+    position: int(row["position"], "position"),
+  };
+}
+
+function mapBanner(row: Record<string, unknown>): CatalogBanner {
+  return {
+    id: str(row["id"], "id"),
+    tenantId: str(row["tenant_id"], "tenant_id"),
+    storeId: str(row["store_id"], "store_id"),
+    objectKey: str(row["object_key"], "object_key"),
+    title: nullableStr(row["title"], "title"),
+    subtitle: nullableStr(row["subtitle"], "subtitle"),
+    linkUrl: nullableStr(row["link_url"], "link_url"),
+    active: bool(row["active"], "active"),
+    position: int(row["position"], "position"),
+  };
+}
+
+function mapSettings(row: Record<string, unknown>): CatalogSettings {
+  return {
+    tenantId: str(row["tenant_id"], "tenant_id"),
+    storeId: str(row["store_id"], "store_id"),
+    layout: str(row["layout"], "layout") as CatalogLayout,
+    primaryColor: str(row["primary_color"], "primary_color"),
+    accentColor: str(row["accent_color"], "accent_color"),
+    backgroundColor: str(row["background_color"], "background_color"),
+    fontKey: str(row["font_key"], "font_key") as CatalogFontKey,
+    showSearch: bool(row["show_search"], "show_search"),
+    showCategories: bool(row["show_categories"], "show_categories"),
+    showStock: bool(row["show_stock"], "show_stock"),
+    showPrices: bool(row["show_prices"], "show_prices"),
+    checkoutMode: str(row["checkout_mode"], "checkout_mode") as CheckoutMode,
+    whatsappPhone: nullableStr(row["whatsapp_phone"], "whatsapp_phone"),
+    whatsappMessageTemplate: str(
+      row["whatsapp_message_template"],
+      "whatsapp_message_template",
+    ),
+    currency: "BRL",
+    seoTitle: nullableStr(row["seo_title"], "seo_title"),
+    seoDescription: nullableStr(row["seo_description"], "seo_description"),
+    labels: stringMap(row["labels"] ?? {}, "labels"),
   };
 }
 
@@ -109,13 +207,68 @@ export class PostgresCatalogRepository implements CatalogRepository {
     return rows.length > 0;
   }
 
+  async getSettings(scope: CatalogScope): Promise<CatalogSettings | null> {
+    const rows = await this.sql.query(
+      `select
+          tenant_id,
+          store_id,
+          layout,
+          primary_color,
+          accent_color,
+          background_color,
+          font_key,
+          show_search,
+          show_categories,
+          show_stock,
+          show_prices,
+          checkout_mode,
+          whatsapp_phone,
+          whatsapp_message_template,
+          currency,
+          seo_title,
+          seo_description,
+          labels
+         from public.catalog_settings
+        where tenant_id = $1
+          and store_id = $2
+        limit 1`,
+      [scope.tenantId, scope.storeId],
+    );
+
+    const row = rows[0];
+    return row ? mapSettings(row) : defaultCatalogSettings(scope.tenantId, scope.storeId);
+  }
+
+  async listBanners(scope: CatalogScope): Promise<CatalogBanner[]> {
+    const rows = await this.sql.query(
+      `select
+          id,
+          tenant_id,
+          store_id,
+          object_key,
+          title,
+          subtitle,
+          link_url,
+          active,
+          position
+         from public.catalog_banners
+        where tenant_id = $1
+          and store_id = $2
+          and active = true
+        order by position asc, id asc`,
+      [scope.tenantId, scope.storeId],
+    );
+    return rows.map(mapBanner);
+  }
+
   async listCategories(scope: CatalogScope): Promise<Category[]> {
     const rows = await this.sql.query(
       `select id, tenant_id, store_id, slug, name, created_at
          from public.categories
         where tenant_id = $1
           and store_id = $2
-        order by lower(name) asc, id asc`,
+          and active = true
+        order by position asc, lower(name) asc, id asc`,
       [scope.tenantId, scope.storeId],
     );
     return rows.map(mapCategory);
@@ -205,5 +358,54 @@ export class PostgresCatalogRepository implements CatalogRepository {
 
     const row = rows[0];
     return row ? mapProduct(row) : null;
+  }
+
+  async listProductVariants(
+    scope: CatalogScope,
+    productId: string,
+  ): Promise<ProductVariant[]> {
+    const rows = await this.sql.query(
+      `select
+          id,
+          tenant_id,
+          store_id,
+          product_id,
+          name,
+          sku,
+          attributes,
+          price_cents,
+          active
+         from public.product_variants
+        where tenant_id = $1
+          and store_id = $2
+          and product_id = $3
+          and active = true
+        order by position asc, id asc`,
+      [scope.tenantId, scope.storeId, productId],
+    );
+    return rows.map(mapVariant);
+  }
+
+  async listProductImages(
+    scope: CatalogScope,
+    productId: string,
+  ): Promise<ProductImage[]> {
+    const rows = await this.sql.query(
+      `select
+          id,
+          tenant_id,
+          store_id,
+          product_id,
+          object_key,
+          alt_text,
+          position
+         from public.product_images
+        where tenant_id = $1
+          and store_id = $2
+          and product_id = $3
+        order by position asc, id asc`,
+      [scope.tenantId, scope.storeId, productId],
+    );
+    return rows.map(mapImage);
   }
 }
