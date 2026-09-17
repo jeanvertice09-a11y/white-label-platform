@@ -96,7 +96,7 @@ function VariantOptions(props: {
             key={variant.id}
             className="catalog-option"
             aria-pressed={props.selectedId === variant.id}
-            onClick={() => props.onChange(variant.id)}
+            onClick={() => { props.onChange(variant.id); }}
           >
             {variant.name} — {formatCatalogMoney(variant.priceCents)}
           </button>
