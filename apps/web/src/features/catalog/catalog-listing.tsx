@@ -52,7 +52,7 @@ export function CatalogFilters(props: {
             className="catalog-control"
             type="search"
             value={props.searchText}
-            onChange={(event) => props.onSearchText(event.target.value)}
+            onChange={(event) => { props.onSearchText(event.target.value); }}
             placeholder="Buscar produtos"
             aria-label="Buscar produtos"
           />
