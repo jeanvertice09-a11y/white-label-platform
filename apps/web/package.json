@@ -23,7 +23,7 @@
     "nitro": "3.0.260903-beta"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.0.7"
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.7"
   }
 }
