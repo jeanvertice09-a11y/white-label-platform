@@ -91,10 +91,10 @@ export function useProductSelection() {
 }
 
 export function initialCatalogCart(payload: PublicCatalogPayload): CatalogCart {
-  const product = payload.catalog.products.items[0];
-  if (!product) {
+  if (payload.catalog.products.items.length === 0) {
     return { tenantId: "", storeId: "", items: [] };
   }
+  const product = payload.catalog.products.items[0];
   return createEmptyCart({
     tenantId: product.tenantId,
     storeId: product.storeId,
