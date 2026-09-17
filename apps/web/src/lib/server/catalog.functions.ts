@@ -126,9 +126,10 @@ async function getPublicStoreIdentity(
       limit 1`,
     [tenantId, storeId],
   );
+  if (rows.length === 0) throw new Error("Loja não encontrada");
   const row = rows[0];
-  if (!row || typeof row["name"] !== "string" || typeof row["slug"] !== "string") {
-    throw new Error("Loja não encontrada");
+  if (typeof row["name"] !== "string" || typeof row["slug"] !== "string") {
+    throw new Error("Loja inválida");
   }
   return { name: row["name"], slug: row["slug"] };
 }
@@ -215,10 +216,12 @@ export const saveMerchantProduct = createServerFn({ method: "POST" })
     );
     const normalized = normalizeMerchantProductInput(data);
 
-    const id = data.id
-      ? await repository.updateProduct(scope, data.id, normalized).then(() => data.id!)
-      : await repository.createProduct(scope, normalized);
+    if (data.id) {
+      await repository.updateProduct(scope, data.id, normalized);
+      return { id: data.id };
+    }
 
+    const id = await repository.createProduct(scope, normalized);
     return { id };
   });
 
@@ -260,10 +263,12 @@ export const saveMerchantCategory = createServerFn({ method: "POST" })
     );
     const normalized = normalizeMerchantCategoryInput(data);
 
-    const id = data.id
-      ? await repository.updateCategory(scope, data.id, normalized).then(() => data.id!)
-      : await repository.createCategory(scope, normalized);
+    if (data.id) {
+      await repository.updateCategory(scope, data.id, normalized);
+      return { id: data.id };
+    }
 
+    const id = await repository.createCategory(scope, normalized);
     return { id };
   });
 
