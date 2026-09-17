@@ -1,52 +1,116 @@
 import { useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { CSSProperties, SyntheticEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
-import type { CatalogSettings } from "@white-label/catalog";
+import type {
+  CatalogSettings,
+  CatalogSettingsMutationInput,
+} from "@white-label/catalog";
 import { saveMerchantCatalogSettings } from "../../lib/server/catalog-admin.functions.ts";
 
-export function CatalogSettingsForm({ settings }: Readonly<{ settings: CatalogSettings }>) {
+type SettingsDraft = CatalogSettingsMutationInput;
+
+function initialDraft(settings: CatalogSettings): SettingsDraft {
+  return {
+    layout: settings.layout,
+    primaryColor: settings.primaryColor,
+    accentColor: settings.accentColor,
+    backgroundColor: settings.backgroundColor,
+    fontFamily: settings.fontFamily,
+    showSearch: settings.showSearch,
+    showCategories: settings.showCategories,
+    showPrice: settings.showPrice,
+    showStock: settings.showStock,
+    labels: settings.labels,
+    whatsappPhone: settings.whatsappPhone,
+    whatsappMessage: settings.whatsappMessage,
+    checkoutMode: settings.checkoutMode,
+    seoTitle: settings.seoTitle,
+    seoDescription: settings.seoDescription,
+  };
+}
+
+function AppearanceFields(props: Readonly<{
+  draft: SettingsDraft;
+  setField: <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => void;
+}>): React.JSX.Element {
+  const { draft, setField } = props;
+  return (
+    <>
+      <div className="k-field"><label>Layout</label>
+        <select value={draft.layout} onChange={(event) => { setField("layout", event.target.value as SettingsDraft["layout"]); }}>
+          <option value="classic">Classic</option><option value="modern">Modern</option>
+        </select>
+      </div>
+      <div className="k-field"><label>Fonte</label>
+        <select value={draft.fontFamily} onChange={(event) => { setField("fontFamily", event.target.value as SettingsDraft["fontFamily"]); }}>
+          <option value="system">Sistema</option><option value="inter">Inter</option><option value="sans">Sans</option><option value="serif">Serif</option>
+        </select>
+      </div>
+      <div className="k-field"><label>Cor principal</label><input type="color" value={draft.primaryColor} onChange={(event) => { setField("primaryColor", event.target.value); }} /></div>
+      <div className="k-field"><label>Cor de destaque</label><input type="color" value={draft.accentColor} onChange={(event) => { setField("accentColor", event.target.value); }} /></div>
+      <div className="k-field"><label>Fundo</label><input type="color" value={draft.backgroundColor} onChange={(event) => { setField("backgroundColor", event.target.value); }} /></div>
+    </>
+  );
+}
+
+function CatalogFields(props: Readonly<{
+  draft: SettingsDraft;
+  setField: <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) => void;
+}>): React.JSX.Element {
+  const { draft, setField } = props;
+  return (
+    <>
+      <div className="k-field"><label>Modo de checkout</label>
+        <select value={draft.checkoutMode} onChange={(event) => { setField("checkoutMode", event.target.value as SettingsDraft["checkoutMode"]); }}>
+          <option value="whatsapp">WhatsApp</option><option value="online">Online (preparação)</option><option value="both">WhatsApp + Online</option>
+        </select>
+      </div>
+      <div className="k-field"><label>WhatsApp</label><input value={draft.whatsappPhone ?? ""} onChange={(event) => { setField("whatsappPhone", event.target.value || null); }} placeholder="5562999999999" /></div>
+      <div className="k-field k-field--full"><label>Mensagem padrão do WhatsApp</label><textarea value={draft.whatsappMessage} onChange={(event) => { setField("whatsappMessage", event.target.value); }} /></div>
+      <div className="k-field"><label>SEO title</label><input value={draft.seoTitle ?? ""} onChange={(event) => { setField("seoTitle", event.target.value || null); }} /></div>
+      <div className="k-field"><label>SEO description</label><input value={draft.seoDescription ?? ""} onChange={(event) => { setField("seoDescription", event.target.value || null); }} /></div>
+      <label className="k-check"><input type="checkbox" checked={draft.showSearch} onChange={(event) => { setField("showSearch", event.target.checked); }} />Mostrar busca</label>
+      <label className="k-check"><input type="checkbox" checked={draft.showCategories} onChange={(event) => { setField("showCategories", event.target.checked); }} />Mostrar categorias</label>
+      <label className="k-check"><input type="checkbox" checked={draft.showPrice} onChange={(event) => { setField("showPrice", event.target.checked); }} />Mostrar preços</label>
+      <label className="k-check"><input type="checkbox" checked={draft.showStock} onChange={(event) => { setField("showStock", event.target.checked); }} />Mostrar estoque</label>
+    </>
+  );
+}
+
+function Preview({ draft }: Readonly<{ draft: SettingsDraft }>): React.JSX.Element {
+  const style = {
+    "--preview-primary": draft.primaryColor,
+    "--preview-accent": draft.accentColor,
+    "--preview-bg": draft.backgroundColor,
+  } as CSSProperties;
+  return (
+    <div className="k-preview" style={style}>
+      <div className="k-preview__bar" />
+      <div className="k-preview__body">
+        <strong>Prévia {draft.layout === "modern" ? "Modern" : "Classic"}</strong>
+        <p className="k-muted">Personalização estruturada, sem CSS ou JavaScript arbitrário.</p>
+        <span className="k-preview__accent">Destaque da loja</span>
+      </div>
+    </div>
+  );
+}
+
+export function CatalogSettingsForm({ settings }: Readonly<{ settings: CatalogSettings }>): React.JSX.Element {
   const router = useRouter();
-  const [layout, setLayout] = useState(settings.layout);
-  const [fontFamily, setFontFamily] = useState(settings.fontFamily);
-  const [checkoutMode, setCheckoutMode] = useState(settings.checkoutMode);
-  const [primaryColor, setPrimaryColor] = useState(settings.primaryColor);
-  const [accentColor, setAccentColor] = useState(settings.accentColor);
-  const [backgroundColor, setBackgroundColor] = useState(settings.backgroundColor);
-  const [showSearch, setShowSearch] = useState(settings.showSearch);
-  const [showCategories, setShowCategories] = useState(settings.showCategories);
-  const [showPrice, setShowPrice] = useState(settings.showPrice);
-  const [showStock, setShowStock] = useState(settings.showStock);
-  const [phone, setPhone] = useState(settings.whatsappPhone ?? "");
-  const [message, setMessage] = useState(settings.whatsappMessage);
-  const [seoTitle, setSeoTitle] = useState(settings.seoTitle ?? "");
-  const [seoDescription, setSeoDescription] = useState(settings.seoDescription ?? "");
+  const [draft, setDraft] = useState(() => initialDraft(settings));
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
 
-  async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  function setField<K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]): void {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setSaving(true);
     setStatus("");
     try {
-      await saveMerchantCatalogSettings({
-        data: {
-          layout,
-          primaryColor,
-          accentColor,
-          backgroundColor,
-          fontFamily,
-          showSearch,
-          showCategories,
-          showPrice,
-          showStock,
-          labels: settings.labels,
-          whatsappPhone: phone.trim() || null,
-          whatsappMessage: message.trim(),
-          checkoutMode,
-          seoTitle: seoTitle.trim() || null,
-          seoDescription: seoDescription.trim() || null,
-        },
-      });
+      await saveMerchantCatalogSettings({ data: draft });
       setStatus("Configurações salvas.");
       await router.invalidate();
     } catch (error) {
@@ -56,65 +120,16 @@ export function CatalogSettingsForm({ settings }: Readonly<{ settings: CatalogSe
     }
   }
 
-  const previewStyle = {
-    "--preview-primary": primaryColor,
-    "--preview-accent": accentColor,
-    "--preview-bg": backgroundColor,
-  } as CSSProperties;
-
   return (
-    <form className="k-form" onSubmit={(event) => void submit(event)}>
+    <form className="k-form" onSubmit={(event) => { void submit(event); }}>
       <div className="k-card k-form__grid">
-        <div className="k-field">
-          <label>Layout</label>
-          <select value={layout} onChange={(e) => setLayout(e.target.value as "classic" | "modern")}>
-            <option value="classic">Classic</option>
-            <option value="modern">Modern</option>
-          </select>
-        </div>
-        <div className="k-field">
-          <label>Fonte</label>
-          <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value as CatalogSettings["fontFamily"])}>
-            <option value="system">Sistema</option><option value="inter">Inter</option>
-            <option value="sans">Sans</option><option value="serif">Serif</option>
-          </select>
-        </div>
-        <div className="k-field">
-          <label>Modo de checkout</label>
-          <select value={checkoutMode} onChange={(e) => setCheckoutMode(e.target.value as CatalogSettings["checkoutMode"])}>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="online">Online (preparação)</option>
-            <option value="both">WhatsApp + Online</option>
-          </select>
-        </div>
-        <div className="k-field">
-          <label>WhatsApp</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="5562999999999" />
-        </div>
-        <div className="k-field"><label>Cor principal</label><input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} /></div>
-        <div className="k-field"><label>Cor de destaque</label><input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} /></div>
-        <div className="k-field"><label>Fundo</label><input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} /></div>
-        <div className="k-field k-field--full"><label>Mensagem padrão do WhatsApp</label><textarea value={message} onChange={(e) => setMessage(e.target.value)} /></div>
-        <div className="k-field"><label>SEO title</label><input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} /></div>
-        <div className="k-field"><label>SEO description</label><input value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} /></div>
-        <label className="k-check"><input type="checkbox" checked={showSearch} onChange={(e) => setShowSearch(e.target.checked)} />Mostrar busca</label>
-        <label className="k-check"><input type="checkbox" checked={showCategories} onChange={(e) => setShowCategories(e.target.checked)} />Mostrar categorias</label>
-        <label className="k-check"><input type="checkbox" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />Mostrar preços</label>
-        <label className="k-check"><input type="checkbox" checked={showStock} onChange={(e) => setShowStock(e.target.checked)} />Mostrar estoque</label>
+        <AppearanceFields draft={draft} setField={setField} />
+        <CatalogFields draft={draft} setField={setField} />
       </div>
-      <div className="k-preview" style={previewStyle}>
-        <div className="k-preview__bar" />
-        <div className="k-preview__body">
-          <strong>Prévia {layout === "modern" ? "Modern" : "Classic"}</strong>
-          <p className="k-muted">Personalização estruturada, sem CSS ou JavaScript arbitrário.</p>
-          <span className="k-preview__accent">Destaque da loja</span>
-        </div>
-      </div>
+      <Preview draft={draft} />
       <div className="k-actions">
         {status ? <span className="k-status">{status}</span> : null}
-        <button className="k-button k-button--primary" type="submit" disabled={saving}>
-          {saving ? "Salvando…" : "Salvar configurações"}
-        </button>
+        <button className="k-button k-button--primary" type="submit" disabled={saving}>{saving ? "Salvando…" : "Salvar configurações"}</button>
       </div>
     </form>
   );
