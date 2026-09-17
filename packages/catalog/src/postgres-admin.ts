@@ -2,13 +2,17 @@ import type { CatalogSqlExecutor } from "./postgres.ts";
 import type { CatalogScope } from "./types.ts";
 import type {
   CatalogAdminRepository,
+  MerchantCatalogAdminSnapshot,
   NormalizedMerchantBannerInput,
   NormalizedMerchantCatalogSettingsInput,
   NormalizedMerchantCategoryInput,
   NormalizedMerchantProductInput,
   NormalizedMerchantVariantInput,
 } from "./admin.ts";
-import { assertCatalogAdminScope } from "./admin.ts";
+import {
+  assertCatalogAdminScope,
+  normalizeMerchantCatalogSettingsInput,
+} from "./admin.ts";
 
 export interface CatalogAdminSqlExecutor extends CatalogSqlExecutor {
   transaction<T>(
@@ -26,6 +30,165 @@ function idFrom(rows: Record<string, unknown>[], resource: string): string {
 
 export class PostgresCatalogAdminRepository implements CatalogAdminRepository {
   constructor(private readonly sql: CatalogAdminSqlExecutor) {}
+
+  async getSnapshot(scope: CatalogScope): Promise<MerchantCatalogAdminSnapshot> {
+    assertCatalogAdminScope(scope);
+
+    const [productRows, categoryRows, bannerRows, settingsRows] = await Promise.all([
+      this.sql.query(
+        `select
+          id,
+          category_id,
+          name,
+          slug,
+          sku,
+          price_cents,
+          compare_at_price_cents,
+          cost_cents,
+          active,
+          track_inventory,
+          created_at,
+          updated_at
+         from public.products
+        where tenant_id = $1
+          and store_id = $2
+        order by created_at desc, id desc`,
+        [scope.tenantId, scope.storeId],
+      ),
+      this.sql.query(
+        `select id, parent_id, name, slug, active, position
+           from public.categories
+          where tenant_id = $1
+            and store_id = $2
+          order by position asc, lower(name) asc, id asc`,
+        [scope.tenantId, scope.storeId],
+      ),
+      this.sql.query(
+        `select id, object_key, title, subtitle, link_url, active, position
+           from public.catalog_banners
+          where tenant_id = $1
+            and store_id = $2
+          order by position asc, id asc`,
+        [scope.tenantId, scope.storeId],
+      ),
+      this.sql.query(
+        `select
+          layout,
+          primary_color,
+          accent_color,
+          background_color,
+          font_key,
+          show_search,
+          show_categories,
+          show_stock,
+          show_prices,
+          checkout_mode,
+          whatsapp_phone,
+          whatsapp_message_template,
+          seo_title,
+          seo_description,
+          labels
+         from public.catalog_settings
+        where tenant_id = $1
+          and store_id = $2
+        limit 1`,
+        [scope.tenantId, scope.storeId],
+      ),
+    ]);
+
+    const products = productRows.map((row) => ({
+      id: String(row["id"]),
+      categoryId: row["category_id"] == null ? null : String(row["category_id"]),
+      name: String(row["name"]),
+      slug: String(row["slug"]),
+      sku: row["sku"] == null ? null : String(row["sku"]),
+      priceCents: Number(row["price_cents"]),
+      compareAtPriceCents:
+        row["compare_at_price_cents"] == null
+          ? null
+          : Number(row["compare_at_price_cents"]),
+      costCents: row["cost_cents"] == null ? null : Number(row["cost_cents"]),
+      active: Boolean(row["active"]),
+      trackInventory: Boolean(row["track_inventory"]),
+      createdAt:
+        row["created_at"] instanceof Date
+          ? row["created_at"].toISOString()
+          : String(row["created_at"]),
+      updatedAt:
+        row["updated_at"] instanceof Date
+          ? row["updated_at"].toISOString()
+          : String(row["updated_at"]),
+    }));
+
+    const categories = categoryRows.map((row) => ({
+      id: String(row["id"]),
+      parentId: row["parent_id"] == null ? null : String(row["parent_id"]),
+      name: String(row["name"]),
+      slug: String(row["slug"]),
+      active: Boolean(row["active"]),
+      position: Number(row["position"]),
+    }));
+
+    const banners = bannerRows.map((row) => ({
+      id: String(row["id"]),
+      objectKey: String(row["object_key"]),
+      title: row["title"] == null ? null : String(row["title"]),
+      subtitle: row["subtitle"] == null ? null : String(row["subtitle"]),
+      linkUrl: row["link_url"] == null ? null : String(row["link_url"]),
+      active: Boolean(row["active"]),
+      position: Number(row["position"]),
+    }));
+
+    const settingsRow = settingsRows[0];
+    const settings = normalizeMerchantCatalogSettingsInput(
+      settingsRow
+        ? {
+            layout: settingsRow["layout"] as "classic" | "modern",
+            primaryColor: String(settingsRow["primary_color"]),
+            accentColor: String(settingsRow["accent_color"]),
+            backgroundColor: String(settingsRow["background_color"]),
+            fontKey: settingsRow["font_key"] as
+              | "system"
+              | "inter"
+              | "manrope"
+              | "poppins"
+              | "montserrat"
+              | "playfair",
+            showSearch: Boolean(settingsRow["show_search"]),
+            showCategories: Boolean(settingsRow["show_categories"]),
+            showStock: Boolean(settingsRow["show_stock"]),
+            showPrices: Boolean(settingsRow["show_prices"]),
+            checkoutMode: settingsRow["checkout_mode"] as
+              | "whatsapp"
+              | "online"
+              | "both",
+            whatsappPhone:
+              settingsRow["whatsapp_phone"] == null
+                ? null
+                : String(settingsRow["whatsapp_phone"]),
+            whatsappMessageTemplate: String(
+              settingsRow["whatsapp_message_template"],
+            ),
+            seoTitle:
+              settingsRow["seo_title"] == null
+                ? null
+                : String(settingsRow["seo_title"]),
+            seoDescription:
+              settingsRow["seo_description"] == null
+                ? null
+                : String(settingsRow["seo_description"]),
+            labels:
+              settingsRow["labels"] &&
+              typeof settingsRow["labels"] === "object" &&
+              !Array.isArray(settingsRow["labels"])
+                ? (settingsRow["labels"] as Record<string, string>)
+                : {},
+          }
+        : {},
+    );
+
+    return { products, categories, banners, settings };
+  }
 
   async createProduct(
     scope: CatalogScope,
