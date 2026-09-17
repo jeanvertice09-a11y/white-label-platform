@@ -12,7 +12,7 @@ import type {
 import {
   assertCatalogAdminScope,
   normalizeMerchantCatalogSettingsInput,
-} from "./admin.ts";
+} from "./admin-validation.ts";
 
 export interface CatalogAdminSqlExecutor extends CatalogSqlExecutor {
   transaction<T>(
