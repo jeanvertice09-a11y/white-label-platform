@@ -1,4 +1,4 @@
-import type { Product } from "./types.ts";
+import type { Product, PublicCatalogSnapshot } from "./types.ts";
 import type { ProductVariant } from "./pricing.ts";
 
 export type CatalogLayout = "classic" | "modern";
@@ -52,6 +52,11 @@ export interface ProductImage {
   objectKey: string;
   altText: string | null;
   position: number;
+}
+
+export interface PublicStorefrontSnapshot extends PublicCatalogSnapshot {
+  settings: CatalogSettings;
+  banners: CatalogBanner[];
 }
 
 export interface CatalogProductDetail {
