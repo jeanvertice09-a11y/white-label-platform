@@ -41,8 +41,9 @@ describe("catalog admin repository scope", () => {
       },
     };
     const repository = createCatalogAdminRepository(sql);
-    await expect(
-      repository.createBanner(
+    let rejected = false;
+    try {
+      await repository.createBanner(
         { tenantId: "t1", storeId: "s1" },
         {
           title: null,
@@ -52,7 +53,10 @@ describe("catalog admin repository scope", () => {
           active: true,
           position: 0,
         },
-      ),
-    ).rejects.toThrow();
+      );
+    } catch {
+      rejected = true;
+    }
+    expect(rejected).toBe(true);
   });
 });
