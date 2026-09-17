@@ -89,6 +89,24 @@ export interface MerchantCatalogSettingsInput {
   labels?: Record<string, string>;
 }
 
+export interface NormalizedMerchantCatalogSettingsInput {
+  layout: CatalogLayout;
+  primaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  fontKey: CatalogFontKey;
+  showSearch: boolean;
+  showCategories: boolean;
+  showStock: boolean;
+  showPrices: boolean;
+  checkoutMode: CheckoutMode;
+  whatsappPhone: string | null;
+  whatsappMessageTemplate: string;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  labels: Record<string, string>;
+}
+
 export interface MerchantBannerInput {
   id?: string;
   objectKey: string;
@@ -97,6 +115,16 @@ export interface MerchantBannerInput {
   linkUrl?: string | null;
   active?: boolean;
   position?: number;
+}
+
+export interface NormalizedMerchantBannerInput {
+  id?: string;
+  objectKey: string;
+  title: string | null;
+  subtitle: string | null;
+  linkUrl: string | null;
+  active: boolean;
+  position: number;
 }
 
 export interface CatalogAdminRepository {
@@ -130,11 +158,11 @@ export interface CatalogAdminRepository {
   ): Promise<void>;
   upsertSettings(
     scope: CatalogScope,
-    input: MerchantCatalogSettingsInput,
+    input: NormalizedMerchantCatalogSettingsInput,
   ): Promise<void>;
   upsertBanner(
     scope: CatalogScope,
-    input: MerchantBannerInput,
+    input: NormalizedMerchantBannerInput,
   ): Promise<string>;
   deleteBanner(scope: CatalogScope, bannerId: string): Promise<void>;
 }
@@ -249,6 +277,99 @@ export function normalizeMerchantCategoryInput(
     name,
     slug: slugifyCatalogName(input.slug ?? name),
     parentId: input.parentId ?? null,
+    active: input.active ?? true,
+    position: position(input.position),
+  };
+}
+
+function color(value: string | undefined, fallback: string): string {
+  const normalized = value?.trim() || fallback;
+  if (!/^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+    throw new Error("Cor inválida");
+  }
+  return normalized.toLowerCase();
+}
+
+function safeLink(value: string | null | undefined): string | null {
+  const normalized = optionalText(value, 2048);
+  if (!normalized) return null;
+  if (normalized.startsWith("/")) return normalized;
+  let url: URL;
+  try {
+    url = new URL(normalized);
+  } catch {
+    throw new Error("Link do banner inválido");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("Link do banner deve usar HTTPS");
+  }
+  return url.toString();
+}
+
+function normalizeLabels(input: Record<string, string> | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(input ?? {})) {
+    const k = key.trim();
+    const v = value.trim();
+    if (!k || !v) continue;
+    if (k.length > 80 || v.length > 160) throw new Error("Label muito longa");
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * Snapshot completo das configurações do catálogo.
+ * A tela de aparência deve carregar o estado atual, editar e enviar o snapshot.
+ */
+export function normalizeMerchantCatalogSettingsInput(
+  input: MerchantCatalogSettingsInput,
+): NormalizedMerchantCatalogSettingsInput {
+  const whatsappPhone = optionalText(input.whatsappPhone, 20);
+  if (whatsappPhone && !/^\+[1-9][0-9]{7,14}$/.test(whatsappPhone)) {
+    throw new Error("WhatsApp inválido; use formato +5511999999999");
+  }
+
+  return {
+    layout: input.layout ?? "classic",
+    primaryColor: color(input.primaryColor, "#111111"),
+    accentColor: color(input.accentColor, "#111111"),
+    backgroundColor: color(input.backgroundColor, "#ffffff"),
+    fontKey: input.fontKey ?? "system",
+    showSearch: input.showSearch ?? true,
+    showCategories: input.showCategories ?? true,
+    showStock: input.showStock ?? false,
+    showPrices: input.showPrices ?? true,
+    checkoutMode: input.checkoutMode ?? "whatsapp",
+    whatsappPhone,
+    whatsappMessageTemplate:
+      requiredText(
+        input.whatsappMessageTemplate ?? "Olá! Gostaria de fazer este pedido:",
+        "Mensagem do WhatsApp",
+        1000,
+      ),
+    seoTitle: optionalText(input.seoTitle, 160),
+    seoDescription: optionalText(input.seoDescription, 320),
+    labels: normalizeLabels(input.labels),
+  };
+}
+
+export function normalizeMerchantBannerInput(
+  scope: CatalogScope,
+  input: MerchantBannerInput,
+): NormalizedMerchantBannerInput {
+  const objectKey = requiredText(input.objectKey, "Imagem do banner", 500);
+  const expectedPrefix = `tenants/${scope.tenantId.toLowerCase()}/stores/${scope.storeId.toLowerCase()}/`;
+  if (!objectKey.toLowerCase().startsWith(expectedPrefix)) {
+    throw new Error("Imagem do banner fora do escopo da loja");
+  }
+
+  return {
+    id: input.id,
+    objectKey,
+    title: optionalText(input.title, 180),
+    subtitle: optionalText(input.subtitle, 320),
+    linkUrl: safeLink(input.linkUrl),
     active: input.active ?? true,
     position: position(input.position),
   };
