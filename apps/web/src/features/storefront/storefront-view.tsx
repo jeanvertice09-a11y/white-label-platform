@@ -19,7 +19,7 @@ function fontValue(font: StorefrontSnapshot["settings"]["fontFamily"]): string {
 }
 
 function Banner(props: Readonly<{ data: StorefrontSnapshot }>): React.JSX.Element | null {
-  const banner = props.data.banners[0];
+  const banner = props.data.banners.at(0);
   if (!banner) return null;
   const url = getCatalogPublicMediaUrl(banner, banner.imageObjectKey);
   const image = <img src={url} alt={banner.altText ?? banner.title ?? ""} />;

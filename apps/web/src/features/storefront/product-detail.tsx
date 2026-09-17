@@ -33,7 +33,7 @@ export function ProductDetail(props: Readonly<{
     [props.product, variantId],
   );
   const image = props.product.images.find((item) => item.variantId === selectedId)
-    ?? props.product.images[0];
+    ?? props.product.images.at(0);
   const imageUrl = image
     ? getCatalogPublicMediaUrl(props.product, image.objectKey)
     : null;
@@ -51,7 +51,7 @@ export function ProductDetail(props: Readonly<{
         </div>
         <div className="sf__detail">
           <div className="sf__detail-image">
-            {imageUrl ? <img src={imageUrl} alt={image?.altText ?? props.product.name} /> : <div className="sf__image"><span className="sf__placeholder">Sem imagem</span></div>}
+            {imageUrl && image ? <img src={imageUrl} alt={image.altText ?? props.product.name} /> : <div className="sf__image"><span className="sf__placeholder">Sem imagem</span></div>}
           </div>
           <div className="sf__panel">
             {props.product.variants.length ? (

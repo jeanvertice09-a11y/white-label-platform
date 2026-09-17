@@ -7,7 +7,7 @@ export function ProductCard(props: Readonly<{
   showPrice: boolean;
   onOpen: (product: Product) => void;
 }>): React.JSX.Element {
-  const image = props.product.images[0];
+  const image = props.product.images.at(0);
   const imageUrl = image
     ? getCatalogPublicMediaUrl(props.product, image.objectKey)
     : null;
@@ -18,8 +18,8 @@ export function ProductCard(props: Readonly<{
   return (
     <button className="sf__card" type="button" onClick={() => { props.onOpen(props.product); }}>
       <div className="sf__image">
-        {imageUrl ? (
-          <img src={imageUrl} alt={image?.altText ?? props.product.name} loading="lazy" />
+        {imageUrl && image ? (
+          <img src={imageUrl} alt={image.altText ?? props.product.name} loading="lazy" />
         ) : (
           <span className="sf__placeholder">Sem imagem</span>
         )}
