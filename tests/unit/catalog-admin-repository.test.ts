@@ -41,7 +41,7 @@ describe("catalog admin repository scope", () => {
       },
     };
     const repository = createCatalogAdminRepository(sql);
-    expect(
+    await expect(
       repository.createBanner(
         { tenantId: "t1", storeId: "s1" },
         {
