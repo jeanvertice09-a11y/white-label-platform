@@ -90,6 +90,7 @@ export interface StorefrontStore extends CatalogScope {
   slug: string;
   tenantStatus: "trial" | "active" | "suspended";
   storeStatus: "draft" | "active" | "suspended";
+  trialEndsAt: string | null;
 }
 
 export interface CatalogQuery extends CatalogScope {

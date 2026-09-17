@@ -40,3 +40,6 @@ export {
   isStorefrontAvailable,
   assertStorefrontAvailable,
 } from "./storefront.ts";
+export { defaultCatalogSettings } from "./defaults.ts";
+export { createCatalogReadRepository } from "./postgres-read.ts";
+export type { CatalogReadRepository, CatalogSqlExecutor } from "./repository.ts";
