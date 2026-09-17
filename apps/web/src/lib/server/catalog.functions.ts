@@ -184,6 +184,25 @@ export const getPublicProductData = createServerFn({ method: "GET" })
     };
   });
 
+export const getMerchantCatalogAdminData = createServerFn({ method: "GET" }).handler(
+  async () => {
+    noStore();
+    const scope = await requireMerchantCatalogScope();
+    const repository = new PostgresCatalogAdminRepository(
+      createCatalogAdminSqlExecutor(),
+    );
+    const snapshot = await repository.getSnapshot(scope);
+
+    const store = await getPublicStoreIdentity(scope.tenantId, scope.storeId);
+
+    return {
+      store,
+      snapshot,
+      mediaBaseUrl: publicMediaBaseUrl(),
+    };
+  },
+);
+
 export const saveMerchantProduct = createServerFn({ method: "POST" })
   .validator(productInputSchema)
   .handler(async ({ data }) => {
