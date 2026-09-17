@@ -84,6 +84,21 @@ function mapProduct(row: Record<string, unknown>): Product {
     slug: str(row["slug"], "slug"),
     name: str(row["name"], "name"),
     priceCents: int(row["price_cents"], "price_cents"),
+    compareAtPriceCents:
+      row["compare_at_price_cents"] == null
+        ? null
+        : int(row["compare_at_price_cents"], "compare_at_price_cents"),
+    sku: nullableStr(row["sku"], "sku"),
+    description:
+      typeof row["description"] === "string" ? row["description"] : "",
+    trackInventory:
+      typeof row["track_inventory"] === "boolean"
+        ? row["track_inventory"]
+        : false,
+    primaryImageObjectKey: nullableStr(
+      row["primary_image_object_key"],
+      "primary_image_object_key",
+    ),
     active: bool(row["active"], "active"),
     createdAt: instant(row["created_at"], "created_at"),
   };
@@ -305,6 +320,19 @@ export class PostgresCatalogRepository implements CatalogRepository {
           p.slug,
           p.name,
           p.price_cents,
+          p.compare_at_price_cents,
+          p.sku,
+          p.description,
+          p.track_inventory,
+          (
+            select pi.object_key
+              from public.product_images pi
+             where pi.tenant_id = p.tenant_id
+               and pi.store_id = p.store_id
+               and pi.product_id = p.id
+             order by pi.position asc, pi.id asc
+             limit 1
+          ) as primary_image_object_key,
           p.active,
           p.created_at
          from public.products p
@@ -345,6 +373,19 @@ export class PostgresCatalogRepository implements CatalogRepository {
           slug,
           name,
           price_cents,
+          compare_at_price_cents,
+          sku,
+          description,
+          track_inventory,
+          (
+            select pi.object_key
+              from public.product_images pi
+             where pi.tenant_id = products.tenant_id
+               and pi.store_id = products.store_id
+               and pi.product_id = products.id
+             order by pi.position asc, pi.id asc
+             limit 1
+          ) as primary_image_object_key,
           active,
           created_at
          from public.products
