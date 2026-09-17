@@ -10,27 +10,26 @@ import type {
 
 function text(row: Record<string, unknown>, key: string): string {
   const value = row[key];
-  if (typeof value !== "string") throw new Error(\`Coluna inválida: \${key}\`);
+  if (typeof value !== "string") throw new Error("Coluna inválida: " + key);
   return value;
 }
 
 function optionalText(row: Record<string, unknown>, key: string): string | null {
   const value = row[key];
   if (value === null || value === undefined) return null;
-  if (typeof value !== "string") throw new Error(\`Coluna inválida: \${key}\`);
+  if (typeof value !== "string") throw new Error("Coluna inválida: " + key);
   return value;
 }
 
 function bool(row: Record<string, unknown>, key: string): boolean {
   const value = row[key];
-  if (typeof value !== "boolean") throw new Error(\`Coluna inválida: \${key}\`);
+  if (typeof value !== "boolean") throw new Error("Coluna inválida: " + key);
   return value;
 }
 
 function num(row: Record<string, unknown>, key: string): number {
-  const value = row[key];
-  const parsed = typeof value === "bigint" ? Number(value) : Number(value);
-  if (!Number.isFinite(parsed)) throw new Error(\`Coluna inválida: \${key}\`);
+  const parsed = Number(row[key]);
+  if (!Number.isFinite(parsed)) throw new Error("Coluna inválida: " + key);
   return parsed;
 }
 
@@ -112,8 +111,8 @@ export function mapProduct(row: Record<string, unknown>): Product {
     trackInventory: bool(row, "track_inventory"),
     stockQuantity: num(row, "stock_quantity"),
     position: num(row, "position"),
-    variants: jsonArray(row, "variants").map(mapVariant),
-    images: jsonArray(row, "images").map(mapImage),
+    variants: jsonArray(row, "variants").map((item) => mapVariant(item)),
+    images: jsonArray(row, "images").map((item) => mapImage(item)),
   };
 }
 
