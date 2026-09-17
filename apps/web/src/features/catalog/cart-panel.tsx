@@ -89,13 +89,13 @@ function CartLine(props: {
         <div className="catalog-muted">{formatCatalogMoney(item.unitPriceCents)} cada</div>
       </div>
       <div className="catalog-admin-actions">
-        <button type="button" className="catalog-chip" onClick={() => setQuantity(Math.max(0, item.quantity - 1))}>−</button>
+        <button type="button" className="catalog-chip" onClick={() => { setQuantity(Math.max(0, item.quantity - 1)); }}>−</button>
         <span style={{ alignSelf: "center" }}>{item.quantity}</span>
-        <button type="button" className="catalog-chip" onClick={() => setQuantity(item.quantity + 1)}>+</button>
+        <button type="button" className="catalog-chip" onClick={() => { setQuantity(item.quantity + 1); }}>+</button>
         <button
           type="button"
           className="catalog-chip"
-          onClick={() => props.onCartChange(removeCartItem(scope, props.cart, item.key))}
+          onClick={() => { props.onCartChange(removeCartItem(scope, props.cart, item.key)); }}
         >
           Remover
         </button>
