@@ -9,6 +9,14 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
+    rollupOptions: {
+      external: [
+        "@white-label/domains",
+        "@white-label/auth",
+        "@white-label/tenant",
+        "@white-label/validation",
+      ],
+    },
   },
   ssr: {
     external: [
