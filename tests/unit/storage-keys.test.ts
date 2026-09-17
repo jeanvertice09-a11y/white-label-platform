@@ -12,10 +12,14 @@ describe("storage keys", () => {
   });
 
   test("key fora do tenant rejeitada", () => {
-    expect(() => assertKeyBelongsToTenant("tenants/other/x.png", "t1")).toThrow();
+    expect(() => {
+      assertKeyBelongsToTenant("tenants/other/x.png", "t1");
+    }).toThrow();
   });
 
   test("key de outra store é rejeitada", () => {
-    expect(() => assertKeyBelongsToStore("tenants/t1/stores/s2/product/x.png", "t1", "s1")).toThrow();
+    expect(() => {
+      assertKeyBelongsToStore("tenants/t1/stores/s2/product/x.png", "t1", "s1");
+    }).toThrow();
   });
 });

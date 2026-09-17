@@ -24,14 +24,20 @@ const settings: CatalogSettings = {
 
 describe("catalog settings validation", () => {
   test("aceita configuração estruturada válida", () => {
-    expect(() => assertCatalogSettings(settings)).not.toThrow();
+    expect(() => {
+      assertCatalogSettings(settings);
+    }).not.toThrow();
   });
 
   test("bloqueia HTML arbitrário em labels", () => {
-    expect(() => assertCatalogSettings({ ...settings, labels: { title: "<script>x</script>" } })).toThrow();
+    expect(() => {
+      assertCatalogSettings({ ...settings, labels: { title: "<script>x</script>" } });
+    }).toThrow();
   });
 
   test("bloqueia cor fora do formato permitido", () => {
-    expect(() => assertCatalogSettings({ ...settings, primaryColor: "red; background:url(x)" })).toThrow();
+    expect(() => {
+      assertCatalogSettings({ ...settings, primaryColor: "red; background:url(x)" });
+    }).toThrow();
   });
 });

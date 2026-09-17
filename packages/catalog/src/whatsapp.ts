@@ -20,7 +20,7 @@ export function buildWhatsappMessage(cart: CartState, intro: string): string {
   for (const item of cart.items) {
     const variant = item.variantName ? ` — ${item.variantName}` : "";
     lines.push(
-      `${item.quantity}x ${item.name}${variant} — ${money(item.unitPriceCents * item.quantity)}`,
+      `${String(item.quantity)}x ${item.name}${variant} — ${money(item.unitPriceCents * item.quantity)}`,
     );
   }
   lines.push("", `Total: ${money(cartTotalCents(cart))}`);
