@@ -1,7 +1,11 @@
-// /master — esqueleto autenticado, reservado a platform_owner/admin.
-// A verificação REAL acontece em server function (ver lib/route-guard.ts).
-export function MasterPage(): React.JSX.Element {
-  return (
+import { createFileRoute } from "@tanstack/react-router";
+import { loadMasterContext } from "../lib/client-guard.ts";
+import { AccessDenied } from "./-access-denied.tsx";
+
+export const Route = createFileRoute("/master")({
+  loader: () => loadMasterContext(),
+  errorComponent: AccessDenied,
+  component: () => (
     <section>
       <h1>White Label Platform — Master</h1>
       <p>Área da plataforma. Acesso restrito a platform_owner / platform_admin.</p>
@@ -12,5 +16,5 @@ export function MasterPage(): React.JSX.Element {
         <li>Security (placeholder)</li>
       </ul>
     </section>
-  );
-}
+  ),
+});

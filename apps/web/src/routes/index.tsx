@@ -1,5 +1,7 @@
-export function HomePage(): React.JSX.Element {
-  return (
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/")({
+  component: () => (
     <section>
       <h1>White Label Platform — Fundação</h1>
       <p>
@@ -7,5 +9,5 @@ export function HomePage(): React.JSX.Element {
         /control (tenant), /admin (store), /catalog (público por hostname).
       </p>
     </section>
-  );
-}
+  ),
+});

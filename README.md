@@ -28,6 +28,7 @@ cp .env.example .env   # nunca commite .env
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun run test` | unitários (bun test) |
 | `bun run test:integration` | integração |
+| `bun run test:db` | **PostgreSQL REAL** (PGlite em-processo por padrão; `TEST_DATABASE_URL` p/ servidor) |
 | `bun run test:security` | **isolamento tenant/store — bloqueante p/ produção** |
 | `bun run test:e2e` | smoke E2E (sem browser) |
 | `bunx playwright test` | E2E com navegador (requer browsers) |

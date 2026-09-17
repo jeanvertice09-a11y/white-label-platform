@@ -1,35 +1,20 @@
-// scripts/bootstrap-platform-owner.ts — operador local, SERVER-ONLY.
-// Promove TARGET_USER_ID a platform_owner usando service role LOCAL.
-// Nunca importar no web. Recusa placeholders e ambiente production sem CONFIRM.
+// scripts/bootstrap-platform-owner.ts — CLI do operador local, SERVER-ONLY.
+// Nunca importar no web. Uso: TARGET_USER_ID=<auth.uid> bun scripts/bootstrap-platform-owner.ts
+import { runBootstrap } from "./bootstrap.ts";
+
 export {};
 
 const g = globalThis as Record<string, unknown>;
 if (typeof g["window"] !== "undefined") throw new Error("server-only");
 
-const url = process.env["SUPABASE_URL"];
-const serviceKey = process.env["SUPABASE_SERVICE_ROLE_KEY"];
-const target = process.env["TARGET_USER_ID"];
-const appEnv = process.env["APP_ENV"] ?? "local";
-const confirmProd = process.env["CONFIRM_PRODUCTION"];
-
-if (!url || !serviceKey) throw new Error("SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY ausentes");
-if (!target || target.includes("EXAMPLE") || target.length < 10) {
-  throw new Error("TARGET_USER_ID inválido (auth.uid() real exigido)");
-}
-if (serviceKey.includes("EXAMPLE")) throw new Error("service key de exemplo recusada");
-if (appEnv === "production" && confirmProd !== "YES") {
-  throw new Error("Produção exige CONFIRM_PRODUCTION=YES + change control");
-}
-
-const res = await fetch(`${url}/rest/v1/platform_members`, {
-  method: "POST",
-  headers: {
-    apikey: serviceKey,
-    Authorization: `Bearer ${serviceKey}`,
-    "Content-Type": "application/json",
-    Prefer: "resolution=merge-duplicates",
+const result = await runBootstrap(
+  {
+    SUPABASE_URL: process.env["SUPABASE_URL"],
+    SUPABASE_SERVICE_ROLE_KEY: process.env["SUPABASE_SERVICE_ROLE_KEY"],
+    TARGET_USER_ID: process.env["TARGET_USER_ID"],
+    APP_ENV: process.env["APP_ENV"],
+    CONFIRM_PRODUCTION: process.env["CONFIRM_PRODUCTION"],
   },
-  body: JSON.stringify({ user_id: target, role: "platform_owner" }),
-});
-if (!res.ok) throw new Error(`bootstrap falhou: ${String(res.status)}`);
-console.warn(`[bootstrap] platform_owner registrado para ${target} em ${appEnv}`);
+  fetch,
+);
+console.warn(`[bootstrap] platform_owner registrado para ${result.targetUserId} em ${result.appEnv}`);

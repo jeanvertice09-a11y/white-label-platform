@@ -1,7 +1,9 @@
 // SERVER-ONLY: resolução de sessão a partir do request.
 // Falha se importado em bundle client (window presente).
-// Integração real com Supabase Auth: PENDENTE (aguardando projeto local).
-// Até lá, NENHUMA sessão é fabricada: retorna null -> rotas negam (fail closed).
+// Sessão REAL: JWT validado contra o Supabase Auth no servidor
+// (validateServerSession). Sem backend/sessão -> null -> rotas negam.
+
+import { validateServerSession } from "./supabase-server.server.ts";
 
 export interface Session {
   userId: string;
@@ -14,14 +16,10 @@ function assertServer(): void {
   }
 }
 
-/**
- * Extrai sessão do cookie do request.
- * Hoje: sempre null (sem JWT validado não há identidade).
- * Integração futura: validar JWT do Supabase (sb-*-auth-token) aqui.
- */
-export function getSessionFromCookieHeader(_cookieHeader: string | null): Session | null {
+/** Resolve sessão via Supabase Auth server-side. Nunca fabrica identidade. */
+export async function resolveSessionFromRequest(): Promise<Session | null> {
   assertServer();
-  return null;
+  return validateServerSession();
 }
 
 /** Injeção p/ testes da matriz de autorização (não usada em produção). */

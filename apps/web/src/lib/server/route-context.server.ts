@@ -11,8 +11,11 @@ import {
 } from "@white-label/tenant";
 import type { MembershipRow, TenantContext } from "@white-label/tenant";
 import type { StoreId, TenantId, UserId } from "@white-label/tenant";
-import { getSessionFromCookieHeader, stubSession } from "./session.ts";
-import type { Session } from "./session.ts";
+import { asTenantId, asStoreId } from "@white-label/tenant";
+import { resolveSessionFromRequest, stubSession } from "./session.server.ts";
+import type { Session } from "./session.server.ts";
+import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
+import { DomainResolver, PostgresDomainStore } from "@white-label/domains";
 
 export { stubSession };
 
@@ -27,7 +30,6 @@ export class HttpError extends Error {
 }
 
 export interface RouteInput {
-  cookieHeader: string | null;
   host: string | null;
 }
 
@@ -47,7 +49,7 @@ export interface TenantResolution {
 }
 
 export interface RouteDeps {
-  resolveSession: (cookieHeader: string | null) => Session | null;
+  resolveSession: () => Promise<Session | null>;
   memberships: MembershipReader;
   resolveTenantForHost: (host: string) => Promise<TenantResolution | null>;
 }
@@ -70,13 +72,35 @@ async function unresolvedHost(): Promise<null> {
 }
 
 export const defaultDeps: RouteDeps = {
-  resolveSession: getSessionFromCookieHeader,
+  resolveSession: resolveSessionFromRequest,
   memberships: pendingMembershipReader,
   resolveTenantForHost: unresolvedHost,
 };
 
-function requireSession(input: RouteInput, deps: RouteDeps): Session {
-  const session = deps.resolveSession(input.cookieHeader);
+/** Cria dependências reais conectadas ao Supabase (service_role para DB, anon para Auth). */
+export async function createRealDeps(): Promise<RouteDeps> {
+  const sqlExecutor = createAdminSqlExecutor();
+  const domainResolver = new DomainResolver(new PostgresDomainStore(sqlExecutor));
+  const { createDbMembershipReader } = await import("./db-memberships.server.ts");
+  const memberships = createDbMembershipReader(sqlExecutor);
+
+  return {
+    resolveSession: resolveSessionFromRequest,
+    memberships,
+    resolveTenantForHost: async (host: string) => {
+      const normalized = host.toLowerCase().split(":")[0].replace(/\.$/, "");
+      const resolved = await domainResolver.resolve(normalized);
+      if (!resolved) return null;
+      return {
+        tenantId: asTenantId(resolved.tenantId),
+        storeId: resolved.storeId ? asStoreId(resolved.storeId) : null,
+      };
+    },
+  };
+}
+
+async function requireSession(input: RouteInput, deps: RouteDeps): Promise<Session> {
+  const session = await deps.resolveSession();
   if (!session) throw new HttpError(401, "Sessão necessária", "UNAUTHENTICATED");
   return session;
 }
@@ -92,7 +116,7 @@ function toHttp(e: unknown): never {
 /** /master: somente platform_owner/platform_admin. Sem service_role. */
 export async function loadMaster(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<MasterContext> {
   try {
-    const session = requireSession(input, deps);
+    const session = await requireSession(input, deps);
     const roles = await deps.memberships.getPlatformRoles(session.userId);
     assertCanAccessMaster({ platformRoles: roles });
     return { userId: session.userId as UserId, platformRoles: roles };
@@ -122,7 +146,7 @@ function buildContext(
 /** /control: membership válida no tenant resolvido pelo host (servidor). */
 export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
-    const session = requireSession(input, deps);
+    const session = await requireSession(input, deps);
     const host = input.host;
     if (!host) throw new HttpError(403, "Tenant não resolvido", "TENANT_UNRESOLVED");
     const resolved = await deps.resolveTenantForHost(host);
@@ -139,7 +163,7 @@ export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDe
 /** /admin: membership válida da store resolvida + role permitida. */
 export async function loadStoreAdmin(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
-    const session = requireSession(input, deps);
+    const session = await requireSession(input, deps);
     const host = input.host;
     if (!host) throw new HttpError(403, "Store não resolvida", "STORE_UNRESOLVED");
     const resolved = await deps.resolveTenantForHost(host);

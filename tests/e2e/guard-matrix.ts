@@ -2,9 +2,9 @@
 // (loadMaster/loadControl/loadStoreAdmin) usados pelas rotas /master,
 // /control e /admin. Falha fechada: qualquer contexto inválido nega.
 // Usada por tests/security/route-guards.test.ts e tests/e2e/smoke.ts.
-import { loadControl, loadMaster, loadStoreAdmin } from "../../apps/web/src/lib/server/route-context.ts";
-import type { RouteDeps } from "../../apps/web/src/lib/server/route-context.ts";
-import { stubSession } from "../../apps/web/src/lib/server/session.ts";
+import { loadControl, loadMaster, loadStoreAdmin } from "../../apps/web/src/lib/server/route-context.server.ts";
+import type { RouteDeps } from "../../apps/web/src/lib/server/route-context.server.ts";
+import { stubSession } from "../../apps/web/src/lib/server/session.server.ts";
 import type { PlatformRole } from "../../packages/auth/src/roles.ts";
 import type { MembershipRow } from "../../packages/tenant/src/context.ts";
 import type { StoreId, TenantId } from "../../packages/tenant/src/branded.ts";
@@ -22,7 +22,10 @@ interface Case {
 
 function deps(over: Partial<RouteDeps>): RouteDeps {
   return {
-    resolveSession: () => null,
+    resolveSession: async () => {
+      await Promise.resolve();
+      return null;
+    },
     memberships: {
       async getPlatformRoles() {
         await Promise.resolve();
@@ -43,7 +46,10 @@ function deps(over: Partial<RouteDeps>): RouteDeps {
 
 function userDeps(userId: string, platform: PlatformRole[], tenants: MembershipRow[], hostMap: Record<string, { tenantId: TenantId; storeId: StoreId | null }>): RouteDeps {
   return deps({
-    resolveSession: () => stubSession(userId),
+    resolveSession: async () => {
+      await Promise.resolve();
+      return stubSession(userId);
+    },
     memberships: {
       async getPlatformRoles() {
         await Promise.resolve();
@@ -73,29 +79,29 @@ const storeAStaff: MembershipRow[] = [
 const cases: Case[] = [
   {
     name: "visitante nao autenticado NAO acessa /master (401)",
-    run: () => loadMaster({ cookieHeader: null, host: "x.example.com" }, deps({})),
+    run: () => loadMaster({ host: "x.example.com" }, deps({})),
     expect: "deny",
   },
   {
     name: "visitante nao autenticado NAO acessa /control (401)",
-    run: () => loadControl({ cookieHeader: null, host: "a.example.com" }, deps({})),
+    run: () => loadControl({ host: "a.example.com" }, deps({})),
     expect: "deny",
   },
   {
     name: "visitante nao autenticado NAO acessa /admin (401)",
-    run: () => loadStoreAdmin({ cookieHeader: null, host: "s.example.com" }, deps({})),
+    run: () => loadStoreAdmin({ host: "s.example.com" }, deps({})),
     expect: "deny",
   },
   {
     name: "tenant comum NAO acessa /master (403)",
-    run: () => loadMaster({ cookieHeader: "s", host: null }, userDeps(U, [], tenantA, {})),
+    run: () => loadMaster({ host: null }, userDeps(U, [], tenantA, {})),
     expect: "deny",
   },
   {
     name: "platform_support NAO acessa /master (403)",
     run: () =>
       loadMaster(
-        { cookieHeader: "s", host: null },
+        { host: null },
         userDeps(U, ["platform_support"], [], {}),
       ),
     expect: "deny",
@@ -103,19 +109,19 @@ const cases: Case[] = [
   {
     name: "platform_owner acessa /master",
     run: () =>
-      loadMaster({ cookieHeader: "s", host: null }, userDeps(U, ["platform_owner"], [], {})),
+      loadMaster({ host: null }, userDeps(U, ["platform_owner"], [], {})),
     expect: "allow",
   },
   {
     name: "platform_admin acessa /master",
     run: () =>
-      loadMaster({ cookieHeader: "s", host: null }, userDeps(U, ["platform_admin"], [], {})),
+      loadMaster({ host: null }, userDeps(U, ["platform_admin"], [], {})),
     expect: "allow",
   },
   {
     name: "usuario do Tenant A nao acessa /control do Tenant B",
     run: () =>
-      loadControl({ cookieHeader: "s", host: "b.example.com" }, userDeps(U, [], tenantA, {
+      loadControl({ host: "b.example.com" }, userDeps(U, [], tenantA, {
         "b.example.com": { tenantId: TB, storeId: null },
       })),
     expect: "deny",
@@ -123,7 +129,7 @@ const cases: Case[] = [
   {
     name: "usuario do Tenant A acessa /control do Tenant A",
     run: () =>
-      loadControl({ cookieHeader: "s", host: "a.example.com" }, userDeps(U, [], tenantA, {
+      loadControl({ host: "a.example.com" }, userDeps(U, [], tenantA, {
         "a.example.com": { tenantId: TA, storeId: null },
       })),
     expect: "allow",
@@ -131,7 +137,7 @@ const cases: Case[] = [
   {
     name: "usuario da Store A nao acessa /admin da Store B",
     run: () =>
-      loadStoreAdmin({ cookieHeader: "s", host: "sb.example.com" }, userDeps(U, [], storeAAdmin, {
+      loadStoreAdmin({ host: "sb.example.com" }, userDeps(U, [], storeAAdmin, {
         "sb.example.com": { tenantId: TA, storeId: SB },
       })),
     expect: "deny",
@@ -139,7 +145,7 @@ const cases: Case[] = [
   {
     name: "store_staff nao acessa /admin (role insuficiente)",
     run: () =>
-      loadStoreAdmin({ cookieHeader: "s", host: "sa.example.com" }, userDeps(U, [], storeAStaff, {
+      loadStoreAdmin({ host: "sa.example.com" }, userDeps(U, [], storeAStaff, {
         "sa.example.com": { tenantId: TA, storeId: SA },
       })),
     expect: "deny",
@@ -147,7 +153,7 @@ const cases: Case[] = [
   {
     name: "store_admin acessa /admin da propria store",
     run: () =>
-      loadStoreAdmin({ cookieHeader: "s", host: "sa.example.com" }, userDeps(U, [], storeAAdmin, {
+      loadStoreAdmin({ host: "sa.example.com" }, userDeps(U, [], storeAAdmin, {
         "sa.example.com": { tenantId: TA, storeId: SA },
       })),
     expect: "allow",
