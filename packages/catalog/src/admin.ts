@@ -127,7 +127,49 @@ export interface NormalizedMerchantBannerInput {
   position: number;
 }
 
+export interface MerchantAdminProduct {
+  id: string;
+  categoryId: string | null;
+  name: string;
+  slug: string;
+  sku: string | null;
+  priceCents: number;
+  compareAtPriceCents: number | null;
+  costCents: number | null;
+  active: boolean;
+  trackInventory: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MerchantAdminCategory {
+  id: string;
+  parentId: string | null;
+  name: string;
+  slug: string;
+  active: boolean;
+  position: number;
+}
+
+export interface MerchantAdminBanner {
+  id: string;
+  objectKey: string;
+  title: string | null;
+  subtitle: string | null;
+  linkUrl: string | null;
+  active: boolean;
+  position: number;
+}
+
+export interface MerchantCatalogAdminSnapshot {
+  products: MerchantAdminProduct[];
+  categories: MerchantAdminCategory[];
+  banners: MerchantAdminBanner[];
+  settings: NormalizedMerchantCatalogSettingsInput;
+}
+
 export interface CatalogAdminRepository {
+  getSnapshot(scope: CatalogScope): Promise<MerchantCatalogAdminSnapshot>;
   createProduct(
     scope: CatalogScope,
     input: NormalizedMerchantProductInput,
