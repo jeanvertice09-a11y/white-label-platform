@@ -13,6 +13,13 @@ export type {
   CatalogPage,
   StorefrontSnapshot,
 } from "./types.ts";
+export type {
+  ProductMutationInput,
+  VariantMutationInput,
+  CategoryMutationInput,
+  BannerMutationInput,
+  CatalogSettingsMutationInput,
+} from "./admin-types.ts";
 export {
   CatalogScopeError,
   assertCatalogScope,
@@ -42,4 +49,6 @@ export {
 } from "./storefront.ts";
 export { defaultCatalogSettings } from "./defaults.ts";
 export { createCatalogReadRepository } from "./postgres-read.ts";
+export { createCatalogAdminRepository } from "./postgres-admin.ts";
 export type { CatalogReadRepository, CatalogSqlExecutor } from "./repository.ts";
+export type { CatalogAdminRepository } from "./admin-repository.ts";
