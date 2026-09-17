@@ -1,0 +1,15 @@
+﻿{
+    "version":  "0.1.0",
+    "types":  "./src/index.ts",
+    "type":  "module",
+    "name":  "@white-label/payments",
+    "private":  true,
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit -p ../../tsconfig.json",
+                    "build":  "echo build @white-label/payments ok"
+                },
+    "exports":  {
+                    ".":  "./src/index.ts"
+                },
+    "main":  "./src/index.ts"
+}

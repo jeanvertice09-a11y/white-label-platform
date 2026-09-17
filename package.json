@@ -1,0 +1,36 @@
+{
+  "name": "white-label-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma SaaS White-Label Multi-Tenant — fundação (modular monolith)",
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun --filter '@white-label/web' dev",
+    "dev:worker": "bun --filter '@white-label/worker' dev",
+    "build": "bun run build:packages && bun run build:web && bun run build:worker",
+    "build:packages": "tsc --noEmit -p tsconfig.json",
+    "build:web": "bun --filter '@white-label/web' build",
+    "build:worker": "bun --filter '@white-label/worker' build",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test tests/unit packages/*/src --timeout 10000",
+    "test:integration": "bun test tests/integration --timeout 15000",
+    "test:security": "bun test tests/security --timeout 15000",
+    "test:all": "bun test tests/unit tests/integration tests/security packages/*/src --timeout 15000",
+    "test:e2e": "bun tests/e2e/smoke.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.49.1",
+    "@types/bun": "^1.2.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vite": "^6.0.7"
+  }
+}

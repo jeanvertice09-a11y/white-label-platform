@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+.output/
+coverage/
+playwright-report/
+test-results/
+
+# Env — nunca commitar segredos; preservar .env.example
+.env
+.env.*
+!.env.example
+
+# Bun / Node
+bun.lockb
+*.tsbuildinfo
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
