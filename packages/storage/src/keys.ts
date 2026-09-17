@@ -1,7 +1,12 @@
-import { randomUUID } from "node:crypto";
-
 function slug(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+}
+
+function randomObjectId(): string {
+  if (!globalThis.crypto?.randomUUID) {
+    throw new Error("Gerador seguro de UUID indisponível");
+  }
+  return globalThis.crypto.randomUUID();
 }
 
 export type StorageKind =
@@ -14,7 +19,7 @@ export type StorageKind =
   | "brand"
   | "misc";
 
-/** Key canônica: tenants/{t}/stores/{s}/... — sempre gerada no servidor. */
+/** Key canônica: tenants/{t}/stores/{s}/... — o servidor continua sendo a autoridade do upload. */
 export function buildObjectKey(args: {
   tenantId: string;
   storeId?: string;
@@ -29,7 +34,7 @@ export function buildObjectKey(args: {
   const store = args.storeId ? slug(args.storeId) : null;
   if (args.storeId && !store) throw new Error("storeId inválido");
   const scope = store ? `${base}/stores/${store}` : base;
-  return `${scope}/${args.kind}/${randomUUID()}.${ext}`;
+  return `${scope}/${args.kind}/${randomObjectId()}.${ext}`;
 }
 
 export function assertKeyBelongsToTenant(objectKey: string, tenantId: string): void {

@@ -6,6 +6,7 @@ on:
       - feat/merchant-admin-catalog-gpt
     paths:
       - .github/workflows/sync-route-tree.yml
+      - packages/storage/src/keys.ts
 
 permissions:
   contents: write
