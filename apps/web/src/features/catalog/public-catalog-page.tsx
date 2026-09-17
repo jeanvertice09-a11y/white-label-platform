@@ -22,6 +22,9 @@ import { CatalogProductDetail } from "./product-detail.tsx";
 import { CatalogCartPanel } from "./cart-panel.tsx";
 import type { PublicCatalogPayload } from "./view-model.ts";
 
+type ListingState = ReturnType<typeof useCatalogListing>;
+type ProductState = ReturnType<typeof useProductSelection>;
+
 export function PublicCatalogPage(props: {
   initial: PublicCatalogPayload;
 }): React.JSX.Element {
@@ -29,16 +32,11 @@ export function PublicCatalogPage(props: {
   const product = useProductSelection();
   const [cart, setCart] = useState<CatalogCart>(() => initialCatalogCart(props.initial));
   const settings = listing.payload.catalog.settings;
-  const products = listing.payload.catalog.products;
 
   function addSelected(): void {
-    if (!product.selected) return;
+    if (product.selected === null) return;
     setCart(
-      addProductPayloadToCart(
-        cart,
-        product.selected,
-        product.selectedVariantId,
-      ),
+      addProductPayloadToCart(cart, product.selected, product.selectedVariantId),
     );
     product.closeProduct();
   }
@@ -54,6 +52,32 @@ export function PublicCatalogPage(props: {
         itemCount={getCartItemCount(cart)}
       />
       <CatalogBanner payload={listing.payload} />
+      <CatalogMain
+        listing={listing}
+        product={product}
+        onAddSelected={addSelected}
+      />
+      <CatalogCartPanel
+        storeName={listing.payload.store.name}
+        cart={cart}
+        settings={settings}
+        onCartChange={setCart}
+      />
+    </section>
+  );
+}
+
+function CatalogMain(props: {
+  listing: ListingState;
+  product: ProductState;
+  onAddSelected: () => void;
+}): React.JSX.Element {
+  const { listing, product } = props;
+  const settings = listing.payload.catalog.settings;
+  const products = listing.payload.catalog.products;
+
+  return (
+    <>
       <CatalogFilters
         query={listing.query}
         searchText={listing.searchText}
@@ -62,13 +86,7 @@ export function PublicCatalogPage(props: {
         onSearchText={listing.setSearchText}
         onReload={listing.reload}
       />
-      {settings.showCategories && listing.payload.catalog.categories.length > 0 ? (
-        <CategoryChips
-          categories={listing.payload.catalog.categories}
-          query={listing.query}
-          onReload={listing.reload}
-        />
-      ) : null}
+      <CategorySection listing={listing} />
       <CatalogProductGrid
         products={products.items}
         mediaBaseUrl={listing.payload.mediaBaseUrl}
@@ -83,22 +101,43 @@ export function PublicCatalogPage(props: {
         onReload={listing.reload}
       />
       {product.detailLoading ? <LoadingProduct /> : null}
-      {product.selected ? (
-        <CatalogProductDetail
-          payload={product.selected}
-          selectedVariantId={product.selectedVariantId}
-          onVariantChange={product.setSelectedVariantId}
-          onAdd={addSelected}
-          onClose={product.closeProduct}
-        />
-      ) : null}
-      <CatalogCartPanel
-        storeName={listing.payload.store.name}
-        cart={cart}
-        settings={settings}
-        onCartChange={setCart}
+      <SelectedProduct
+        product={product}
+        onAddSelected={props.onAddSelected}
       />
-    </section>
+    </>
+  );
+}
+
+function CategorySection({ listing }: { listing: ListingState }): React.JSX.Element | null {
+  const categories = listing.payload.catalog.categories;
+  if (!listing.payload.catalog.settings.showCategories || categories.length === 0) {
+    return null;
+  }
+
+  return (
+    <CategoryChips
+      categories={categories}
+      query={listing.query}
+      onReload={listing.reload}
+    />
+  );
+}
+
+function SelectedProduct(props: {
+  product: ProductState;
+  onAddSelected: () => void;
+}): React.JSX.Element | null {
+  if (props.product.selected === null) return null;
+
+  return (
+    <CatalogProductDetail
+      payload={props.product.selected}
+      selectedVariantId={props.product.selectedVariantId}
+      onVariantChange={props.product.setSelectedVariantId}
+      onAdd={props.onAddSelected}
+      onClose={props.product.closeProduct}
+    />
   );
 }
 
@@ -115,16 +154,18 @@ function catalogStyle(settings: PublicCatalogPayload["catalog"]["settings"]): CS
     "--catalog-primary": settings.primaryColor,
     "--catalog-accent": settings.accentColor,
     "--catalog-bg": settings.backgroundColor,
-    fontFamily: fonts[settings.fontKey] ?? fonts["system"],
+    fontFamily: fonts[settings.fontKey],
   } as CSSProperties;
 }
 
 function CatalogBanner(props: {
   payload: PublicCatalogPayload;
 }): React.JSX.Element | null {
-  const banner = props.payload.catalog.banners[0];
-  const url = buildCatalogMediaUrl(props.payload.mediaBaseUrl, banner?.objectKey);
-  if (!banner || !url) return null;
+  const banners = props.payload.catalog.banners;
+  if (banners.length === 0) return null;
+  const banner = banners[0];
+  const url = buildCatalogMediaUrl(props.payload.mediaBaseUrl, banner.objectKey);
+  if (url === null) return null;
 
   return (
     <a href={banner.linkUrl ?? "#produtos"} style={{ display: "block", marginBottom: 24 }}>
