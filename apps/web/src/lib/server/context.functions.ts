@@ -1,38 +1,26 @@
-// RPC boundary: server functions exportadas p/ client via TanStack Start.
-// Este arquivo usa createServerFn e importa lógica pura de *.server.ts.
-// Pode ser importado pelo client (não é .server.ts).
+// RPC boundary: server functions exportadas para uso isomórfico via TanStack Start.
+// Todo código server-only fica referenciado diretamente dentro dos handlers,
+// permitindo que o compilador remova essas dependências do bundle do navegador.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
-import { loadControl, loadMaster, loadStoreAdmin, createRealDeps } from "./route-context.server.ts";
-import type { RouteDeps } from "./route-context.server.ts";
+import {
+  createRealDeps,
+  loadControl,
+  loadMaster,
+  loadStoreAdmin,
+} from "./route-context.server.ts";
 
-function requestInput(): { host: string | null } {
-  return {
-    host: getRequestHost(),
-  };
-}
-
-let realDepsPromise: Promise<RouteDeps> | null = null;
-
-async function getRealDeps(): Promise<RouteDeps> {
-  if (!realDepsPromise) {
-    realDepsPromise = createRealDeps();
-  }
-  return realDepsPromise;
-}
-
-/** Server functions: executam no servidor; client recebe apenas stub RPC. */
 export const getMasterContext = createServerFn({ method: "GET" }).handler(async () => {
-  const deps = await getRealDeps();
-  return loadMaster(requestInput(), deps);
+  const deps = await createRealDeps();
+  return loadMaster({ host: getRequestHost() }, deps);
 });
 
 export const getControlContext = createServerFn({ method: "GET" }).handler(async () => {
-  const deps = await getRealDeps();
-  return loadControl(requestInput(), deps);
+  const deps = await createRealDeps();
+  return loadControl({ host: getRequestHost() }, deps);
 });
 
 export const getStoreAdminContext = createServerFn({ method: "GET" }).handler(async () => {
-  const deps = await getRealDeps();
-  return loadStoreAdmin(requestInput(), deps);
+  const deps = await createRealDeps();
+  return loadStoreAdmin({ host: getRequestHost() }, deps);
 });
