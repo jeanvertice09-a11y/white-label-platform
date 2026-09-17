@@ -1,22 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AdminPage, Card } from "../features/store-admin/ui.tsx";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { PageHead } from "../features/store-admin/admin-shell.tsx";
 
 export const Route = createFileRoute("/admin/settings")({
   component: SettingsPage,
 });
 
-function SettingsPage(): React.JSX.Element {
+function SettingsPage() {
   return (
-    <AdminPage
-      title="Configurações"
-      description="Configurações gerais do lojista serão ampliadas sem misturar o escopo do Control."
-    >
-      <Card>
-        <p style={{ margin: 0 }}>
-          As configurações de catálogo disponíveis agora ficam em{" "}
-          <a href="/admin/store/catalog">Minha loja → Catálogo</a>.
-        </p>
-      </Card>
-    </AdminPage>
+    <div className="k-page">
+      <PageHead
+        title="Configurações"
+        description="A fundação atual concentra as configurações relacionadas à loja e ao catálogo."
+      />
+      <div className="k-card">
+        <h2>Configurações da loja</h2>
+        <p className="k-muted">Acesse aparência, banners, catálogo, WhatsApp e checkout.</p>
+        <Link className="k-button" to="/admin/store">Abrir Minha loja</Link>
+      </div>
+    </div>
   );
 }

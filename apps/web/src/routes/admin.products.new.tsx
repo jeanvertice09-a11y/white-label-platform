@@ -1,18 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
+import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { ProductForm } from "../features/store-admin/product-form.tsx";
-import { AdminPage } from "../features/store-admin/ui.tsx";
+import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
 
 export const Route = createFileRoute("/admin/products/new")({
   loader: () => getMerchantCatalogOverview(),
   component: NewProductPage,
 });
 
-function NewProductPage(): React.JSX.Element {
+function NewProductPage() {
   const data = Route.useLoaderData();
   return (
-    <AdminPage title="Novo produto" description="Cadastre um produto real no catálogo da sua loja.">
-      <ProductForm categories={data.categories} />
-    </AdminPage>
+    <div className="k-page">
+      <PageHead title="Novo produto" description="Cadastre as informações comerciais do produto." />
+      <ProductForm product={null} categories={data.categories} />
+    </div>
   );
 }

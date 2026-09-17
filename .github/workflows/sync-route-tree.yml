@@ -1,0 +1,46 @@
+name: sync-route-tree
+
+on:
+  push:
+    branches:
+      - feat/merchant-admin-catalog-gpt
+    paths:
+      - .github/workflows/sync-route-tree.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/merchant-admin-catalog-gpt
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - name: Generate TanStack route tree
+        run: bun --filter '@white-label/web' build
+      - name: Ensure only route tree changed
+        shell: bash
+        run: |
+          CHANGED="$(git diff --name-only)"
+          if [ -n "$CHANGED" ] && [ "$CHANGED" != "apps/web/src/routeTree.gen.ts" ]; then
+            echo "Unexpected tracked files changed:"
+            echo "$CHANGED"
+            exit 1
+          fi
+      - name: Commit generated route tree
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/src/routeTree.gen.ts
+          if git diff --cached --quiet; then
+            echo "routeTree.gen.ts already synchronized"
+            exit 0
+          fi
+          git commit -m "chore: sync TanStack route tree"
+          git push origin HEAD:feat/merchant-admin-catalog-gpt

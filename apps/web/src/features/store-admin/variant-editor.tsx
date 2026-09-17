@@ -1,103 +1,129 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useRouter } from "@tanstack/react-router";
 import type { ProductVariant } from "@white-label/catalog";
 import {
   createMerchantVariant,
   updateMerchantVariant,
 } from "../../lib/server/catalog-admin.functions.ts";
-import { buttonStyle, Card, Field, gridStyle, inputStyle, Money } from "./ui.tsx";
+import { centsToInput, moneyToCents } from "./format.ts";
 
-function readPrice(value: FormDataEntryValue | null): number {
-  const parsed = Number(String(value ?? "").replace(",", "."));
-  if (!Number.isFinite(parsed) || parsed < 0) throw new Error("Preço inválido");
-  return Math.round(parsed * 100);
-}
-
-function VariantForm(props: {
+interface VariantFormProps {
   productId: string;
   variant?: ProductVariant;
-  onSaved: () => void;
-}): React.JSX.Element {
+}
+
+function VariantForm({ productId, variant }: VariantFormProps) {
+  const router = useRouter();
+  const [name, setName] = useState(variant?.name ?? "");
+  const [sku, setSku] = useState(variant?.sku ?? "");
+  const [price, setPrice] = useState(centsToInput(variant?.priceCents ?? 0));
+  const [stock, setStock] = useState(String(variant?.stockQuantity ?? 0));
+  const [attribute, setAttribute] = useState(Object.keys(variant?.attributes ?? {})[0] ?? "");
+  const [value, setValue] = useState(Object.values(variant?.attributes ?? {})[0] ?? "");
+  const [active, setActive] = useState(variant?.active ?? true);
+  const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const variant = props.variant;
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setStatus("Salvando...");
+    setSaving(true);
+    setStatus("");
+    const input = {
+      productId,
+      name: name.trim(),
+      sku: sku.trim() || null,
+      attributes: attribute.trim() && value.trim() ? { [attribute.trim()]: value.trim() } : {},
+      priceCents: moneyToCents(price),
+      compareAtPriceCents: variant?.compareAtPriceCents ?? null,
+      costCents: variant?.costCents ?? null,
+      active,
+      stockQuantity: Number.parseInt(stock || "0", 10),
+      position: variant?.position ?? 0,
+    };
     try {
-      const input = {
-        productId: props.productId,
-        name: String(form.get("name") ?? "").trim(),
-        sku: String(form.get("sku") ?? "").trim() || null,
-        attributes: {},
-        priceCents: readPrice(form.get("price")),
-        compareAtPriceCents: null,
-        costCents: null,
-        active: form.get("active") === "on",
-        stockQuantity: Number(form.get("stockQuantity") ?? 0),
-        position: Number(form.get("position") ?? 0),
-      };
       if (variant) {
         await updateMerchantVariant({ data: { id: variant.id, input } });
       } else {
         await createMerchantVariant({ data: input });
+        setName("");
+        setSku("");
+        setPrice("0,00");
+        setStock("0");
+        setAttribute("");
+        setValue("");
       }
-      setStatus("Salvo.");
-      props.onSaved();
+      setStatus("Variante salva.");
+      await router.invalidate();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Erro ao salvar variante.");
+      setStatus(error instanceof Error ? error.message : "Não foi possível salvar a variante.");
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
-    <form onSubmit={(event) => { void submit(event); }} style={{ display: "grid", gap: 12 }}>
-      <div style={gridStyle}>
-        <Field label="Nome da variante">
-          <input style={inputStyle} name="name" required defaultValue={variant?.name ?? ""} />
-        </Field>
-        <Field label="SKU">
-          <input style={inputStyle} name="sku" defaultValue={variant?.sku ?? ""} />
-        </Field>
-        <Field label="Preço (R$)">
-          <input style={inputStyle} name="price" required inputMode="decimal" defaultValue={((variant?.priceCents ?? 0) / 100).toFixed(2)} />
-        </Field>
-        <Field label="Estoque">
-          <input style={inputStyle} name="stockQuantity" type="number" min={0} defaultValue={variant?.stockQuantity ?? 0} />
-        </Field>
-        <Field label="Posição">
-          <input style={inputStyle} name="position" type="number" min={0} defaultValue={variant?.position ?? 0} />
-        </Field>
+    <form className="k-card k-form" onSubmit={(event) => void submit(event)}>
+      <div className="k-form__grid">
+        <div className="k-field">
+          <label>Nome da variante</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: P, Azul" required />
+        </div>
+        <div className="k-field">
+          <label>SKU</label>
+          <input value={sku} onChange={(e) => setSku(e.target.value)} />
+        </div>
+        <div className="k-field">
+          <label>Preço</label>
+          <input inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} required />
+        </div>
+        <div className="k-field">
+          <label>Estoque</label>
+          <input type="number" min="0" value={stock} onChange={(e) => setStock(e.target.value)} />
+        </div>
+        <div className="k-field">
+          <label>Atributo</label>
+          <input value={attribute} onChange={(e) => setAttribute(e.target.value)} placeholder="Ex.: tamanho" />
+        </div>
+        <div className="k-field">
+          <label>Valor</label>
+          <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Ex.: P" />
+        </div>
       </div>
-      <label><input name="active" type="checkbox" defaultChecked={variant?.active ?? true} /> Ativa</label>
-      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-        <button style={buttonStyle} type="submit">{variant ? "Salvar variante" : "Adicionar variante"}</button>
-        <span style={{ fontSize: 13, color: "#6b7280" }}>{status}</span>
+      <label className="k-check">
+        <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+        Variante ativa
+      </label>
+      <div className="k-actions">
+        {status ? <span className="k-status">{status}</span> : null}
+        <button className="k-button" type="submit" disabled={saving}>
+          {saving ? "Salvando…" : variant ? "Atualizar variante" : "Adicionar variante"}
+        </button>
       </div>
     </form>
   );
 }
 
-export function VariantEditor(props: {
+export function VariantEditor(props: Readonly<{
   productId: string;
   variants: ProductVariant[];
-}): React.JSX.Element {
-  const refresh = (): void => window.location.reload();
+}>) {
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <Card>
-        <h2 style={{ marginTop: 0 }}>Nova variante</h2>
-        <VariantForm productId={props.productId} onSaved={refresh} />
-      </Card>
-      {props.variants.length === 0 ? null : props.variants.map((variant) => (
-        <Card key={variant.id}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
-            <strong>{variant.name}</strong>
-            <span><Money cents={variant.priceCents} /></span>
-          </div>
-          <VariantForm productId={props.productId} variant={variant} onSaved={refresh} />
-        </Card>
-      ))}
-    </div>
+    <section className="k-page">
+      <div>
+        <h2>Variantes</h2>
+        <p className="k-muted">Cada variante mantém seu próprio preço e estoque.</p>
+      </div>
+      <VariantForm productId={props.productId} />
+      {props.variants.length ? (
+        <div className="k-stack">
+          {props.variants.map((variant) => (
+            <VariantForm key={variant.id} productId={props.productId} variant={variant} />
+          ))}
+        </div>
+      ) : (
+        <div className="k-empty">Nenhuma variante cadastrada.</div>
+      )}
+    </section>
   );
 }

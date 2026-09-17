@@ -1,126 +1,121 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
+import { useRouter } from "@tanstack/react-router";
 import type { CatalogSettings } from "@white-label/catalog";
 import { saveMerchantCatalogSettings } from "../../lib/server/catalog-admin.functions.ts";
-import { buttonStyle, Card, Field, gridStyle, inputStyle } from "./ui.tsx";
 
-export function CatalogSettingsForm(props: {
-  settings: CatalogSettings;
-  mode?: "catalog" | "appearance";
-}): React.JSX.Element {
+export function CatalogSettingsForm({ settings }: Readonly<{ settings: CatalogSettings }>) {
+  const router = useRouter();
+  const [layout, setLayout] = useState(settings.layout);
+  const [fontFamily, setFontFamily] = useState(settings.fontFamily);
+  const [checkoutMode, setCheckoutMode] = useState(settings.checkoutMode);
+  const [primaryColor, setPrimaryColor] = useState(settings.primaryColor);
+  const [accentColor, setAccentColor] = useState(settings.accentColor);
+  const [backgroundColor, setBackgroundColor] = useState(settings.backgroundColor);
+  const [showSearch, setShowSearch] = useState(settings.showSearch);
+  const [showCategories, setShowCategories] = useState(settings.showCategories);
+  const [showPrice, setShowPrice] = useState(settings.showPrice);
+  const [showStock, setShowStock] = useState(settings.showStock);
+  const [phone, setPhone] = useState(settings.whatsappPhone ?? "");
+  const [message, setMessage] = useState(settings.whatsappMessage);
+  const [seoTitle, setSeoTitle] = useState(settings.seoTitle ?? "");
+  const [seoDescription, setSeoDescription] = useState(settings.seoDescription ?? "");
+  const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const settings = props.settings;
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    setStatus("Salvando...");
+    setSaving(true);
+    setStatus("");
     try {
       await saveMerchantCatalogSettings({
         data: {
-          layout: form.get("layout") === "modern" ? "modern" : "classic",
-          primaryColor: String(form.get("primaryColor") ?? ""),
-          accentColor: String(form.get("accentColor") ?? ""),
-          backgroundColor: String(form.get("backgroundColor") ?? ""),
-          fontFamily: String(form.get("fontFamily") ?? "system") as CatalogSettings["fontFamily"],
-          showSearch: form.get("showSearch") === "on",
-          showCategories: form.get("showCategories") === "on",
-          showPrice: form.get("showPrice") === "on",
-          showStock: form.get("showStock") === "on",
+          layout,
+          primaryColor,
+          accentColor,
+          backgroundColor,
+          fontFamily,
+          showSearch,
+          showCategories,
+          showPrice,
+          showStock,
           labels: settings.labels,
-          whatsappPhone: String(form.get("whatsappPhone") ?? "").trim() || null,
-          whatsappMessage: String(form.get("whatsappMessage") ?? "").trim(),
-          checkoutMode: String(form.get("checkoutMode") ?? "whatsapp") as CatalogSettings["checkoutMode"],
-          seoTitle: String(form.get("seoTitle") ?? "").trim() || null,
-          seoDescription: String(form.get("seoDescription") ?? "").trim() || null,
+          whatsappPhone: phone.trim() || null,
+          whatsappMessage: message.trim(),
+          checkoutMode,
+          seoTitle: seoTitle.trim() || null,
+          seoDescription: seoDescription.trim() || null,
         },
       });
       setStatus("Configurações salvas.");
+      await router.invalidate();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Erro ao salvar configurações.");
+      setStatus(error instanceof Error ? error.message : "Não foi possível salvar.");
+    } finally {
+      setSaving(false);
     }
   }
 
+  const previewStyle = {
+    "--preview-primary": primaryColor,
+    "--preview-accent": accentColor,
+    "--preview-bg": backgroundColor,
+  } as CSSProperties;
+
   return (
-    <Card>
-      <form onSubmit={(event) => { void submit(event); }} style={{ display: "grid", gap: 18 }}>
-        <div style={gridStyle}>
-          <Field label="Layout">
-            <select style={inputStyle} name="layout" defaultValue={settings.layout}>
-              <option value="classic">Classic</option>
-              <option value="modern">Modern</option>
-            </select>
-          </Field>
-          <Field label="Fonte">
-            <select style={inputStyle} name="fontFamily" defaultValue={settings.fontFamily}>
-              <option value="system">Sistema</option>
-              <option value="inter">Inter</option>
-              <option value="sans">Sans</option>
-              <option value="serif">Serif</option>
-            </select>
-          </Field>
-          <Field label="Cor principal">
-            <input style={inputStyle} name="primaryColor" type="color" defaultValue={settings.primaryColor} />
-          </Field>
-          <Field label="Cor de destaque">
-            <input style={inputStyle} name="accentColor" type="color" defaultValue={settings.accentColor} />
-          </Field>
-          <Field label="Fundo">
-            <input style={inputStyle} name="backgroundColor" type="color" defaultValue={settings.backgroundColor} />
-          </Field>
+    <form className="k-form" onSubmit={(event) => void submit(event)}>
+      <div className="k-card k-form__grid">
+        <div className="k-field">
+          <label>Layout</label>
+          <select value={layout} onChange={(e) => setLayout(e.target.value as "classic" | "modern")}>
+            <option value="classic">Classic</option>
+            <option value="modern">Modern</option>
+          </select>
         </div>
-
-        {props.mode !== "appearance" ? (
-          <>
-            <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-              <label><input name="showSearch" type="checkbox" defaultChecked={settings.showSearch} /> Mostrar busca</label>
-              <label><input name="showCategories" type="checkbox" defaultChecked={settings.showCategories} /> Mostrar categorias</label>
-              <label><input name="showPrice" type="checkbox" defaultChecked={settings.showPrice} /> Mostrar preço</label>
-              <label><input name="showStock" type="checkbox" defaultChecked={settings.showStock} /> Mostrar estoque</label>
-            </div>
-            <div style={gridStyle}>
-              <Field label="WhatsApp">
-                <input style={inputStyle} name="whatsappPhone" defaultValue={settings.whatsappPhone ?? ""} placeholder="5562999990000" />
-              </Field>
-              <Field label="Checkout">
-                <select style={inputStyle} name="checkoutMode" defaultValue={settings.checkoutMode}>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="online">Online (futuro)</option>
-                  <option value="both">Ambos</option>
-                </select>
-              </Field>
-            </div>
-            <Field label="Mensagem padrão do WhatsApp">
-              <textarea style={{ ...inputStyle, minHeight: 90 }} name="whatsappMessage" defaultValue={settings.whatsappMessage} />
-            </Field>
-            <div style={gridStyle}>
-              <Field label="SEO title">
-                <input style={inputStyle} name="seoTitle" defaultValue={settings.seoTitle ?? ""} />
-              </Field>
-              <Field label="SEO description">
-                <input style={inputStyle} name="seoDescription" defaultValue={settings.seoDescription ?? ""} />
-              </Field>
-            </div>
-          </>
-        ) : (
-          <>
-            <input type="hidden" name="showSearch" value={settings.showSearch ? "on" : ""} />
-            <input type="hidden" name="showCategories" value={settings.showCategories ? "on" : ""} />
-            <input type="hidden" name="showPrice" value={settings.showPrice ? "on" : ""} />
-            <input type="hidden" name="showStock" value={settings.showStock ? "on" : ""} />
-            <input type="hidden" name="whatsappPhone" value={settings.whatsappPhone ?? ""} />
-            <input type="hidden" name="whatsappMessage" value={settings.whatsappMessage} />
-            <input type="hidden" name="checkoutMode" value={settings.checkoutMode} />
-            <input type="hidden" name="seoTitle" value={settings.seoTitle ?? ""} />
-            <input type="hidden" name="seoDescription" value={settings.seoDescription ?? ""} />
-          </>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button style={buttonStyle} type="submit">Salvar configurações</button>
-          <span style={{ color: "#6b7280", fontSize: 14 }}>{status}</span>
+        <div className="k-field">
+          <label>Fonte</label>
+          <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value as CatalogSettings["fontFamily"])}>
+            <option value="system">Sistema</option><option value="inter">Inter</option>
+            <option value="sans">Sans</option><option value="serif">Serif</option>
+          </select>
         </div>
-      </form>
-    </Card>
+        <div className="k-field">
+          <label>Modo de checkout</label>
+          <select value={checkoutMode} onChange={(e) => setCheckoutMode(e.target.value as CatalogSettings["checkoutMode"])}>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="online">Online (preparação)</option>
+            <option value="both">WhatsApp + Online</option>
+          </select>
+        </div>
+        <div className="k-field">
+          <label>WhatsApp</label>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="5562999999999" />
+        </div>
+        <div className="k-field"><label>Cor principal</label><input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} /></div>
+        <div className="k-field"><label>Cor de destaque</label><input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} /></div>
+        <div className="k-field"><label>Fundo</label><input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} /></div>
+        <div className="k-field k-field--full"><label>Mensagem padrão do WhatsApp</label><textarea value={message} onChange={(e) => setMessage(e.target.value)} /></div>
+        <div className="k-field"><label>SEO title</label><input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} /></div>
+        <div className="k-field"><label>SEO description</label><input value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} /></div>
+        <label className="k-check"><input type="checkbox" checked={showSearch} onChange={(e) => setShowSearch(e.target.checked)} />Mostrar busca</label>
+        <label className="k-check"><input type="checkbox" checked={showCategories} onChange={(e) => setShowCategories(e.target.checked)} />Mostrar categorias</label>
+        <label className="k-check"><input type="checkbox" checked={showPrice} onChange={(e) => setShowPrice(e.target.checked)} />Mostrar preços</label>
+        <label className="k-check"><input type="checkbox" checked={showStock} onChange={(e) => setShowStock(e.target.checked)} />Mostrar estoque</label>
+      </div>
+      <div className="k-preview" style={previewStyle}>
+        <div className="k-preview__bar" />
+        <div className="k-preview__body">
+          <strong>Prévia {layout === "modern" ? "Modern" : "Classic"}</strong>
+          <p className="k-muted">Personalização estruturada, sem CSS ou JavaScript arbitrário.</p>
+          <span className="k-preview__accent">Destaque da loja</span>
+        </div>
+      </div>
+      <div className="k-actions">
+        {status ? <span className="k-status">{status}</span> : null}
+        <button className="k-button k-button--primary" type="submit" disabled={saving}>
+          {saving ? "Salvando…" : "Salvar configurações"}
+        </button>
+      </div>
+    </form>
   );
 }

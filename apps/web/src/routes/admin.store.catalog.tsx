@@ -1,21 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
+import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { CatalogSettingsForm } from "../features/store-admin/catalog-settings-form.tsx";
-import { AdminPage } from "../features/store-admin/ui.tsx";
+import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
 
 export const Route = createFileRoute("/admin/store/catalog")({
   loader: () => getMerchantCatalogOverview(),
   component: CatalogSettingsPage,
 });
 
-function CatalogSettingsPage(): React.JSX.Element {
+function CatalogSettingsPage() {
   const data = Route.useLoaderData();
   return (
-    <AdminPage
-      title="Configurações do catálogo"
-      description="Busca, categorias, preços, WhatsApp, checkout e SEO."
-    >
+    <div className="k-page">
+      <PageHead
+        title="Configurações do catálogo"
+        description="Controle visibilidade, WhatsApp, checkout e SEO do catálogo público."
+      />
       <CatalogSettingsForm settings={data.settings} />
-    </AdminPage>
+    </div>
   );
 }

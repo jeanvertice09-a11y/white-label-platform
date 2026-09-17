@@ -1,18 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { PageHead } from "../features/store-admin/admin-shell.tsx";
+import { CategoryManager } from "../features/store-admin/category-manager.tsx";
 import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
-import { CategoriesPanel } from "../features/store-admin/categories-panel.tsx";
-import { AdminPage } from "../features/store-admin/ui.tsx";
 
 export const Route = createFileRoute("/admin/categories")({
   loader: () => getMerchantCatalogOverview(),
   component: CategoriesPage,
 });
 
-function CategoriesPage(): React.JSX.Element {
+function CategoriesPage() {
   const data = Route.useLoaderData();
   return (
-    <AdminPage title="Categorias" description="Organize categorias e subcategorias da sua loja.">
-      <CategoriesPanel categories={data.categories} />
-    </AdminPage>
+    <div className="k-page">
+      <PageHead
+        title="Categorias"
+        description="Organize categorias e subcategorias sem permitir referências entre lojas."
+      />
+      <CategoryManager categories={data.categories} />
+    </div>
   );
 }

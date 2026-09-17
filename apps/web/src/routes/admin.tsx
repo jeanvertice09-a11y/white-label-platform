@@ -1,6 +1,6 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { loadStoreAdminContext } from "../lib/client-guard.ts";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "../features/store-admin/admin-shell.tsx";
+import { loadStoreAdminContext } from "../lib/client-guard.ts";
 import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/admin")({

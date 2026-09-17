@@ -1,122 +1,139 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useRouter } from "@tanstack/react-router";
 import type { Category, Product } from "@white-label/catalog";
 import {
   createMerchantProduct,
   updateMerchantProduct,
 } from "../../lib/server/catalog-admin.functions.ts";
-import { buttonStyle, Card, Field, gridStyle, inputStyle } from "./ui.tsx";
+import { centsToInput, moneyToCents, slugify } from "./format.ts";
 
-function cents(value: FormDataEntryValue | null): number {
-  const normalized = String(value ?? "").trim().replace(",", ".");
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed < 0) throw new Error("Valor inválido");
-  return Math.round(parsed * 100);
-}
-
-function optionalCents(value: FormDataEntryValue | null): number | null {
-  if (!String(value ?? "").trim()) return null;
-  return cents(value);
-}
-
-export function ProductForm(props: {
-  product?: Product;
+interface ProductFormProps {
+  product: Product | null;
   categories: Category[];
-}): React.JSX.Element {
+}
+
+function optionalCents(value: string): number | null {
+  return value.trim() ? moneyToCents(value) : null;
+}
+
+export function ProductForm({ product, categories }: ProductFormProps) {
+  const router = useRouter();
+  const [name, setName] = useState(product?.name ?? "");
+  const [slug, setSlug] = useState(product?.slug ?? "");
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [sku, setSku] = useState(product?.sku ?? "");
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
+  const [price, setPrice] = useState(centsToInput(product?.priceCents ?? 0));
+  const [compareAt, setCompareAt] = useState(centsToInput(product?.compareAtPriceCents ?? null));
+  const [cost, setCost] = useState(centsToInput(product?.costCents ?? null));
+  const [stock, setStock] = useState(String(product?.stockQuantity ?? 0));
+  const [active, setActive] = useState(product?.active ?? true);
+  const [trackInventory, setTrackInventory] = useState(product?.trackInventory ?? false);
+  const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const product = props.product;
+
+  function changeName(value: string): void {
+    setName(value);
+    if (!product && (!slug || slug === slugify(name))) setSlug(slugify(value));
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setStatus("Salvando...");
-    const form = new FormData(event.currentTarget);
+    setSaving(true);
+    setStatus("");
     try {
       const input = {
-        name: String(form.get("name") ?? "").trim(),
-        slug: String(form.get("slug") ?? "").trim(),
-        description: String(form.get("description") ?? "").trim() || null,
-        sku: String(form.get("sku") ?? "").trim() || null,
-        categoryId: String(form.get("categoryId") ?? "").trim() || null,
-        priceCents: cents(form.get("price")),
-        compareAtPriceCents: optionalCents(form.get("compareAtPrice")),
-        costCents: optionalCents(form.get("cost")),
-        active: form.get("active") === "on",
-        trackInventory: form.get("trackInventory") === "on",
-        stockQuantity: Number(form.get("stockQuantity") ?? 0),
-        position: Number(form.get("position") ?? 0),
+        name: name.trim(),
+        slug: slug.trim(),
+        description: description.trim() || null,
+        sku: sku.trim() || null,
+        categoryId: categoryId || null,
+        priceCents: moneyToCents(price),
+        compareAtPriceCents: optionalCents(compareAt),
+        costCents: optionalCents(cost),
+        active,
+        trackInventory,
+        stockQuantity: Number.parseInt(stock || "0", 10),
+        position: product?.position ?? 0,
       };
       if (product) {
-        const saved = await updateMerchantProduct({ data: { id: product.id, input } });
-        if (!saved) throw new Error("Produto não encontrado");
+        await updateMerchantProduct({ data: { id: product.id, input } });
         setStatus("Produto salvo.");
+        await router.invalidate();
       } else {
-        const saved = await createMerchantProduct({ data: input });
-        window.location.assign("/admin/products/" + saved.id);
+        const created = await createMerchantProduct({ data: input });
+        await router.navigate({
+          to: "/admin/products/$id",
+          params: { id: created.id },
+        });
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Não foi possível salvar.");
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
-    <Card>
-      <form onSubmit={(event) => { void submit(event); }} style={{ display: "grid", gap: 18 }}>
-        <div style={gridStyle}>
-          <Field label="Nome">
-            <input style={inputStyle} name="name" required maxLength={160} defaultValue={product?.name ?? ""} />
-          </Field>
-          <Field label="Slug" hint="Ex.: camiseta-basica">
-            <input style={inputStyle} name="slug" required maxLength={180} defaultValue={product?.slug ?? ""} />
-          </Field>
-          <Field label="SKU">
-            <input style={inputStyle} name="sku" maxLength={180} defaultValue={product?.sku ?? ""} />
-          </Field>
-          <Field label="Categoria">
-            <select style={inputStyle} name="categoryId" defaultValue={product?.categoryId ?? ""}>
-              <option value="">Sem categoria</option>
-              {props.categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
-              ))}
-            </select>
-          </Field>
+    <form className="k-form" onSubmit={(event) => void submit(event)}>
+      <div className="k-card k-form__grid">
+        <div className="k-field">
+          <label htmlFor="product-name">Nome</label>
+          <input id="product-name" value={name} onChange={(e) => changeName(e.target.value)} required />
         </div>
-
-        <Field label="Descrição">
-          <textarea
-            style={{ ...inputStyle, minHeight: 110, resize: "vertical" }}
-            name="description"
-            defaultValue={product?.description ?? ""}
-          />
-        </Field>
-
-        <div style={gridStyle}>
-          <Field label="Preço (R$)">
-            <input style={inputStyle} name="price" inputMode="decimal" required defaultValue={((product?.priceCents ?? 0) / 100).toFixed(2)} />
-          </Field>
-          <Field label="Preço comparativo (R$)">
-            <input style={inputStyle} name="compareAtPrice" inputMode="decimal" defaultValue={product?.compareAtPriceCents === null || product?.compareAtPriceCents === undefined ? "" : (product.compareAtPriceCents / 100).toFixed(2)} />
-          </Field>
-          <Field label="Custo (R$)">
-            <input style={inputStyle} name="cost" inputMode="decimal" defaultValue={product?.costCents === null || product?.costCents === undefined ? "" : (product.costCents / 100).toFixed(2)} />
-          </Field>
-          <Field label="Estoque">
-            <input style={inputStyle} name="stockQuantity" type="number" min={0} defaultValue={product?.stockQuantity ?? 0} />
-          </Field>
-          <Field label="Posição">
-            <input style={inputStyle} name="position" type="number" min={0} defaultValue={product?.position ?? 0} />
-          </Field>
+        <div className="k-field">
+          <label htmlFor="product-slug">Slug</label>
+          <input id="product-slug" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} required />
         </div>
-
-        <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-          <label><input name="active" type="checkbox" defaultChecked={product?.active ?? true} /> Ativo</label>
-          <label><input name="trackInventory" type="checkbox" defaultChecked={product?.trackInventory ?? false} /> Controlar estoque</label>
+        <div className="k-field k-field--full">
+          <label htmlFor="product-description">Descrição</label>
+          <textarea id="product-description" value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
-
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button style={buttonStyle} type="submit">Salvar produto</button>
-          <span style={{ color: "#6b7280", fontSize: 14 }}>{status}</span>
+        <div className="k-field">
+          <label htmlFor="product-sku">SKU</label>
+          <input id="product-sku" value={sku} onChange={(e) => setSku(e.target.value)} />
         </div>
-      </form>
-    </Card>
+        <div className="k-field">
+          <label htmlFor="product-category">Categoria</label>
+          <select id="product-category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">Sem categoria</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="k-field">
+          <label htmlFor="product-price">Preço</label>
+          <input id="product-price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} required />
+        </div>
+        <div className="k-field">
+          <label htmlFor="product-compare">Preço comparativo</label>
+          <input id="product-compare" inputMode="decimal" value={compareAt} onChange={(e) => setCompareAt(e.target.value)} />
+        </div>
+        <div className="k-field">
+          <label htmlFor="product-cost">Custo</label>
+          <input id="product-cost" inputMode="decimal" value={cost} onChange={(e) => setCost(e.target.value)} />
+        </div>
+        <div className="k-field">
+          <label htmlFor="product-stock">Estoque</label>
+          <input id="product-stock" type="number" min="0" value={stock} onChange={(e) => setStock(e.target.value)} />
+        </div>
+        <label className="k-check">
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+          Produto ativo
+        </label>
+        <label className="k-check">
+          <input type="checkbox" checked={trackInventory} onChange={(e) => setTrackInventory(e.target.checked)} />
+          Controlar estoque
+        </label>
+      </div>
+      <div className="k-actions">
+        {status ? <span className="k-status">{status}</span> : null}
+        <button className="k-button k-button--primary" type="submit" disabled={saving}>
+          {saving ? "Salvando…" : "Salvar produto"}
+        </button>
+      </div>
+    </form>
   );
 }

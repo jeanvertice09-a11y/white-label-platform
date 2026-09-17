@@ -1,50 +1,54 @@
 import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { adminTheme } from "./admin-theme.ts";
 
 const items = [
-  ["/admin", "Início"],
-  ["/admin/products", "Produtos"],
-  ["/admin/categories", "Categorias"],
-  ["/admin/store/appearance", "Aparência"],
-  ["/admin/store/banners", "Banners"],
-  ["/admin/store/catalog", "Catálogo"],
+  { to: "/admin", label: "Início", exact: true },
+  { to: "/admin/products", label: "Produtos", exact: false },
+  { to: "/admin/categories", label: "Categorias", exact: false },
+  { to: "/admin/store", label: "Minha loja", exact: false },
+  { to: "/admin/settings", label: "Configurações", exact: false },
 ] as const;
 
-export function AdminShell(props: { children: ReactNode }): React.JSX.Element {
+export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div style={{ display: "grid", gap: 22 }}>
-      <div
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: 16,
-          background: "#fff",
-          padding: "14px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          overflowX: "auto",
-        }}
-      >
-        <strong style={{ whiteSpace: "nowrap" }}>Admin da loja</strong>
-        <nav style={{ display: "flex", gap: 6 }}>
-          {items.map(([href, label]) => (
-            <a
-              key={href}
-              href={href}
-              style={{
-                textDecoration: "none",
-                color: "#374151",
-                padding: "8px 10px",
-                borderRadius: 9,
-                whiteSpace: "nowrap",
-                fontSize: 14,
-              }}
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
+    <section className="k-admin">
+      <style>{adminTheme}</style>
+      <div className="k-admin__top">
+        <div className="k-admin__brand">
+          <span className="k-admin__eyebrow">Administrativo do lojista</span>
+          <strong className="k-admin__title">Kataluu Store</strong>
+        </div>
       </div>
-      {props.children}
-    </div>
+      <nav className="k-admin__nav" aria-label="Administração da loja">
+        {items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            activeOptions={{ exact: item.exact }}
+            activeProps={{ "data-status": "active" }}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+      {children}
+    </section>
+  );
+}
+
+export function PageHead(props: Readonly<{
+  title: string;
+  description: string;
+  action?: ReactNode;
+}>) {
+  return (
+    <header className="k-page__head">
+      <div>
+        <h1>{props.title}</h1>
+        <p>{props.description}</p>
+      </div>
+      {props.action}
+    </header>
   );
 }

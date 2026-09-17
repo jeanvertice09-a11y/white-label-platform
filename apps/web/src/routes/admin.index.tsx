@@ -1,67 +1,43 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
-import { AdminPage, Card, EmptyState, Money, gridStyle } from "../features/store-admin/ui.tsx";
 
 export const Route = createFileRoute("/admin/")({
   loader: () => getMerchantCatalogOverview(),
-  component: Dashboard,
+  component: AdminDashboard,
 });
 
-function Dashboard(): React.JSX.Element {
+function AdminDashboard() {
   const data = Route.useLoaderData();
-  const activeProducts = data.products.items.filter((product) => product.active).length;
-
   return (
-    <AdminPage
-      title={data.store.name}
-      description="Visão geral real da sua loja e do catálogo."
-    >
-      <div style={gridStyle}>
-        <Card>
-          <small style={{ color: "#6b7280" }}>Produtos cadastrados</small>
-          <strong style={{ display: "block", fontSize: 28, marginTop: 6 }}>{data.products.total}</strong>
-        </Card>
-        <Card>
-          <small style={{ color: "#6b7280" }}>Produtos ativos nesta página</small>
-          <strong style={{ display: "block", fontSize: 28, marginTop: 6 }}>{activeProducts}</strong>
-        </Card>
-        <Card>
-          <small style={{ color: "#6b7280" }}>Categorias</small>
-          <strong style={{ display: "block", fontSize: 28, marginTop: 6 }}>{data.categories.length}</strong>
-        </Card>
-        <Card>
-          <small style={{ color: "#6b7280" }}>Layout</small>
-          <strong style={{ display: "block", fontSize: 22, marginTop: 6 }}>{data.settings.layout}</strong>
-        </Card>
+    <div className="k-page">
+      <PageHead
+        title={data.store.name}
+        description="Visão geral do catálogo e da configuração pública da sua loja."
+        action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
+      />
+      <div className="k-grid">
+        <div className="k-card">
+          <div className="k-stat__label">Produtos</div>
+          <div className="k-stat__value">{data.products.total}</div>
+        </div>
+        <div className="k-card">
+          <div className="k-stat__label">Categorias</div>
+          <div className="k-stat__value">{data.categories.length}</div>
+        </div>
+        <div className="k-card">
+          <div className="k-stat__label">Banners</div>
+          <div className="k-stat__value">{data.banners.length}</div>
+        </div>
       </div>
-
-      <Card>
-        <h2 style={{ marginTop: 0 }}>Produtos recentes</h2>
-        {data.products.items.length === 0 ? (
-          <EmptyState title="Nenhum produto" text="Crie seu primeiro produto para começar o catálogo." />
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {data.products.items.slice(0, 5).map((product) => (
-              <a
-                key={product.id}
-                href={"/admin/products/" + product.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  textDecoration: "none",
-                  color: "#111827",
-                  padding: "10px 0",
-                  borderBottom: "1px solid #f3f4f6",
-                }}
-              >
-                <span>{product.name}</span>
-                <Money cents={product.priceCents} />
-              </a>
-            ))}
-          </div>
-        )}
-      </Card>
-    </AdminPage>
+      <div className="k-card">
+        <h2>Catálogo</h2>
+        <p className="k-muted">
+          Layout atual: <strong>{data.settings.layout === "modern" ? "Modern" : "Classic"}</strong>.
+          Configure aparência, WhatsApp e visibilidade em Minha loja.
+        </p>
+        <Link className="k-button" to="/admin/store">Configurar minha loja</Link>
+      </div>
+    </div>
   );
 }

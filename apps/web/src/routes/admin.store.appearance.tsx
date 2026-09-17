@@ -1,18 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
+import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { CatalogSettingsForm } from "../features/store-admin/catalog-settings-form.tsx";
-import { AdminPage } from "../features/store-admin/ui.tsx";
+import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
 
 export const Route = createFileRoute("/admin/store/appearance")({
   loader: () => getMerchantCatalogOverview(),
   component: AppearancePage,
 });
 
-function AppearancePage(): React.JSX.Element {
+function AppearancePage() {
   const data = Route.useLoaderData();
   return (
-    <AdminPage title="Aparência" description="Escolha layout, cores e tipografia do catálogo.">
-      <CatalogSettingsForm settings={data.settings} mode="appearance" />
-    </AdminPage>
+    <div className="k-page">
+      <PageHead
+        title="Aparência da loja"
+        description="Escolha o layout e personalize cores de forma estruturada e segura."
+      />
+      <CatalogSettingsForm settings={data.settings} />
+    </div>
   );
 }
