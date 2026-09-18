@@ -44,6 +44,7 @@ export interface RouteDeps {
   memberships: MembershipReader;
   resolveTenantForHost: (host: string) => Promise<TenantResolution | null>;
   getTenantStatus: (tenantId: string) => Promise<string | null>;
+  getStoreStatus?: (tenantId: string, storeId: string) => Promise<string | null>;
 }
 
 export const pendingMembershipReader: MembershipReader = {
@@ -83,6 +84,16 @@ export async function createRealDeps(): Promise<RouteDeps> {
       if (error) throw new Error(`Falha ao consultar status da White Label: ${error.message}`);
       return typeof data?.status === "string" ? data.status : null;
     },
+    getStoreStatus: async (tenantId: string, storeId: string) => {
+      const { data, error } = await serviceClient
+        .from("stores")
+        .select("status")
+        .eq("tenant_id", tenantId)
+        .eq("id", storeId)
+        .maybeSingle();
+      if (error) throw new Error(`Falha ao consultar status da loja: ${error.message}`);
+      return typeof data?.status === "string" ? data.status : null;
+    },
   };
 }
 
@@ -110,6 +121,16 @@ async function assertTenantOperational(deps: RouteDeps, tenantId: TenantId): Pro
   const status = await deps.getTenantStatus(String(tenantId));
   if (status === null) throw new HttpError(404, "White Label não encontrada", "TENANT_NOT_FOUND");
   if (status === "suspended") throw new HttpError(403, "White Label suspensa", "TENANT_SUSPENDED");
+}
+async function assertStoreOperational(
+  deps: RouteDeps,
+  tenantId: TenantId,
+  storeId: StoreId,
+): Promise<void> {
+  if (!deps.getStoreStatus) return;
+  const status = await deps.getStoreStatus(String(tenantId), String(storeId));
+  if (status === null) throw new HttpError(404, "Loja não encontrada", "STORE_NOT_FOUND");
+  if (status === "suspended") throw new HttpError(403, "Loja suspensa", "STORE_SUSPENDED");
 }
 
 /** /master: somente host de sistema + platform_owner/platform_admin. */
@@ -166,6 +187,7 @@ export async function loadStoreAdmin(input: RouteInput, deps: RouteDeps = defaul
     const resolved = requireDomain(await deps.resolveTenantForHost(host), "store_admin");
     if (!resolved.storeId) throw new HttpError(500, "store_admin sem store", "DOMAIN_SCOPE_INVALID");
     await assertTenantOperational(deps, resolved.tenantId);
+    await assertStoreOperational(deps, resolved.tenantId, resolved.storeId);
     const memberships = await deps.memberships.getTenantMemberships(session.userId);
     const ctx = buildContext(session, memberships, resolved.tenantId, resolved.storeId, host);
     assertCanAccessStoreAdmin({ storeRoles: ctx.storeRoles });
