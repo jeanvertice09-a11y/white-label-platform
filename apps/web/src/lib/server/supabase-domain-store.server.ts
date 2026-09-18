@@ -47,6 +47,8 @@ export function createServiceDomainStore(): DomainStore {
         .from("domains")
         .select("id,tenant_id,store_id,hostname,type,status,verified_at")
         .eq("hostname", hostname)
+        .eq("status", "active")
+        .not("verified_at", "is", null)
         .limit(1);
       if (result.error) throw new Error(`Falha ao resolver domínio: ${result.error.message}`);
       const row = firstRow(result.data);

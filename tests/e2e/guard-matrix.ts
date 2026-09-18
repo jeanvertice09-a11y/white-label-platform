@@ -1,9 +1,6 @@
-// Matriz de autorização EXECUTÁVEL: exercita os loaders server-side reais
-// (loadMaster/loadControl/loadStoreAdmin) usados pelas rotas /master,
-// /control e /admin. Falha fechada: qualquer contexto inválido nega.
-// Usada por tests/security/route-guards.test.ts e tests/e2e/smoke.ts.
+// Matriz executável dos loaders reais /master, /control e /admin.
 import { loadControl, loadMaster, loadStoreAdmin } from "../../apps/web/src/lib/server/route-context.server.ts";
-import type { RouteDeps } from "../../apps/web/src/lib/server/route-context.server.ts";
+import type { RouteDeps, TenantResolution } from "../../apps/web/src/lib/server/route-context.server.ts";
 import { stubSession } from "../../apps/web/src/lib/server/session.server.ts";
 import type { PlatformRole } from "../../packages/auth/src/roles.ts";
 import type { MembershipRow } from "../../packages/tenant/src/context.ts";
@@ -13,6 +10,7 @@ const TA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" as TenantId;
 const TB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb" as TenantId;
 const SA = "aaaaaaaa-0000-4000-8000-aaaaaaaaaaaa" as StoreId;
 const SB = "bbbbbbbb-0000-4000-8000-bbbbbbbbbbbb" as StoreId;
+const U = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 interface Case {
   name: string;
@@ -44,7 +42,12 @@ function deps(over: Partial<RouteDeps>): RouteDeps {
   };
 }
 
-function userDeps(userId: string, platform: PlatformRole[], tenants: MembershipRow[], hostMap: Record<string, { tenantId: TenantId; storeId: StoreId | null }>): RouteDeps {
+function userDeps(
+  userId: string,
+  platform: PlatformRole[],
+  tenants: MembershipRow[],
+  hostMap: Record<string, TenantResolution>,
+): RouteDeps {
   return deps({
     resolveSession: async () => {
       await Promise.resolve();
@@ -67,7 +70,6 @@ function userDeps(userId: string, platform: PlatformRole[], tenants: MembershipR
   });
 }
 
-const U = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const tenantA: MembershipRow[] = [{ tenantId: TA, tenantRoles: ["tenant_admin"], storeRoles: [] }];
 const storeAAdmin: MembershipRow[] = [
   { tenantId: TA, storeId: SA, tenantRoles: ["tenant_admin"], storeRoles: ["store_admin"] },
@@ -78,84 +80,107 @@ const storeAStaff: MembershipRow[] = [
 
 const cases: Case[] = [
   {
-    name: "visitante nao autenticado NAO acessa /master (401)",
-    run: () => loadMaster({ host: "x.example.com" }, deps({})),
+    name: "visitante não autenticado não acessa /master",
+    run: () => loadMaster({ host: "control.geral.kataluu.com.br" }, deps({})),
     expect: "deny",
   },
   {
-    name: "visitante nao autenticado NAO acessa /control (401)",
+    name: "visitante não autenticado não acessa /control",
     run: () => loadControl({ host: "a.example.com" }, deps({})),
     expect: "deny",
   },
   {
-    name: "visitante nao autenticado NAO acessa /admin (401)",
+    name: "visitante não autenticado não acessa /admin",
     run: () => loadStoreAdmin({ host: "s.example.com" }, deps({})),
     expect: "deny",
   },
   {
-    name: "tenant comum NAO acessa /master (403)",
-    run: () => loadMaster({ host: null }, userDeps(U, [], tenantA, {})),
+    name: "tenant comum não acessa /master",
+    run: () => loadMaster(
+      { host: "control.geral.kataluu.com.br" },
+      userDeps(U, [], tenantA, {}),
+    ),
     expect: "deny",
   },
   {
-    name: "platform_support NAO acessa /master (403)",
-    run: () =>
-      loadMaster(
-        { host: null },
-        userDeps(U, ["platform_support"], [], {}),
-      ),
+    name: "platform_support não acessa /master",
+    run: () => loadMaster(
+      { host: "control.geral.kataluu.com.br" },
+      userDeps(U, ["platform_support"], [], {}),
+    ),
     expect: "deny",
   },
   {
-    name: "platform_owner acessa /master",
-    run: () =>
-      loadMaster({ host: null }, userDeps(U, ["platform_owner"], [], {})),
+    name: "platform_owner acessa /master no host correto",
+    run: () => loadMaster(
+      { host: "control.geral.kataluu.com.br" },
+      userDeps(U, ["platform_owner"], [], {}),
+    ),
     expect: "allow",
   },
   {
-    name: "platform_admin acessa /master",
-    run: () =>
-      loadMaster({ host: null }, userDeps(U, ["platform_admin"], [], {})),
+    name: "platform_admin acessa /master no host correto",
+    run: () => loadMaster(
+      { host: "control.geral.kataluu.com.br" },
+      userDeps(U, ["platform_admin"], [], {}),
+    ),
     expect: "allow",
   },
   {
-    name: "usuario do Tenant A nao acessa /control do Tenant B",
-    run: () =>
-      loadControl({ host: "b.example.com" }, userDeps(U, [], tenantA, {
-        "b.example.com": { tenantId: TB, storeId: null },
-      })),
+    name: "master não existe em host arbitrário",
+    run: () => loadMaster(
+      { host: "x.example.com" },
+      userDeps(U, ["platform_owner"], [], {}),
+    ),
     expect: "deny",
   },
   {
-    name: "usuario do Tenant A acessa /control do Tenant A",
-    run: () =>
-      loadControl({ host: "a.example.com" }, userDeps(U, [], tenantA, {
-        "a.example.com": { tenantId: TA, storeId: null },
-      })),
+    name: "Tenant A não acessa /control do Tenant B",
+    run: () => loadControl({ host: "b.example.com" }, userDeps(U, [], tenantA, {
+      "b.example.com": { tenantId: TB, storeId: null, type: "tenant_panel" },
+    })),
+    expect: "deny",
+  },
+  {
+    name: "Tenant A acessa tenant_panel do próprio tenant",
+    run: () => loadControl({ host: "a.example.com" }, userDeps(U, [], tenantA, {
+      "a.example.com": { tenantId: TA, storeId: null, type: "tenant_panel" },
+    })),
     expect: "allow",
   },
   {
-    name: "usuario da Store A nao acessa /admin da Store B",
-    run: () =>
-      loadStoreAdmin({ host: "sb.example.com" }, userDeps(U, [], storeAAdmin, {
-        "sb.example.com": { tenantId: TA, storeId: SB },
-      })),
+    name: "tenant_site não vira /control",
+    run: () => loadControl({ host: "site.example.com" }, userDeps(U, [], tenantA, {
+      "site.example.com": { tenantId: TA, storeId: null, type: "tenant_site" },
+    })),
     expect: "deny",
   },
   {
-    name: "store_staff nao acessa /admin (role insuficiente)",
-    run: () =>
-      loadStoreAdmin({ host: "sa.example.com" }, userDeps(U, [], storeAStaff, {
-        "sa.example.com": { tenantId: TA, storeId: SA },
-      })),
+    name: "Store A não acessa /admin da Store B",
+    run: () => loadStoreAdmin({ host: "sb.example.com" }, userDeps(U, [], storeAAdmin, {
+      "sb.example.com": { tenantId: TA, storeId: SB, type: "store_admin" },
+    })),
     expect: "deny",
   },
   {
-    name: "store_admin acessa /admin da propria store",
-    run: () =>
-      loadStoreAdmin({ host: "sa.example.com" }, userDeps(U, [], storeAAdmin, {
-        "sa.example.com": { tenantId: TA, storeId: SA },
-      })),
+    name: "store_catalog não vira /admin",
+    run: () => loadStoreAdmin({ host: "catalog.example.com" }, userDeps(U, [], storeAAdmin, {
+      "catalog.example.com": { tenantId: TA, storeId: SA, type: "store_catalog" },
+    })),
+    expect: "deny",
+  },
+  {
+    name: "store_staff não acessa /admin",
+    run: () => loadStoreAdmin({ host: "sa.example.com" }, userDeps(U, [], storeAStaff, {
+      "sa.example.com": { tenantId: TA, storeId: SA, type: "store_admin" },
+    })),
+    expect: "deny",
+  },
+  {
+    name: "store_admin acessa /admin da própria store",
+    run: () => loadStoreAdmin({ host: "sa.example.com" }, userDeps(U, [], storeAAdmin, {
+      "sa.example.com": { tenantId: TA, storeId: SA, type: "store_admin" },
+    })),
     expect: "allow",
   },
 ];

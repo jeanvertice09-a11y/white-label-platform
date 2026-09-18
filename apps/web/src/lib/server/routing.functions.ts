@@ -1,48 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { DomainResolver } from "@white-label/domains";
+import {
+  loginTargetForRoot,
+  normalizeRoutingHost,
+  rootTargetForDomainType,
+  systemTargetForHost,
+} from "../routing-targets.ts";
+import type { LoginTarget, RootTarget } from "../routing-targets.ts";
 import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
 
-export type RootTarget = "/master" | "/control" | "/admin" | "/catalog" | null;
-export type LoginTarget = "/master" | "/control" | "/admin" | "/";
-
-function normalizeHost(rawHost: string | null): string {
-  return (rawHost ?? "").toLowerCase().split(":")[0]?.replace(/\.$/, "") ?? "";
-}
+export type { LoginTarget, RootTarget } from "../routing-targets.ts";
 
 async function resolveTarget(rawHost: string | null): Promise<RootTarget> {
-  const host = normalizeHost(rawHost);
-
-  if (host === "control.geral.kataluu.com.br") return "/master";
-  if (host === "app.kataluu.com.br") return "/control";
-  if (host === "kataluu.com.br" || host === "www.kataluu.com.br" || host === "") {
-    return null;
-  }
+  const host = normalizeRoutingHost(rawHost);
+  const systemTarget = systemTargetForHost(host);
+  if (systemTarget !== undefined) return systemTarget;
 
   const resolver = new DomainResolver(createServiceDomainStore());
   const resolved = await resolver.resolve(host);
-  if (!resolved) return null;
-
-  switch (resolved.type) {
-    case "tenant_panel":
-      return "/control";
-    case "store_admin":
-      return "/admin";
-    case "store_catalog":
-    case "tenant_site":
-      return "/catalog";
-  }
-}
-
-function loginTarget(target: RootTarget): LoginTarget {
-  if (target === "/master" || target === "/control" || target === "/admin") return target;
-  return "/";
+  return resolved ? rootTargetForDomainType(resolved.type) : null;
 }
 
 export const getRootTarget = createServerFn({ method: "GET" }).handler(async () => {
   return resolveTarget(getRequestHost());
 });
 
-export const getLoginTarget = createServerFn({ method: "GET" }).handler(async () => {
-  return loginTarget(await resolveTarget(getRequestHost()));
+export const getLoginTarget = createServerFn({ method: "GET" }).handler(async (): Promise<LoginTarget> => {
+  return loginTargetForRoot(await resolveTarget(getRequestHost()));
 });

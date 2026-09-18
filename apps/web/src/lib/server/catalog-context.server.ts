@@ -7,8 +7,9 @@ import type {
   CatalogScope,
   StorefrontStore,
 } from "@white-label/catalog";
-import { DomainResolver, PostgresDomainStore } from "@white-label/domains";
+import { DomainResolver } from "@white-label/domains";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
+import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
 import { createRealDeps, loadStoreAdmin } from "./route-context.server.ts";
 
 export interface CatalogServerContext {
@@ -35,14 +36,13 @@ export async function createPublicCatalogContext(
   rawHost: string | null,
 ): Promise<CatalogServerContext> {
   const host = requireHost(rawHost);
-  const sql = createAdminSqlExecutor();
-  const resolver = new DomainResolver(new PostgresDomainStore(sql));
+  const resolver = new DomainResolver(createServiceDomainStore());
   const resolved = await resolver.resolve(host);
   if (!resolved || resolved.type !== "store_catalog" || !resolved.storeId) {
     throw new Error("Catálogo não encontrado");
   }
   const scope = { tenantId: resolved.tenantId, storeId: resolved.storeId };
-  const repository = createCatalogReadRepository(sql);
+  const repository = createCatalogReadRepository(createAdminSqlExecutor());
   const store = await loadStore(scope, repository);
   assertStorefrontAvailable(store);
   return { scope, repository, store };
