@@ -59,14 +59,22 @@ const PREPARE_CAMPAIGN_SQL = `with prepared as (
     )
   from prepared p where $4::uuid is not null
   returning id
+), prepared_result as (
+  select p.*,(select count(*)::integer from inserted) as recipient_count
+  from prepared p
+), retry_result as (
+  select c.*,
+    (select count(*)::integer from public.marketing_campaign_recipients r
+     where r.tenant_id=c.tenant_id and r.store_id=c.store_id
+       and r.campaign_id=c.id) as recipient_count
+  from public.marketing_campaigns c
+  where c.tenant_id=$1 and c.store_id=$2 and c.id=$3
+    and c.status in ('prepared','scheduled')
+    and not exists (select 1 from prepared)
 )
-select c.*,
-  (select count(*)::integer from public.marketing_campaign_recipients r
-   where r.tenant_id=$1 and r.store_id=$2 and r.campaign_id=$3)
-  as recipient_count
-from public.marketing_campaigns c
-where c.tenant_id=$1 and c.store_id=$2 and c.id=$3
-  and c.status in ('prepared','scheduled')`;
+select * from prepared_result
+union all
+select * from retry_result`;
 
 export async function createCampaign(
   sql: MarketingSqlExecutor,
