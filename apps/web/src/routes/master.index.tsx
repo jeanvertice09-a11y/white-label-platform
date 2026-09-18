@@ -20,12 +20,12 @@ function MasterDashboard() {
     <div className="master-stack">
       <MasterPageHeader title="Visão geral" description="Resumo operacional real da plataforma Kataluu." />
       <div className="master-metrics">
-        <MasterMetricCard label="Receita recebida" value={masterMoney(data.metrics.paidCents)} detail="Pagamentos platform_billing com status paid" />
-        <MasterMetricCard label="Plataformas" value={String(data.metrics.tenants)} detail={`${String(data.metrics.activeTenants)} ativas`} />
-        <MasterMetricCard label="Lojas ativas" value={String(data.metrics.activeStores)} detail="Stores com status active" />
-        <MasterMetricCard label="Em trial" value={String(data.metrics.trialTenants)} detail="Tenants em período de teste" />
-        <MasterMetricCard label="Assinaturas ativas" value={String(data.metrics.activeSubscriptions)} detail="Nível platform_billing" />
-        <MasterMetricCard label="Domínios ativos" value={String(data.metrics.activeDomains)} detail="Fonte: domains" />
+        <MasterMetricCard icon="revenue" label="Receita recebida" value={masterMoney(data.metrics.paidCents)} detail="Pagamentos platform_billing com status paid" />
+        <MasterMetricCard icon="platforms" label="Plataformas" value={String(data.metrics.tenants)} detail={`${String(data.metrics.activeTenants)} ativas`} />
+        <MasterMetricCard icon="store" label="Lojas ativas" value={String(data.metrics.activeStores)} detail="Stores com status active" />
+        <MasterMetricCard icon="activity" label="Em trial" value={String(data.metrics.trialTenants)} detail="Tenants em período de teste" />
+        <MasterMetricCard icon="subscriptions" label="Assinaturas ativas" value={String(data.metrics.activeSubscriptions)} detail="Nível platform_billing" />
+        <MasterMetricCard icon="domains" label="Domínios ativos" value={String(data.metrics.activeDomains)} detail="Fonte: domains" />
       </div>
       <div className="master-grid master-grid--two">
         <MasterPanel title="Atividade recente">
