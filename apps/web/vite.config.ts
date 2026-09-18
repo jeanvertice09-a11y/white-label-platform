@@ -9,11 +9,11 @@ export default defineConfig({
     outDir: "dist", 
     sourcemap: false,
     rollupOptions: {
-      external: ["@white-label/domains", "@white-label/auth", "@white-label/tenant", "@white-label/validation"],
+      external: ["@white-label/domains", "@white-label/auth", "@white-label/tenant", "@white-label/validation", "@white-label/ui"],
     },
   },
   ssr: {
-    external: ["@white-label/domains", "@white-label/auth", "@white-label/tenant", "@white-label/validation"],
+    external: ["@white-label/domains", "@white-label/auth", "@white-label/tenant", "@white-label/validation", "@white-label/ui"],
     noExternal: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-start"],
   },
 });

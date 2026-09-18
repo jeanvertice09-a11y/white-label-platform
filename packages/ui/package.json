@@ -5,11 +5,39 @@
     "name":  "@white-label/ui",
     "private":  true,
     "scripts":  {
-                    "typecheck":  "tsc --noEmit -p ../../tsconfig.json",
-                    "build":  "echo build @white-label/ui ok"
-                },
-    "exports":  {
-                    ".":  "./src/index.ts"
-                },
-    "main":  "./src/index.ts"
+        "typecheck":  "tsc --noEmit -p ../../tsconfig.json",
+        "build":  "echo build @white-label/ui ok"
+    },
+    "peerDependencies": {
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "@tanstack/react-router": "^1.95.1"
+    },
+    "exports": {
+        ".": "./src/index.ts",
+        "./components/Button": "./src/components/Button.tsx",
+        "./components/Input": "./src/components/Input.tsx",
+        "./components/Label": "./src/components/Label.tsx",
+        "./components/Card": "./src/components/Card.tsx",
+        "./components/Badge": "./src/components/Badge.tsx",
+        "./components/Avatar": "./src/components/Avatar.tsx",
+        "./components/Divider": "./src/components/Divider.tsx",
+        "./components/EmptyState": "./src/components/EmptyState.tsx",
+        "./components/ErrorState": "./src/components/ErrorState.tsx",
+        "./components/LoadingState": "./src/components/LoadingState.tsx",
+        "./components/PageHeader": "./src/components/PageHeader.tsx",
+        "./components/SectionHeader": "./src/components/SectionHeader.tsx",
+        "./components/MetricCard": "./src/components/MetricCard.tsx",
+        "./components/SidebarItem": "./src/components/SidebarItem.tsx",
+        "./components/Modal": "./src/components/Modal.tsx",
+        "./components/Table": "./src/components/Table.tsx",
+        "./components/Pagination": "./src/components/Pagination.tsx",
+        "./components/Tooltip": "./src/components/Tooltip.tsx",
+        "./components/Input": "./src/components/Input.tsx",
+        "./components/Label": "./src/components/Label.tsx",
+        "./components/Input": "./src/components/Input.tsx",
+        "./components/Avatar": "./src/components/Avatar.tsx",
+        "./components/Divider": "./src/components/Divider.tsx"
+    },
+    "main": "./src/index.ts"
 }

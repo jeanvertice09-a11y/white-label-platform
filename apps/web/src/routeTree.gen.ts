@@ -14,7 +14,14 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as ControlRouteImport } from './routes/control'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as MasterRouteImport } from './routes/master'
+import { Route as MasterIndexRouteImport } from './routes/master/index'
+import { Route as Master_layoutRouteImport } from './routes/master/__layout'
+import { Route as MasterAuditRouteImport } from './routes/master/audit'
+import { Route as MasterBillingRouteImport } from './routes/master/billing'
+import { Route as MasterInfrastructureRouteImport } from './routes/master/infrastructure'
+import { Route as MasterPlatformsRouteImport } from './routes/master/platforms'
+import { Route as MasterSettingsRouteImport } from './routes/master/settings'
+import { Route as MasterSupportRouteImport } from './routes/master/support'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,9 +48,44 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MasterRoute = MasterRouteImport.update({
-  id: '/master',
+const MasterIndexRoute = MasterIndexRouteImport.update({
+  id: '/master/',
+  path: '/master/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Master_layoutRoute = Master_layoutRouteImport.update({
+  id: '/master/__layout',
   path: '/master',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterAuditRoute = MasterAuditRouteImport.update({
+  id: '/master/audit',
+  path: '/master/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterBillingRoute = MasterBillingRouteImport.update({
+  id: '/master/billing',
+  path: '/master/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterInfrastructureRoute = MasterInfrastructureRouteImport.update({
+  id: '/master/infrastructure',
+  path: '/master/infrastructure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterPlatformsRoute = MasterPlatformsRouteImport.update({
+  id: '/master/platforms',
+  path: '/master/platforms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterSettingsRoute = MasterSettingsRouteImport.update({
+  id: '/master/settings',
+  path: '/master/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MasterSupportRoute = MasterSupportRouteImport.update({
+  id: '/master/support',
+  path: '/master/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -53,7 +95,14 @@ export interface FileRoutesByFullPath {
   '/catalog': typeof CatalogRoute
   '/control': typeof ControlRoute
   '/login': typeof LoginRoute
-  '/master': typeof MasterRoute
+  '/master': typeof Master_layoutRoute
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
+  '/master/': typeof MasterIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +110,13 @@ export interface FileRoutesByTo {
   '/catalog': typeof CatalogRoute
   '/control': typeof ControlRoute
   '/login': typeof LoginRoute
-  '/master': typeof MasterRoute
+  '/master': typeof MasterIndexRoute
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,15 +125,60 @@ export interface FileRoutesById {
   '/catalog': typeof CatalogRoute
   '/control': typeof ControlRoute
   '/login': typeof LoginRoute
-  '/master': typeof MasterRoute
+  '/master/__layout': typeof Master_layoutRoute
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
+  '/master/': typeof MasterIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/catalog' | '/control' | '/login' | '/master'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/catalog'
+    | '/control'
+    | '/login'
+    | '/master'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/master/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/catalog' | '/control' | '/login' | '/master'
+  to:
+    | '/'
+    | '/admin'
+    | '/catalog'
+    | '/control'
+    | '/login'
+    | '/master'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
   id:
-    '__root__' | '/' | '/admin' | '/catalog' | '/control' | '/login' | '/master'
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/catalog'
+    | '/control'
+    | '/login'
+    | '/master/__layout'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/master/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,7 +187,14 @@ export interface RootRouteChildren {
   CatalogRoute: typeof CatalogRoute
   ControlRoute: typeof ControlRoute
   LoginRoute: typeof LoginRoute
-  MasterRoute: typeof MasterRoute
+  Master_layoutRoute: typeof Master_layoutRoute
+  MasterAuditRoute: typeof MasterAuditRoute
+  MasterBillingRoute: typeof MasterBillingRoute
+  MasterInfrastructureRoute: typeof MasterInfrastructureRoute
+  MasterPlatformsRoute: typeof MasterPlatformsRoute
+  MasterSettingsRoute: typeof MasterSettingsRoute
+  MasterSupportRoute: typeof MasterSupportRoute
+  MasterIndexRoute: typeof MasterIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -127,11 +234,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/master': {
-      id: '/master'
+    '/master/': {
+      id: '/master/'
+      path: '/master'
+      fullPath: '/master/'
+      preLoaderRoute: typeof MasterIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/__layout': {
+      id: '/master/__layout'
       path: '/master'
       fullPath: '/master'
-      preLoaderRoute: typeof MasterRouteImport
+      preLoaderRoute: typeof Master_layoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/audit': {
+      id: '/master/audit'
+      path: '/master/audit'
+      fullPath: '/master/audit'
+      preLoaderRoute: typeof MasterAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/billing': {
+      id: '/master/billing'
+      path: '/master/billing'
+      fullPath: '/master/billing'
+      preLoaderRoute: typeof MasterBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/infrastructure': {
+      id: '/master/infrastructure'
+      path: '/master/infrastructure'
+      fullPath: '/master/infrastructure'
+      preLoaderRoute: typeof MasterInfrastructureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/platforms': {
+      id: '/master/platforms'
+      path: '/master/platforms'
+      fullPath: '/master/platforms'
+      preLoaderRoute: typeof MasterPlatformsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/settings': {
+      id: '/master/settings'
+      path: '/master/settings'
+      fullPath: '/master/settings'
+      preLoaderRoute: typeof MasterSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/master/support': {
+      id: '/master/support'
+      path: '/master/support'
+      fullPath: '/master/support'
+      preLoaderRoute: typeof MasterSupportRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -143,7 +299,14 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogRoute: CatalogRoute,
   ControlRoute: ControlRoute,
   LoginRoute: LoginRoute,
-  MasterRoute: MasterRoute,
+  Master_layoutRoute: Master_layoutRoute,
+  MasterAuditRoute: MasterAuditRoute,
+  MasterBillingRoute: MasterBillingRoute,
+  MasterInfrastructureRoute: MasterInfrastructureRoute,
+  MasterPlatformsRoute: MasterPlatformsRoute,
+  MasterSettingsRoute: MasterSettingsRoute,
+  MasterSupportRoute: MasterSupportRoute,
+  MasterIndexRoute: MasterIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

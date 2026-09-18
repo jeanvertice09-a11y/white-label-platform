@@ -5,6 +5,7 @@
     "": {
       "name": "white-label-platform",
       "dependencies": {
+        "@tanstack/react-router": "^1.95.1",
         "postgres": "^3.4.9",
       },
       "devDependencies": {
@@ -96,6 +97,11 @@
     "packages/ui": {
       "name": "@white-label/ui",
       "version": "0.1.0",
+      "peerDependencies": {
+        "@tanstack/react-router": "^1.95.1",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
     },
     "packages/validation": {
       "name": "@white-label/validation",
