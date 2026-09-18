@@ -87,6 +87,5 @@ export interface OrderTimelineEntry {
   id: string;
   action: string;
   actorUserId: string | null;
-  metadata: Record<string, unknown>;
   createdAt: string;
 }

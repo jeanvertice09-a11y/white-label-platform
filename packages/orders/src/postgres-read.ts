@@ -39,16 +39,12 @@ function rowTimestamp(value: unknown): string {
 }
 
 function mapTimeline(row: Record<string, unknown>): OrderTimelineEntry {
-  const metadata = row["metadata"];
   return {
     id: String(row["id"]),
     action: String(row["action"]),
     actorUserId: typeof row["actor_user_id"] === "string"
       ? row["actor_user_id"]
       : null,
-    metadata: metadata && typeof metadata === "object"
-      ? metadata as Record<string, unknown>
-      : {},
     createdAt: rowTimestamp(row["created_at"]),
   };
 }
@@ -97,7 +93,7 @@ export async function getOrderTimeline(
 ): Promise<OrderTimelineEntry[]> {
   assertOrderScope(scope);
   const rows = await sql.query(
-    `select a.id::text,a.actor_user_id::text,a.action,a.metadata,a.created_at
+    `select a.id::text,a.actor_user_id::text,a.action,a.created_at
      from public.audit_logs a
      where a.tenant_id=$1 and a.store_id=$2
        and a.resource_type='order' and a.resource_id=$3
