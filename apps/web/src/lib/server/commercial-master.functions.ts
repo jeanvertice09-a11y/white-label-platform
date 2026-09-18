@@ -29,8 +29,8 @@ export const getMasterCommercialSummary = createServerFn({ method: "GET" }).hand
        (select count(*) from public.store_subscriptions where status='suspended')::integer as suspended_subscriptions`,
     [],
   );
+  if (rows.length === 0) throw new Error("Resumo comercial indisponível");
   const row = rows[0];
-  if (!row) throw new Error("Resumo comercial indisponível");
   return {
     commercialPlans: Number(row["commercial_plans"]),
     activeCommercialPlans: Number(row["active_commercial_plans"]),
