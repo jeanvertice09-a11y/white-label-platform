@@ -1,7 +1,12 @@
 import type {
+  InventoryHistoryPage,
+  InventoryHistoryQuery,
   InventoryItem,
+  InventoryPage,
+  InventoryQuery,
   InventoryScope,
-  StockAdjustmentInput,
+  StockOperationInput,
+  StockOperationResult,
 } from "./types.ts";
 
 export interface InventorySqlExecutor {
@@ -10,5 +15,7 @@ export interface InventorySqlExecutor {
 
 export interface InventoryRepository {
   list(scope: InventoryScope): Promise<InventoryItem[]>;
-  adjust(scope: InventoryScope, input: StockAdjustmentInput): Promise<number>;
+  listPage(scope: InventoryScope, query: InventoryQuery): Promise<InventoryPage>;
+  history(scope: InventoryScope, query?: InventoryHistoryQuery): Promise<InventoryHistoryPage>;
+  move(scope: InventoryScope, input: StockOperationInput): Promise<StockOperationResult>;
 }
