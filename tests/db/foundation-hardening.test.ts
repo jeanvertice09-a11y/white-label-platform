@@ -17,7 +17,7 @@ describe("foundation hardening migration", () => {
     const exists = await h.db.query(
       "select to_regprocedure('public.rls_auto_enable()') is not null as present",
     );
-    if (!Boolean(exists[0]?.["present"])) return;
+    if (exists[0]?.["present"] !== true) return;
 
     const rows = await h.db.query(`
       select
