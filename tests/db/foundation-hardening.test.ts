@@ -47,14 +47,14 @@ describe("foundation hardening migration", () => {
 
   test("tabelas operacionais permanecem deny-by-default", async () => {
     const rows = await h.db.query(`
-      select tablename, count(policyname)::integer as policies
+      select expected.tablename, count(p.policyname)::integer as policies
       from (
         values ('catalog_settings'),('customers'),('coupons'),('domains'),
           ('payments'),('order_items'),('media_assets'),('webhook_events')
       ) as expected(tablename)
       left join pg_policies p
         on p.schemaname='public' and p.tablename=expected.tablename
-      group by tablename order by tablename
+      group by expected.tablename order by expected.tablename
     `);
     expect(rows.every((row) => Number(row["policies"]) === 0)).toBe(true);
   });
