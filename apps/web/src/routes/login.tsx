@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ChangeEvent, SyntheticEvent } from "react";
 import { useState } from "react";
 import { getBrowserClient, signInWithPassword } from "../lib/supabase-client.ts";
+import { getLoginTarget } from "../lib/server/routing.functions.ts";
 import "../styles/master.css";
 
 function handleAuthError(err: unknown): string {
@@ -9,11 +10,13 @@ function handleAuthError(err: unknown): string {
 }
 
 export const Route = createFileRoute("/login")({
+  loader: () => getLoginTarget(),
   component: LoginPage,
 });
 
 function LoginPage() {
   const navigate = useNavigate();
+  const destination = Route.useLoaderData();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +30,7 @@ function LoginPage() {
       await signInWithPassword(email, password);
       const { data } = await getBrowserClient().auth.getSession();
       if (!data.session) throw new Error("Login falhou: sessão não criada");
-      await navigate({ to: "/master" });
+      await navigate({ to: destination });
     } catch (err) {
       setError(handleAuthError(err));
     } finally {
@@ -40,8 +43,8 @@ function LoginPage() {
       <section className="auth-card">
         <div className="auth-brand"><span>K</span><strong>Kataluu</strong></div>
         <div className="auth-heading">
-          <h1>Acessar Super Admin</h1>
-          <p>Use sua conta administrativa da plataforma.</p>
+          <h1>Acessar painel</h1>
+          <p>Use sua conta autorizada para este endereço.</p>
         </div>
         <form onSubmit={(ev) => { void submit(ev); }} className="auth-form">
           <label htmlFor="email">E-mail</label>

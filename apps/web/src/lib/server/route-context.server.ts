@@ -143,16 +143,46 @@ function buildContext(
   });
 }
 
+function normalizeRouteHost(host: string): string {
+  return host.toLowerCase().split(":")[0]?.replace(/\.$/, "") ?? "";
+}
+
+function uniqueTenantIdForSystemApp(memberships: MembershipRow[]): TenantId {
+  const tenantIds = [...new Set(
+    memberships
+      .filter((membership) => membership.tenantRoles.length > 0)
+      .map((membership) => membership.tenantId),
+  )];
+
+  if (tenantIds.length === 0) {
+    throw new HttpError(403, "Usuário sem White Label vinculada", "TENANT_UNRESOLVED");
+  }
+  if (tenantIds.length > 1) {
+    throw new HttpError(403, "Seleção de White Label necessária", "TENANT_SELECTION_REQUIRED");
+  }
+  const tenantId = tenantIds[0];
+  if (!tenantId) {
+    throw new HttpError(403, "Tenant não resolvido", "TENANT_UNRESOLVED");
+  }
+  return tenantId;
+}
+
 /** /control: membership válida no tenant resolvido pelo host (servidor). */
 export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
     const session = await requireSession(input, deps);
     const host = input.host;
     if (!host) throw new HttpError(403, "Tenant não resolvido", "TENANT_UNRESOLVED");
-    const resolved = await deps.resolveTenantForHost(host);
-    if (!resolved) throw new HttpError(403, "Tenant não resolvido", "TENANT_UNRESOLVED");
+
     const memberships = await deps.memberships.getTenantMemberships(session.userId);
-    const ctx = buildContext(session, memberships, resolved.tenantId, undefined, host);
+    const normalizedHost = normalizeRouteHost(host);
+    const tenantId = normalizedHost === "app.kataluu.com.br"
+      ? uniqueTenantIdForSystemApp(memberships)
+      : (await deps.resolveTenantForHost(host))?.tenantId;
+
+    if (!tenantId) throw new HttpError(403, "Tenant não resolvido", "TENANT_UNRESOLVED");
+
+    const ctx = buildContext(session, memberships, tenantId, undefined, host);
     assertCanAccessTenantControl({ tenantRoles: ctx.tenantRoles });
     return ctx;
   } catch (e) {
