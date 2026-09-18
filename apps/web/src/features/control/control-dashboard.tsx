@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useState } from "react";
 import {
   DashboardIcon,
@@ -26,6 +26,11 @@ function money(cents: number): string {
 
 function date(value: string): string {
   return value ? new Date(value).toLocaleDateString("pt-BR") : "—";
+}
+
+function percent(value: number, total: number): number {
+  if (total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / total) * 100)));
 }
 
 function Metric(props: Readonly<{ label: string; value: ReactNode; detail: string; icon: DashboardIconName }>) {
@@ -61,18 +66,58 @@ function ControlSidebar(props: Readonly<{ data: ControlData; open: boolean; onCl
   );
 }
 
+function OverviewBar(props: Readonly<{ label: string; value: number; total: number; detail: string }>) {
+  const value = percent(props.value, props.total);
+  return (
+    <div className="control-bar-row">
+      <div><strong>{props.label}</strong><small>{props.detail}</small></div>
+      <div className="control-bar-track"><span style={{ width: `${String(value)}%` }} /></div>
+      <strong>{value}%</strong>
+    </div>
+  );
+}
+
 function Overview({ data }: Readonly<{ data: ControlData }>) {
   const activeStores = data.stores.filter((item) => item.status === "active").length;
   const activeDomains = data.domains.filter((item) => item.status === "active").length;
   const activeSubscriptions = data.subscriptions.filter((item) => item.status === "active").length;
-  const paid = data.payments.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amountCents, 0);
+  const paidPayments = data.payments.filter((item) => item.status === "paid");
+  const paid = paidPayments.reduce((sum, item) => sum + item.amountCents, 0);
+  const storeCoverage = percent(activeStores, data.stores.length);
+  const ringStyle = { "--control-progress": `${String(storeCoverage)}%` } as CSSProperties;
   return (
-    <Section id="overview" title="Visão geral" description="Resumo real da sua plataforma White Label.">
+    <Section id="overview" title="Visão geral" description="Acompanhe lojas, domínios, assinaturas e faturamento da sua White Label.">
       <div className="control-metrics">
         <Metric icon="store" label="Lojas" value={data.stores.length} detail={`${String(activeStores)} ativas`} />
         <Metric icon="domains" label="Domínios" value={data.domains.length} detail={`${String(activeDomains)} ativos`} />
         <Metric icon="subscriptions" label="Assinaturas" value={data.subscriptions.length} detail={`${String(activeSubscriptions)} ativas`} />
-        <Metric icon="revenue" label="Pagamentos recebidos" value={money(paid)} detail="Registros com status paid" />
+        <Metric icon="revenue" label="Recebido" value={money(paid)} detail={`${String(paidPayments.length)} pagamentos confirmados`} />
+      </div>
+      <div className="control-overview-grid">
+        <div className="control-card control-analytics-card">
+          <div className="control-analytics-head">
+            <div><h3>Panorama operacional</h3><p>Proporção real de recursos ativos nesta plataforma.</p></div>
+            <span className="control-badge">Atual</span>
+          </div>
+          <div className="control-bars">
+            <OverviewBar label="Lojas ativas" value={activeStores} total={Math.max(data.stores.length, 1)} detail={`${String(activeStores)} de ${String(data.stores.length)}`} />
+            <OverviewBar label="Domínios ativos" value={activeDomains} total={Math.max(data.domains.length, 1)} detail={`${String(activeDomains)} de ${String(data.domains.length)}`} />
+            <OverviewBar label="Assinaturas ativas" value={activeSubscriptions} total={Math.max(data.subscriptions.length, 1)} detail={`${String(activeSubscriptions)} de ${String(data.subscriptions.length)}`} />
+            <OverviewBar label="Pagamentos confirmados" value={paidPayments.length} total={Math.max(data.payments.length, 1)} detail={`${String(paidPayments.length)} de ${String(data.payments.length)}`} />
+          </div>
+        </div>
+        <div className="control-card control-health-card">
+          <div className="control-analytics-head"><div><h3>Saúde das lojas</h3><p>Percentual de lojas com status ativo.</p></div></div>
+          <div className="control-health-summary">
+            <div className="control-health-ring" style={ringStyle}><div><strong>{storeCoverage}%</strong><span>ativas</span></div></div>
+            <div className="control-health-meta">
+              <div><span>Lojas</span><strong>{data.stores.length}</strong></div>
+              <div><span>Domínios ativos</span><strong>{activeDomains}</strong></div>
+              <div><span>Assinaturas</span><strong>{activeSubscriptions}</strong></div>
+              <div><span>Recebido</span><strong>{money(paid)}</strong></div>
+            </div>
+          </div>
+        </div>
       </div>
     </Section>
   );
@@ -128,7 +173,7 @@ function SupportIntegrations({ data }: Readonly<{ data: ControlData }>) {
 export function ControlDashboard({ data }: Readonly<{ data: ControlData }>) {
   const [mobileOpen, setMobileOpen] = useState(false);
   return (
-    <div className="control-shell">
+    <div className="control-shell control-dashboard-rich">
       <ControlSidebar data={data} open={mobileOpen} onClose={() => { setMobileOpen(false); }} />
       <main className="control-main">
         <header className="control-header">
