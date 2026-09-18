@@ -87,7 +87,7 @@ const CREATE_ORDER_SQL = `with raw_input as (
     and ($9::text is null or p.coupon_id is not null)
     and not exists (select 1 from existing)
   on conflict do nothing
-  returning id,coupon_id
+  returning id,coupon_id,order_number,origin,total_cents
 ), coupon_used as (
   update public.coupons c
   set usage_count=c.usage_count+1,updated_at=now()
@@ -105,6 +105,18 @@ const CREATE_ORDER_SQL = `with raw_input as (
   select $1,$2,inserted.id,r.product_id,r.variant_id,r.product_name,
     r.variant_name,r.sku_snapshot,r.qty,r.unit_cents,r.qty*r.unit_cents
   from inserted cross join resolved r
+  returning id
+), audit_created as (
+  insert into public.audit_logs (
+    actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+  )
+  select null,$1::uuid,$2::uuid,'order.created','order',i.id::text,
+    jsonb_build_object(
+      'order_number',i.order_number,
+      'origin',i.origin,
+      'total_cents',i.total_cents
+    )
+  from inserted i
   returning id
 )
 select id from selected_order`;
@@ -147,7 +159,7 @@ export async function createOrderFromCart(
   if (rows.length === 0) {
     throw new Error("Carrinho, cliente ou cupom inválido");
   }
-  const order = await getOrderById(sql, scope, String(rows[0]["id"]));
+  const order = await getOrderById(sql, scope, String(rows[0]!["id"]));
   if (!order) throw new Error("Pedido não encontrado após criação");
   return order;
 }
