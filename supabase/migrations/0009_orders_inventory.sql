@@ -55,14 +55,14 @@ create or replace function private.orders_fill_legacy_subtotal()
 returns trigger
 language plpgsql
 set search_path = pg_catalog
-as $
+as $$
 begin
   if NEW.subtotal_cents is null then
     NEW.subtotal_cents := NEW.total_cents + NEW.discount_cents - NEW.shipping_cents;
   end if;
   return NEW;
 end;
-$;
+$$;
 
 drop trigger if exists orders_fill_legacy_subtotal_trg on public.orders;
 create trigger orders_fill_legacy_subtotal_trg
