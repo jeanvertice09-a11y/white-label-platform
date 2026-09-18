@@ -27,6 +27,8 @@ const SECRET_KEYS = [
   "client_secret",
   "secret",
   "token",
+  "credential",
+  "credentials",
 ];
 
 function isSecretKey(key: string): boolean {

@@ -18,6 +18,7 @@ import { normalizeRoutingHost } from "../routing-targets.ts";
 import { resolveSessionFromRequest, stubSession } from "./session.server.ts";
 import type { Session } from "./session.server.ts";
 import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
+import { createServiceSupabaseClient } from "./supabase-service.server.ts";
 
 export { stubSession };
 
@@ -31,60 +32,40 @@ export class HttpError extends Error {
   }
 }
 
-export interface RouteInput {
-  host: string | null;
-}
-
-export interface MasterContext {
-  userId: UserId;
-  platformRoles: PlatformRole[];
-}
-
+export interface RouteInput { host: string | null; }
+export interface MasterContext { userId: UserId; platformRoles: PlatformRole[]; }
 export interface MembershipReader {
   getPlatformRoles(userId: string): Promise<PlatformRole[]>;
   getTenantMemberships(userId: string): Promise<MembershipRow[]>;
 }
-
-export interface TenantResolution {
-  tenantId: TenantId;
-  storeId: StoreId | null;
-  type: DomainType;
-}
-
+export interface TenantResolution { tenantId: TenantId; storeId: StoreId | null; type: DomainType; }
 export interface RouteDeps {
   resolveSession: () => Promise<Session | null>;
   memberships: MembershipReader;
   resolveTenantForHost: (host: string) => Promise<TenantResolution | null>;
+  getTenantStatus: (tenantId: string) => Promise<string | null>;
 }
 
 export const pendingMembershipReader: MembershipReader = {
-  async getPlatformRoles(): Promise<PlatformRole[]> {
-    await Promise.resolve();
-    return [];
-  },
-  async getTenantMemberships(): Promise<MembershipRow[]> {
-    await Promise.resolve();
-    return [];
-  },
+  async getPlatformRoles(): Promise<PlatformRole[]> { await Promise.resolve(); return []; },
+  async getTenantMemberships(): Promise<MembershipRow[]> { await Promise.resolve(); return []; },
 };
-
-async function unresolvedHost(): Promise<null> {
-  await Promise.resolve();
-  return null;
-}
+async function unresolvedHost(): Promise<null> { await Promise.resolve(); return null; }
+async function unresolvedTenantStatus(): Promise<null> { await Promise.resolve(); return null; }
 
 export const defaultDeps: RouteDeps = {
   resolveSession: resolveSessionFromRequest,
   memberships: pendingMembershipReader,
   resolveTenantForHost: unresolvedHost,
+  getTenantStatus: unresolvedTenantStatus,
 };
 
-/** Sessão/memberships usam Supabase SSR; domínios usam a fonte autoritativa server-side. */
+/** Sessão/memberships usam Supabase SSR; domínios e status usam fonte autoritativa server-side. */
 export async function createRealDeps(): Promise<RouteDeps> {
   const domainResolver = new DomainResolver(createServiceDomainStore());
+  const serviceClient = createServiceSupabaseClient();
   const { createRequestMembershipReader } = await import("./request-memberships.server.ts");
   const memberships = createRequestMembershipReader();
-
   return {
     resolveSession: resolveSessionFromRequest,
     memberships,
@@ -97,6 +78,11 @@ export async function createRealDeps(): Promise<RouteDeps> {
         type: resolved.type,
       };
     },
+    getTenantStatus: async (tenantId: string) => {
+      const { data, error } = await serviceClient.from("tenants").select("status").eq("id", tenantId).maybeSingle();
+      if (error) throw new Error(`Falha ao consultar status da White Label: ${error.message}`);
+      return typeof data?.status === "string" ? data.status : null;
+    },
   };
 }
 
@@ -105,30 +91,25 @@ async function requireSession(_input: RouteInput, deps: RouteDeps): Promise<Sess
   if (!session) throw new HttpError(401, "Sessão necessária", "UNAUTHENTICATED");
   return session;
 }
-
-const FORBIDDEN_TENANT_CONTEXT_CODES = new Set([
-  "TENANT_FORBIDDEN",
-  "STORE_FORBIDDEN",
-  "CROSS_TENANT_DENIED",
-  "CROSS_STORE_DENIED",
-]);
-
+const FORBIDDEN_TENANT_CONTEXT_CODES = new Set(["TENANT_FORBIDDEN", "STORE_FORBIDDEN", "CROSS_TENANT_DENIED", "CROSS_STORE_DENIED"]);
 function toHttp(error: unknown): never {
   if (error instanceof HttpError) throw error;
-  if (error instanceof AuthorizationError) {
-    throw new HttpError(403, error.message, "FORBIDDEN");
-  }
+  if (error instanceof AuthorizationError) throw new HttpError(403, error.message, "FORBIDDEN");
   if (error instanceof TenantContextError) {
     const status = FORBIDDEN_TENANT_CONTEXT_CODES.has(error.code) ? 403 : 500;
     throw new HttpError(status, error.message, error.code);
   }
   throw new HttpError(500, "Falha interna ao validar acesso", "AUTH_INTERNAL_ERROR");
 }
-
 function requireHost(input: RouteInput): string {
   const host = normalizeRoutingHost(input.host);
   if (!host) throw new HttpError(404, "Host não encontrado", "HOST_NOT_FOUND");
   return host;
+}
+async function assertTenantOperational(deps: RouteDeps, tenantId: TenantId): Promise<void> {
+  const status = await deps.getTenantStatus(String(tenantId));
+  if (status === null) throw new HttpError(404, "White Label não encontrada", "TENANT_NOT_FOUND");
+  if (status === "suspended") throw new HttpError(403, "White Label suspensa", "TENANT_SUSPENDED");
 }
 
 /** /master: somente host de sistema + platform_owner/platform_admin. */
@@ -136,104 +117,58 @@ export async function loadMaster(input: RouteInput, deps: RouteDeps = defaultDep
   try {
     const session = await requireSession(input, deps);
     const host = requireHost(input);
-    if (host !== "control.geral.kataluu.com.br") {
-      throw new HttpError(404, "Painel Master não existe neste host", "HOST_ROUTE_MISMATCH");
-    }
+    if (host !== "control.geral.kataluu.com.br") throw new HttpError(404, "Painel Master não existe neste host", "HOST_ROUTE_MISMATCH");
     const roles = await deps.memberships.getPlatformRoles(session.userId);
     assertCanAccessMaster({ platformRoles: roles });
     return { userId: session.userId as UserId, platformRoles: roles };
-  } catch (error) {
-    return toHttp(error);
-  }
+  } catch (error) { return toHttp(error); }
 }
 
-function buildContext(
-  session: Session,
-  memberships: MembershipRow[],
-  tenantId: TenantId,
-  storeId: StoreId | undefined,
-  host: string,
-): TenantContext {
-  return resolveTenantContext({
-    userId: session.userId as UserId,
-    platformRoles: [],
-    memberships,
-    activeTenantId: tenantId,
-    activeStoreId: storeId,
-    hostname: host,
-    requestId: `route-${String(Date.now())}`,
-  });
+function buildContext(session: Session, memberships: MembershipRow[], tenantId: TenantId, storeId: StoreId | undefined, host: string): TenantContext {
+  return resolveTenantContext({ userId: session.userId as UserId, platformRoles: [], memberships, activeTenantId: tenantId, activeStoreId: storeId, hostname: host, requestId: `route-${String(Date.now())}` });
 }
-
 function uniqueTenantIdForSystemApp(memberships: MembershipRow[]): TenantId {
-  const tenantIds = [...new Set(
-    memberships
-      .filter((membership) => membership.tenantRoles.length > 0)
-      .map((membership) => membership.tenantId),
-  )];
-
-  if (tenantIds.length === 0) {
-    throw new HttpError(403, "Usuário sem White Label vinculada", "TENANT_UNRESOLVED");
-  }
-  if (tenantIds.length > 1) {
-    throw new HttpError(403, "Seleção de White Label necessária", "TENANT_SELECTION_REQUIRED");
-  }
+  const tenantIds = [...new Set(memberships.filter((membership) => membership.tenantRoles.length > 0).map((membership) => membership.tenantId))];
+  if (tenantIds.length === 0) throw new HttpError(403, "Usuário sem White Label vinculada", "TENANT_UNRESOLVED");
+  if (tenantIds.length > 1) throw new HttpError(403, "Seleção de White Label necessária", "TENANT_SELECTION_REQUIRED");
   const tenantId = tenantIds[0];
   if (!tenantId) throw new HttpError(500, "Tenant não resolvido", "TENANT_CONTEXT_INVALID");
   return tenantId;
 }
-
-function requireDomain(
-  resolved: TenantResolution | null,
-  expected: DomainType,
-): TenantResolution {
+function requireDomain(resolved: TenantResolution | null, expected: DomainType): TenantResolution {
   if (!resolved) throw new HttpError(404, "Host não encontrado", "HOST_NOT_FOUND");
-  if (resolved.type !== expected) {
-    throw new HttpError(404, "Painel não existe neste tipo de domínio", "HOST_ROUTE_MISMATCH");
-  }
+  if (resolved.type !== expected) throw new HttpError(404, "Painel não existe neste tipo de domínio", "HOST_ROUTE_MISMATCH");
   return resolved;
 }
 
 /** /control: tenant_panel dinâmico ou app.kataluu.com.br com tenant não ambíguo. */
 export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
-    const session = await requireSession(input, deps);
-    const host = requireHost(input);
-    const memberships = await deps.memberships.getTenantMemberships(session.userId);
-    let tenantId: TenantId;
-
-    if (host === "app.kataluu.com.br") {
-      tenantId = uniqueTenantIdForSystemApp(memberships);
-    } else {
+    const session = await requireSession(input, deps); const host = requireHost(input);
+    const memberships = await deps.memberships.getTenantMemberships(session.userId); let tenantId: TenantId;
+    if (host === "app.kataluu.com.br") tenantId = uniqueTenantIdForSystemApp(memberships);
+    else {
       const resolved = requireDomain(await deps.resolveTenantForHost(host), "tenant_panel");
-      if (resolved.storeId !== null) {
-        throw new HttpError(500, "tenant_panel com store inválida", "DOMAIN_SCOPE_INVALID");
-      }
+      if (resolved.storeId !== null) throw new HttpError(500, "tenant_panel com store inválida", "DOMAIN_SCOPE_INVALID");
       tenantId = resolved.tenantId;
     }
-
+    await assertTenantOperational(deps, tenantId);
     const ctx = buildContext(session, memberships, tenantId, undefined, host);
     assertCanAccessTenantControl({ tenantRoles: ctx.tenantRoles });
     return ctx;
-  } catch (error) {
-    return toHttp(error);
-  }
+  } catch (error) { return toHttp(error); }
 }
 
 /** /admin: somente domínio store_admin + membership explícita da store. */
 export async function loadStoreAdmin(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
-    const session = await requireSession(input, deps);
-    const host = requireHost(input);
+    const session = await requireSession(input, deps); const host = requireHost(input);
     const resolved = requireDomain(await deps.resolveTenantForHost(host), "store_admin");
-    if (!resolved.storeId) {
-      throw new HttpError(500, "store_admin sem store", "DOMAIN_SCOPE_INVALID");
-    }
+    if (!resolved.storeId) throw new HttpError(500, "store_admin sem store", "DOMAIN_SCOPE_INVALID");
+    await assertTenantOperational(deps, resolved.tenantId);
     const memberships = await deps.memberships.getTenantMemberships(session.userId);
     const ctx = buildContext(session, memberships, resolved.tenantId, resolved.storeId, host);
     assertCanAccessStoreAdmin({ storeRoles: ctx.storeRoles });
     return ctx;
-  } catch (error) {
-    return toHttp(error);
-  }
+  } catch (error) { return toHttp(error); }
 }
