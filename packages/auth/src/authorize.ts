@@ -45,6 +45,11 @@ export function canAccessTenantControl(roles: RoleSet): boolean {
   return (roles.tenantRoles?.length ?? 0) > 0;
 }
 
+/** Gestão de lojistas no /control: somente owner/admin da White Label. */
+export function canManageTenantStores(roles: RoleSet): boolean {
+  return hasAny(roles.tenantRoles, ["tenant_owner", "tenant_admin"]);
+}
+
 /** Admin da loja (/admin): owner/admin/manager. */
 export function canAccessStoreAdmin(roles: RoleSet): boolean {
   return hasAny(roles.storeRoles, ["store_owner", "store_admin", "store_manager"]);
@@ -62,6 +67,12 @@ export function assertCanManageWhiteLabels(roles: RoleSet): void {
 
 export function assertCanAccessTenantControl(roles: RoleSet): void {
   if (!canAccessTenantControl(roles)) throw new AuthorizationError("Requer membership no tenant");
+}
+
+export function assertCanManageTenantStores(roles: RoleSet): void {
+  if (!canManageTenantStores(roles)) {
+    throw new AuthorizationError("Gestão de lojistas requer tenant_owner/admin");
+  }
 }
 
 export function assertCanAccessStoreAdmin(roles: RoleSet): void {
