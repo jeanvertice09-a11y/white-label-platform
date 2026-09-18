@@ -32,6 +32,7 @@ const MIGRATIONS = [
   "0013_billing_events.sql",
   "0014_billing_level_hardening.sql",
   "0016_catalog_variant_integrity.sql",
+  "0019_secure_gateway_accounts.sql",
 ];
 
 class PGliteDb implements TestDb {

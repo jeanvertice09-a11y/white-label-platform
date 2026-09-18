@@ -50,6 +50,11 @@ export function canManageTenantStores(roles: RoleSet): boolean {
   return hasAny(roles.tenantRoles, ["tenant_owner", "tenant_admin"]);
 }
 
+/** Gestão de gateways no /control: mesmo boundary administrativo do tenant. */
+export function canManageTenantGateways(roles: RoleSet): boolean {
+  return hasAny(roles.tenantRoles, ["tenant_owner", "tenant_admin"]);
+}
+
 /** Admin da loja (/admin): owner/admin/manager. */
 export function canAccessStoreAdmin(roles: RoleSet): boolean {
   return hasAny(roles.storeRoles, ["store_owner", "store_admin", "store_manager"]);
@@ -72,6 +77,12 @@ export function assertCanAccessTenantControl(roles: RoleSet): void {
 export function assertCanManageTenantStores(roles: RoleSet): void {
   if (!canManageTenantStores(roles)) {
     throw new AuthorizationError("Gestão de lojistas requer tenant_owner/admin");
+  }
+}
+
+export function assertCanManageTenantGateways(roles: RoleSet): void {
+  if (!canManageTenantGateways(roles)) {
+    throw new AuthorizationError("Gestão de gateways requer tenant_owner/admin");
   }
 }
 
