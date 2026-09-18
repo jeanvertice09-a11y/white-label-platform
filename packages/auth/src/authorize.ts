@@ -35,6 +35,11 @@ export function canAccessMaster(roles: RoleSet): boolean {
   return hasAny(roles.platformRoles, ["platform_owner", "platform_admin"]);
 }
 
+/** Mutações globais de White Label nunca usam o conceito amplo de platform staff. */
+export function canManageWhiteLabels(roles: RoleSet): boolean {
+  return hasAny(roles.platformRoles, ["platform_owner", "platform_admin"]);
+}
+
 /** Control (/control): qualquer membership válida no tenant. */
 export function canAccessTenantControl(roles: RoleSet): boolean {
   return (roles.tenantRoles?.length ?? 0) > 0;
@@ -47,6 +52,12 @@ export function canAccessStoreAdmin(roles: RoleSet): boolean {
 
 export function assertCanAccessMaster(roles: RoleSet): void {
   if (!canAccessMaster(roles)) throw new AuthorizationError("Requer platform_owner/admin");
+}
+
+export function assertCanManageWhiteLabels(roles: RoleSet): void {
+  if (!canManageWhiteLabels(roles)) {
+    throw new AuthorizationError("Mutações de White Label requerem platform_owner/admin");
+  }
 }
 
 export function assertCanAccessTenantControl(roles: RoleSet): void {

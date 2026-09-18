@@ -38,6 +38,10 @@ function deps(role: StoreRole): RouteDeps {
       await Promise.resolve();
       return { tenantId: TENANT, storeId: STORE, type: "store_admin" };
     },
+    getTenantStatus: async () => {
+      await Promise.resolve();
+      return "active";
+    },
   };
 }
 
