@@ -21,7 +21,8 @@ export async function listWhiteLabels(sql: AdminSql, input: WhiteLabelListInput)
      order by t.created_at desc,t.id desc limit $3 offset $4`,
     [input.search, input.status, input.pageSize, offset],
   );
-  const total = rows.length ? numberValue(rows[0]!, "total_count") : 0;
+  const first = rows.at(0);
+  const total = first ? numberValue(first, "total_count") : 0;
   return {
     items: rows.map((row) => ({
       id: text(row, "id"), name: text(row, "name"), slug: text(row, "slug"), status: text(row, "status") as TenantStatus,
@@ -43,7 +44,7 @@ async function detailRows(sql: AdminSql, tenantId: string) {
 }
 export async function getWhiteLabelDetail(sql: AdminSql, tenantId: string): Promise<MasterWhiteLabelDetail | null> {
   const [tenantRows, memberRows, domainRows, commercialPlanRows, subscriptionRows, templateRows] = await detailRows(sql, tenantId);
-  const row = tenantRows[0]; if (!row) return null; const subscription = subscriptionRows[0];
+  const row = tenantRows.at(0); if (!row) return null; const subscription = subscriptionRows.at(0);
   return {
     tenant: { id: text(row,"id"), name: text(row,"name"), slug: text(row,"slug"), status: text(row,"status") as TenantStatus, createdAt: text(row,"created_at"), updatedAt: text(row,"updated_at"), trialEndsAt: nullableText(row,"trial_ends_at"), logoUrl: nullableText(row,"logo_url"), primaryColor: nullableText(row,"primary_color"), settings: objectValue(row,"settings") },
     members: memberRows.map((m) => ({ userId: text(m,"user_id"), email: nullableText(m,"email"), role: text(m,"role"), createdAt: text(m,"created_at") })),
