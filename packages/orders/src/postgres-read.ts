@@ -16,8 +16,8 @@ async function hydrate(
   sql: OrderSqlExecutor,
   rows: Record<string, unknown>[],
 ): Promise<Order[]> {
+  if (rows.length === 0) return [];
   const first = rows[0];
-  if (!first) return [];
   const tenantId = String(first["tenant_id"]);
   const storeId = String(first["store_id"]);
   const ids = rows.map((row) => String(row["id"]));

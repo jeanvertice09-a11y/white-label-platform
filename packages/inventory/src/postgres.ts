@@ -12,15 +12,28 @@ function assertScope(scope: InventoryScope): void {
   if (!scope.tenantId || !scope.storeId) throw new Error("Escopo de estoque inválido");
 }
 
+function requiredText(row: Record<string, unknown>, key: string): string {
+  const value = row[key];
+  if (typeof value !== "string") throw new Error("Campo inválido: " + key);
+  return value;
+}
+
+function nullableText(row: Record<string, unknown>, key: string): string | null {
+  const value = row[key];
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") throw new Error("Campo inválido: " + key);
+  return value;
+}
+
 function mapItem(row: Record<string, unknown>): InventoryItem {
   return {
-    tenantId: String(row["tenant_id"]),
-    storeId: String(row["store_id"]),
-    productId: String(row["product_id"]),
-    variantId: row["variant_id"] === null ? null : String(row["variant_id"]),
-    productName: String(row["product_name"]),
-    variantName: row["variant_name"] === null ? null : String(row["variant_name"]),
-    sku: row["sku"] === null ? null : String(row["sku"]),
+    tenantId: requiredText(row, "tenant_id"),
+    storeId: requiredText(row, "store_id"),
+    productId: requiredText(row, "product_id"),
+    variantId: nullableText(row, "variant_id"),
+    productName: requiredText(row, "product_name"),
+    variantName: nullableText(row, "variant_name"),
+    sku: nullableText(row, "sku"),
     trackInventory: Boolean(row["track_inventory"]),
     currentQuantity: Number(row["current_quantity"]),
   };
@@ -112,9 +125,8 @@ async function adjust(
       input.createdBy,
     ],
   );
-  const row = rows[0];
-  if (!row) throw new Error("Produto ou variante não encontrado");
-  return Number(row["stock_quantity"]);
+  if (rows.length === 0) throw new Error("Produto ou variante não encontrado");
+  return Number(rows[0]["stock_quantity"]);
 }
 
 export function createInventoryRepository(

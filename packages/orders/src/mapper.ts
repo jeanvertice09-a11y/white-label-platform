@@ -8,7 +8,9 @@ function text(row: Record<string, unknown>, key: string): string {
 
 function nullableText(row: Record<string, unknown>, key: string): string | null {
   const value = row[key];
-  return value === null || value === undefined ? null : String(value);
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") throw new Error("Campo inválido: " + key);
+  return value;
 }
 
 function numberValue(row: Record<string, unknown>, key: string): number {
@@ -19,14 +21,17 @@ function numberValue(row: Record<string, unknown>, key: string): number {
 
 function timestamp(row: Record<string, unknown>, key: string): string {
   const value = row[key];
-  if (value === null || value === undefined) throw new Error("Data inválida: " + key);
-  return value instanceof Date ? value.toISOString() : String(value);
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  throw new Error("Data inválida: " + key);
 }
 
 function nullableTimestamp(row: Record<string, unknown>, key: string): string | null {
   const value = row[key];
   if (value === null || value === undefined) return null;
-  return value instanceof Date ? value.toISOString() : String(value);
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  throw new Error("Data inválida: " + key);
 }
 
 export function mapOrderItem(row: Record<string, unknown>): OrderItem {
