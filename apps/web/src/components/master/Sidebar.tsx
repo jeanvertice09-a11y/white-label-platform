@@ -1,19 +1,30 @@
 import { Link } from "@tanstack/react-router";
+import {
+  DashboardIcon,
+  type DashboardIconName,
+} from "../dashboard/DashboardIcon.tsx";
 
 interface MasterSidebarProps {
   open: boolean;
   onClose: () => void;
 }
 
-const navigation = [
-  { to: "/master", label: "Visão geral", exact: true },
-  { to: "/master/platforms", label: "Plataformas", exact: false },
-  { to: "/master/billing", label: "Faturamento", exact: false },
-  { to: "/master/support", label: "Suporte", exact: false },
-  { to: "/master/audit", label: "Auditoria", exact: false },
-  { to: "/master/infrastructure", label: "Infraestrutura", exact: false },
-  { to: "/master/settings", label: "Configurações", exact: false },
-] as const;
+interface NavigationItem {
+  to: string;
+  label: string;
+  exact: boolean;
+  icon: DashboardIconName;
+}
+
+const navigation: readonly NavigationItem[] = [
+  { to: "/master", label: "Visão geral", exact: true, icon: "home" },
+  { to: "/master/platforms", label: "Plataformas", exact: false, icon: "platforms" },
+  { to: "/master/billing", label: "Faturamento", exact: false, icon: "billing" },
+  { to: "/master/support", label: "Suporte", exact: false, icon: "support" },
+  { to: "/master/audit", label: "Auditoria", exact: false, icon: "audit" },
+  { to: "/master/infrastructure", label: "Infraestrutura", exact: false, icon: "infrastructure" },
+  { to: "/master/settings", label: "Configurações", exact: false, icon: "settings" },
+];
 
 export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
   return (
@@ -29,7 +40,7 @@ export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
           <span className="master-brand__mark" aria-hidden="true">K</span>
           <div>
             <strong>Kataluu</strong>
-            <small>Controle geral</small>
+            <small>Super Admin</small>
           </div>
         </div>
         <nav className="master-nav" aria-label="Navegação do Super Admin">
@@ -42,14 +53,17 @@ export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
               className="master-nav__link"
               onClick={onClose}
             >
-              <span className="master-nav__dot" aria-hidden="true" />
-              {item.label}
+              <DashboardIcon name={item.icon} />
+              <span>{item.label}</span>
             </Link>
           ))}
         </nav>
         <div className="master-sidebar__footer">
-          <span>Status da plataforma</span>
-          <strong>Operacional</strong>
+          <span className="master-status-dot" aria-hidden="true" />
+          <div>
+            <span>Status da plataforma</span>
+            <strong>Operacional</strong>
+          </div>
         </div>
       </aside>
     </>
