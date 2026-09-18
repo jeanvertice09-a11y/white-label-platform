@@ -173,12 +173,13 @@ describe("commercial plans, subscriptions and billing", () => {
       [ids.tenantA, ids.storeA],
     );
     const subscriptionId = requiredString(current, "id");
-    await h.db.query(
-      "update public.store_subscriptions set trial_ends_at=now()-interval '1 day' where id=$1",
-      [subscriptionId],
-    );
-    let snapshot = await loadStoreEntitlementSnapshot(h.db, { tenantId: ids.tenantA, storeId: ids.storeA });
-    expect(hasFeature(snapshot, "products")).toBe(false);
+    let snapshot = await loadStoreEntitlementSnapshot(h.db, {
+      tenantId: ids.tenantA,
+      storeId: ids.storeA,
+    });
+    if (!snapshot?.trialEndsAt) throw new Error("trial_ends_at ausente");
+    const afterTrial = new Date(Date.parse(snapshot.trialEndsAt) + 1_000);
+    expect(hasFeature(snapshot, "products", afterTrial)).toBe(false);
 
     await updateStoreSubscriptionStatus(
       h.db,
