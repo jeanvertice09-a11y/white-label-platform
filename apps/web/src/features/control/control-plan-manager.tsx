@@ -5,14 +5,20 @@ import type {
   TenantCommercialPlan,
   TenantPlanCatalog,
   TenantPlanEntitlementInput,
+  TenantPlanInput,
 } from "@white-label/billing";
 import {
   saveControlPlan,
   saveControlPlanEntitlements,
 } from "../../lib/server/commercial-plans.functions.ts";
 
-function centsFromInput(value: FormDataEntryValue | null): number {
-  const raw = String(value ?? "").trim().replace(/\./g, "").replace(",", ".");
+function formText(form: FormData, key: string, fallback = ""): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value : fallback;
+}
+
+function centsFromInput(value: string): number {
+  const raw = value.trim().replace(/\./g, "").replace(",", ".");
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) throw new Error("Preço inválido");
   return Math.round(parsed * 100);
@@ -26,19 +32,25 @@ function slugFromTemplate(template: PlanTemplateView): string {
   return template.code.replaceAll("_", "-");
 }
 
-function planInput(form: FormData, template: PlanTemplateView) {
+function billingInterval(form: FormData): TenantPlanInput["billingInterval"] {
+  const value = formText(form, "billingInterval");
+  if (value === "monthly" || value === "quarterly" || value === "yearly") return value;
+  throw new Error("Periodicidade inválida");
+}
+
+function planInput(form: FormData, template: PlanTemplateView): TenantPlanInput {
   const trialEnabled = form.get("trialEnabled") === "on";
   return {
     templateId: template.id,
-    slug: String(form.get("slug") ?? slugFromTemplate(template)),
-    name: String(form.get("name") ?? template.name),
-    description: String(form.get("description") ?? "").trim() || null,
-    priceCents: centsFromInput(form.get("price")),
-    billingInterval: String(form.get("billingInterval")) as "monthly" | "quarterly" | "yearly",
+    slug: formText(form, "slug", slugFromTemplate(template)),
+    name: formText(form, "name", template.name),
+    description: formText(form, "description").trim() || null,
+    priceCents: centsFromInput(formText(form, "price")),
+    billingInterval: billingInterval(form),
     active: form.get("active") === "on",
     trialEnabled,
-    trialDays: trialEnabled ? Number(form.get("trialDays") ?? 0) : 0,
-    displayOrder: Number(form.get("displayOrder") ?? template.sortOrder),
+    trialDays: trialEnabled ? Number(formText(form, "trialDays", "0")) : 0,
+    displayOrder: Number(formText(form, "displayOrder", String(template.sortOrder))),
     recommended: form.get("recommended") === "on",
   };
 }
@@ -60,7 +72,7 @@ function entitlementPayload(
       key: item.key,
       kind: item.kind,
       enabled: null,
-      limitValue: Number(form.get(`limit:${item.key}`) ?? 0),
+      limitValue: Number(formText(form, `limit:${item.key}`, "0")),
     };
   });
 }
@@ -123,7 +135,7 @@ function TemplateCard(props: Readonly<{
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function savePlan(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function savePlan(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setBusy(true);
     setMessage("");
