@@ -14,6 +14,7 @@ export default defineConfig({
     noExternal: [
       "react",
       "react-dom",
+      "postgres",
       "@tanstack/react-router",
       "@tanstack/react-start",
       "@white-label/auth",
