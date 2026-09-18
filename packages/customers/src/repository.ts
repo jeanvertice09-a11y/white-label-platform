@@ -1,7 +1,9 @@
 import type {
   Customer,
   CustomerDetail,
+  CustomerListQuery,
   CustomerMutationInput,
+  CustomerPage,
   CustomerScope,
 } from "./types.ts";
 
@@ -11,7 +13,17 @@ export interface CustomerSqlExecutor {
 
 export interface CustomerRepository {
   list(scope: CustomerScope, search: string, limit: number): Promise<Customer[]>;
+  listPage(scope: CustomerScope, query: CustomerListQuery): Promise<CustomerPage>;
   getById(scope: CustomerScope, id: string): Promise<CustomerDetail | null>;
-  create(scope: CustomerScope, input: CustomerMutationInput): Promise<Customer>;
-  update(scope: CustomerScope, id: string, input: CustomerMutationInput): Promise<Customer | null>;
+  create(
+    scope: CustomerScope,
+    input: CustomerMutationInput,
+    actorUserId?: string | null,
+  ): Promise<Customer>;
+  update(
+    scope: CustomerScope,
+    id: string,
+    input: CustomerMutationInput,
+    actorUserId?: string | null,
+  ): Promise<Customer | null>;
 }

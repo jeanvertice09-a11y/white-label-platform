@@ -24,17 +24,41 @@ export interface CustomerMutationInput {
   notes: string | null;
 }
 
+export interface CustomerListQuery {
+  page: number;
+  pageSize: number;
+  search?: string;
+}
+
+export interface CustomerListItem extends Customer {
+  totalOrders: number;
+  totalSpentCents: number;
+  lastOrderAt: string | null;
+}
+
+export interface CustomerPage {
+  items: CustomerListItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 export interface CustomerOrderSummary {
   id: string;
   orderNumber: number;
   totalCents: number;
   status: string;
+  paymentStatus: string;
+  itemCount: number;
+  itemSummary: string | null;
   createdAt: string;
 }
 
 export interface CustomerDetail extends Customer {
+  totalOrders: number;
   orderCount: number;
   totalSpentCents: number;
+  lastOrderAt: string | null;
   lastPurchaseAt: string | null;
   orders: CustomerOrderSummary[];
 }

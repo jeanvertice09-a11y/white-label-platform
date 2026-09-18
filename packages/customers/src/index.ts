@@ -2,6 +2,9 @@ export type {
   CustomerScope,
   Customer,
   CustomerMutationInput,
+  CustomerListQuery,
+  CustomerListItem,
+  CustomerPage,
   CustomerOrderSummary,
   CustomerDetail,
 } from "./types.ts";
