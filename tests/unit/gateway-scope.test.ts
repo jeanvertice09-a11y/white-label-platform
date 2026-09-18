@@ -15,20 +15,26 @@ describe("gateway financial scope", () => {
   });
 
   test("níveis financeiros não aceitam owners incompatíveis", () => {
-    expect(() => assertGatewayScope({
-      level: "platform_billing",
-      tenantId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      storeId: null,
-    })).toThrow();
-    expect(() => assertGatewayScope({
-      level: "tenant_billing",
-      tenantId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      storeId: "aaaaaaaa-0000-4000-8000-aaaaaaaaaaaa",
-    })).toThrow();
-    expect(() => assertGatewayScope({
-      level: "store_checkout",
-      tenantId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      storeId: null,
-    })).toThrow();
+    expect(() => {
+      assertGatewayScope({
+        level: "platform_billing",
+        tenantId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        storeId: null,
+      });
+    }).toThrow();
+    expect(() => {
+      assertGatewayScope({
+        level: "tenant_billing",
+        tenantId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        storeId: "aaaaaaaa-0000-4000-8000-aaaaaaaaaaaa",
+      });
+    }).toThrow();
+    expect(() => {
+      assertGatewayScope({
+        level: "store_checkout",
+        tenantId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        storeId: null,
+      });
+    }).toThrow();
   });
 });

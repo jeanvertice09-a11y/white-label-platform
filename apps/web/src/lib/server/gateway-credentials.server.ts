@@ -30,7 +30,7 @@ export async function loadGatewayCredentialMaterial(
        and s.credentials_ciphertext is not null`,
     [scope.level, scope.tenantId, scope.storeId, gatewayAccountId],
   );
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) throw new Error("Gateway ativo/configurado não encontrado neste escopo.");
   const ciphertext = row["credentials_ciphertext"];
   const webhookCiphertext = row["webhook_secret_ciphertext"];

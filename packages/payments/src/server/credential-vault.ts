@@ -85,10 +85,10 @@ export class CredentialVault {
   }
 
   decrypt(envelope: string): string {
-    const [format, version, ivValue, tagValue, ciphertextValue, extra] = envelope.split(".");
-    if (format !== FORMAT || !version || !ivValue || !tagValue || ciphertextValue === undefined || extra !== undefined) {
-      return invalidEnvelope();
-    }
+    const parts = envelope.split(".");
+    if (parts.length !== 5) return invalidEnvelope();
+    const [format, version, ivValue, tagValue, ciphertextValue] = parts;
+    if (format !== FORMAT || !version || !ivValue || !tagValue) return invalidEnvelope();
     const key = this.keys.get(version);
     if (!key) return invalidEnvelope();
     try {

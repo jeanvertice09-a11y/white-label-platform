@@ -9,6 +9,45 @@ import type {
 } from "./control-gateways.types.ts";
 import { assertGatewayScope } from "./control-gateways.scope.server.ts";
 
+const UPDATE_SQL = `with account as (
+  update public.gateway_accounts
+  set label=$5,public_identifier=$6,updated_at=now()
+  where id=$4::uuid and level=$1
+    and tenant_id is not distinct from $2::uuid
+    and store_id is not distinct from $3::uuid
+  returning *
+), secret as (
+  update private.gateway_account_secrets s
+  set credentials_ciphertext=coalesce($7,s.credentials_ciphertext),
+      webhook_secret_ciphertext=coalesce($8,s.webhook_secret_ciphertext),
+      updated_at=now()
+  from account a where s.gateway_account_id=a.id
+  returning s.gateway_account_id,s.credentials_ciphertext,s.webhook_secret_ciphertext
+), audit_update as (
+  insert into public.audit_logs(
+    actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+  )
+  select $9::uuid,tenant_id,store_id,'gateway_account.updated','gateway_account',id::text,
+    jsonb_build_object('provider',provider,'level',level,'status',status)
+  from account returning id
+), audit_secret as (
+  insert into public.audit_logs(
+    actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+  )
+  select $9::uuid,tenant_id,store_id,'gateway_account.credentials_updated',
+    'gateway_account',id::text,
+    jsonb_build_object(
+      'credentialsChanged',$10::boolean,'webhookSecretChanged',$11::boolean
+    )
+  from account where $10::boolean or $11::boolean
+  returning id
+)
+select a.id::text,a.level,a.tenant_id::text,a.store_id::text,a.provider,a.label,
+  a.public_identifier,a.status,a.created_at::text,a.updated_at::text,
+  (s.credentials_ciphertext is not null) configured,
+  (s.webhook_secret_ciphertext is not null) webhook_configured
+from account a join secret s on s.gateway_account_id=a.id`;
+
 function cleanLabel(value: string): string {
   const label = value.trim();
   if (!label) throw new Error("Nome da conta de gateway é obrigatório.");
@@ -30,7 +69,7 @@ async function assertStoreScopeExists(sql: ControlSql, scope: GatewayScope): Pro
     "select exists(select 1 from public.stores where tenant_id=$1::uuid and id=$2::uuid) ok",
     [scope.tenantId, scope.storeId],
   );
-  if (rows[0]?.["ok"] !== true) throw new Error("Loja não pertence ao tenant do gateway.");
+  if (rows.at(0)?.["ok"] !== true) throw new Error("Loja não pertence ao tenant do gateway.");
 }
 
 function mapResult(row: Record<string, unknown>): SafeGatewayAccount {
@@ -90,40 +129,29 @@ export async function createGatewayAccount(
        $11::boolean configured,$12::boolean webhook_configured
      from account a`,
     [
-      scope.level,
-      scope.tenantId,
-      scope.storeId,
-      input.provider,
-      cleanLabel(input.label),
-      cleanPublicIdentifier(input.publicIdentifier),
-      status,
-      credentials,
-      webhook,
-      actorUserId,
-      credentials !== null,
-      webhook !== null,
+      scope.level, scope.tenantId, scope.storeId, input.provider,
+      cleanLabel(input.label), cleanPublicIdentifier(input.publicIdentifier),
+      status, credentials, webhook, actorUserId, credentials !== null, webhook !== null,
     ],
   );
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) throw new Error("Não foi possível criar a conta de gateway.");
   return mapResult(row);
 }
 
-async function gatewayProvider(
+async function assertGatewayOwned(
   sql: ControlSql,
   scope: GatewayScope,
   gatewayAccountId: string,
-): Promise<string> {
+): Promise<void> {
   const rows = await sql.query(
-    `select provider from public.gateway_accounts
+    `select id from public.gateway_accounts
      where id=$4::uuid and level=$1
        and tenant_id is not distinct from $2::uuid
        and store_id is not distinct from $3::uuid`,
     [scope.level, scope.tenantId, scope.storeId, gatewayAccountId],
   );
-  const provider = rows[0]?.["provider"];
-  if (typeof provider !== "string") throw new Error("Conta de gateway não encontrada neste escopo.");
-  return provider;
+  if (!rows.at(0)) throw new Error("Conta de gateway não encontrada neste escopo.");
 }
 
 export async function updateGatewayAccount(
@@ -134,65 +162,38 @@ export async function updateGatewayAccount(
   input: UpdateGatewayAccountInput,
 ): Promise<SafeGatewayAccount> {
   assertGatewayScope(scope);
-  await gatewayProvider(sql, scope, input.gatewayAccountId);
+  await assertGatewayOwned(sql, scope, input.gatewayAccountId);
   const credentials = optionalCiphertext(vault, input.credentials);
   const webhook = optionalCiphertext(vault, input.webhookSecret);
-  const rows = await sql.query(
-    `with account as (
-       update public.gateway_accounts
-       set label=$5,public_identifier=$6,updated_at=now()
-       where id=$4::uuid and level=$1
-         and tenant_id is not distinct from $2::uuid
-         and store_id is not distinct from $3::uuid
-       returning *
-     ), secret as (
-       update private.gateway_account_secrets s
-       set credentials_ciphertext=coalesce($7,s.credentials_ciphertext),
-           webhook_secret_ciphertext=coalesce($8,s.webhook_secret_ciphertext),
-           updated_at=now()
-       from account a where s.gateway_account_id=a.id
-       returning s.gateway_account_id,s.credentials_ciphertext,s.webhook_secret_ciphertext
-     ), audit_update as (
-       insert into public.audit_logs(
-         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
-       )
-       select $9::uuid,tenant_id,store_id,'gateway_account.updated','gateway_account',id::text,
-         jsonb_build_object('provider',provider,'level',level,'status',status)
-       from account returning id
-     ), audit_secret as (
-       insert into public.audit_logs(
-         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
-       )
-       select $9::uuid,tenant_id,store_id,'gateway_account.credentials_updated',
-         'gateway_account',id::text,
-         jsonb_build_object(
-           'credentialsChanged',$10::boolean,'webhookSecretChanged',$11::boolean
-         )
-       from account where $10::boolean or $11::boolean
-       returning id
-     )
-     select a.id::text,a.level,a.tenant_id::text,a.store_id::text,a.provider,a.label,
-       a.public_identifier,a.status,a.created_at::text,a.updated_at::text,
-       (s.credentials_ciphertext is not null) configured,
-       (s.webhook_secret_ciphertext is not null) webhook_configured
-     from account a join secret s on s.gateway_account_id=a.id`,
-    [
-      scope.level,
-      scope.tenantId,
-      scope.storeId,
-      input.gatewayAccountId,
-      cleanLabel(input.label),
-      cleanPublicIdentifier(input.publicIdentifier),
-      credentials,
-      webhook,
-      actorUserId,
-      credentials !== null,
-      webhook !== null,
-    ],
-  );
-  const row = rows[0];
+  const rows = await sql.query(UPDATE_SQL, [
+    scope.level, scope.tenantId, scope.storeId, input.gatewayAccountId,
+    cleanLabel(input.label), cleanPublicIdentifier(input.publicIdentifier),
+    credentials, webhook, actorUserId, credentials !== null, webhook !== null,
+  ]);
+  const row = rows.at(0);
   if (!row) throw new Error("Conta de gateway não encontrada neste escopo.");
   return mapResult(row);
+}
+
+async function assertConfiguredForActivation(
+  sql: ControlSql,
+  scope: GatewayScope,
+  gatewayAccountId: string,
+): Promise<void> {
+  const rows = await sql.query(
+    `select exists(
+       select 1 from public.gateway_accounts ga
+       join private.gateway_account_secrets s on s.gateway_account_id=ga.id
+       where ga.id=$4::uuid and ga.level=$1
+         and ga.tenant_id is not distinct from $2::uuid
+         and ga.store_id is not distinct from $3::uuid
+         and s.credentials_ciphertext is not null
+     ) ok`,
+    [scope.level, scope.tenantId, scope.storeId, gatewayAccountId],
+  );
+  if (rows.at(0)?.["ok"] !== true) {
+    throw new Error("Conta sem credencial configurada não pode ser ativada.");
+  }
 }
 
 export async function setGatewayAccountStatus(
@@ -203,22 +204,7 @@ export async function setGatewayAccountStatus(
   status: GatewayAccountStatus,
 ): Promise<SafeGatewayAccount> {
   assertGatewayScope(scope);
-  if (status === "active") {
-    const configured = await sql.query(
-      `select exists(
-         select 1 from public.gateway_accounts ga
-         join private.gateway_account_secrets s on s.gateway_account_id=ga.id
-         where ga.id=$4::uuid and ga.level=$1
-           and ga.tenant_id is not distinct from $2::uuid
-           and ga.store_id is not distinct from $3::uuid
-           and s.credentials_ciphertext is not null
-       ) ok`,
-      [scope.level, scope.tenantId, scope.storeId, gatewayAccountId],
-    );
-    if (configured[0]?.["ok"] !== true) {
-      throw new Error("Conta sem credencial configurada não pode ser ativada.");
-    }
-  }
+  if (status === "active") await assertConfiguredForActivation(sql, scope, gatewayAccountId);
   const action = status === "disabled" ? "gateway_account.disabled" : "gateway_account.enabled";
   const rows = await sql.query(
     `with account as (
@@ -244,7 +230,7 @@ export async function setGatewayAccountStatus(
      from account a`,
     [scope.level, scope.tenantId, scope.storeId, gatewayAccountId, status, actorUserId, action],
   );
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) throw new Error("Conta de gateway não encontrada neste escopo.");
   return mapResult(row);
 }

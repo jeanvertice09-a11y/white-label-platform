@@ -13,9 +13,9 @@ describe("fase 09 gateway RBAC", () => {
   test("tenant_support e tenant_finance não recebem mutações de gateway", () => {
     expect(canManageTenantGateways({ tenantRoles: ["tenant_support"] })).toBe(false);
     expect(canManageTenantGateways({ tenantRoles: ["tenant_finance"] })).toBe(false);
-    expect(() => assertCanManageTenantGateways({
-      tenantRoles: ["tenant_support"],
-    })).toThrow();
+    expect(() => {
+      assertCanManageTenantGateways({ tenantRoles: ["tenant_support"] });
+    }).toThrow();
   });
 
   test("papéis de store não elevam autoridade no control", () => {
