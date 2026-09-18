@@ -9,6 +9,7 @@ import {
 } from "@white-label/orders";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createPublicCatalogContext } from "./catalog-context.server.ts";
+import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 
 const checkoutSchema = z.object({
@@ -39,6 +40,9 @@ export const createWhatsappOrder = createServerFn({ method: "POST" })
       : null;
     const sql = createAdminSqlExecutor();
     await assertOrdersEntitlement(sql, catalog.scope);
+    if (data.couponCode?.trim()) {
+      await assertCouponsEntitlement(sql, catalog.scope);
+    }
     const orders = createOrderRepository(sql);
     const order = await orders.createFromCart(catalog.scope, {
       idempotencyKey: data.idempotencyKey,
