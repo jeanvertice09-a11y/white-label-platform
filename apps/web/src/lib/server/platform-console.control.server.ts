@@ -24,7 +24,7 @@ async function queryControlRows(sql: SqlExecutor, tenantId: string) {
 }
 
 function settingsJson(value: unknown): string {
-  return JSON.stringify(value ?? {}) ?? "{}";
+  return JSON.stringify(value ?? {});
 }
 
 export async function loadTenantControlData(
