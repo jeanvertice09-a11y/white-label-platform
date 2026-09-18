@@ -40,7 +40,7 @@ async function responseMessage(response: Response): Promise<string> {
 async function normalizeRouteError(err: unknown): Promise<never> {
   const status = readErrorStatus(err);
   if (status === 401) {
-    throw redirect({ to: "/login", replace: true });
+    redirect({ to: "/login", replace: true, throw: true });
   }
   if (err instanceof Response) {
     throw new RouteContextError(status ?? 403, await responseMessage(err));
