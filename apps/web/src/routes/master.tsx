@@ -4,6 +4,7 @@ import { loadMasterContext } from "../lib/client-guard.ts";
 import "../styles/master.css";
 import "../styles/master-data.css";
 import "../styles/dashboard-rich.css";
+import "../styles/dashboard-pages.css";
 import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/master")({
