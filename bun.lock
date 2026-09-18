@@ -31,7 +31,11 @@
         "@tanstack/react-start": "^1.95.1",
         "@white-label/auth": "0.1.0",
         "@white-label/catalog": "0.1.0",
+        "@white-label/customers": "0.1.0",
         "@white-label/domains": "0.1.0",
+        "@white-label/inventory": "0.1.0",
+        "@white-label/marketing": "0.1.0",
+        "@white-label/orders": "0.1.0",
         "@white-label/tenant": "0.1.0",
         "@white-label/validation": "0.1.0",
         "nitro": "3.0.260903-beta",
@@ -71,12 +75,28 @@
         "@white-label/storage": "0.1.0",
       },
     },
+    "packages/customers": {
+      "name": "@white-label/customers",
+      "version": "0.1.0",
+    },
     "packages/database": {
       "name": "@white-label/database",
       "version": "0.1.0",
     },
     "packages/domains": {
       "name": "@white-label/domains",
+      "version": "0.1.0",
+    },
+    "packages/inventory": {
+      "name": "@white-label/inventory",
+      "version": "0.1.0",
+    },
+    "packages/marketing": {
+      "name": "@white-label/marketing",
+      "version": "0.1.0",
+    },
+    "packages/orders": {
+      "name": "@white-label/orders",
       "version": "0.1.0",
     },
     "packages/payments": {
@@ -440,9 +460,17 @@
 
     "@white-label/catalog": ["@white-label/catalog@workspace:packages/catalog"],
 
+    "@white-label/customers": ["@white-label/customers@workspace:packages/customers"],
+
     "@white-label/database": ["@white-label/database@workspace:packages/database"],
 
     "@white-label/domains": ["@white-label/domains@workspace:packages/domains"],
+
+    "@white-label/inventory": ["@white-label/inventory@workspace:packages/inventory"],
+
+    "@white-label/marketing": ["@white-label/marketing@workspace:packages/marketing"],
+
+    "@white-label/orders": ["@white-label/orders@workspace:packages/orders"],
 
     "@white-label/payments": ["@white-label/payments@workspace:packages/payments"],
 

@@ -25,6 +25,8 @@ const MIGRATIONS = [
   "0006_rls_helpers_hardening.sql",
   "0007_storefront_catalog.sql",
   "0008_storefront_trial_window.sql",
+  "0009_orders_inventory.sql",
+  "0010_customers_marketing.sql",
 ];
 
 class PGliteDb implements TestDb {

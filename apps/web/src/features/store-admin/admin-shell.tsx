@@ -6,6 +6,10 @@ const items = [
   { to: "/admin", label: "Início", exact: true },
   { to: "/admin/products", label: "Produtos", exact: false },
   { to: "/admin/categories", label: "Categorias", exact: false },
+  { to: "/admin/orders", label: "Pedidos", exact: false },
+  { to: "/admin/customers", label: "Clientes", exact: false },
+  { to: "/admin/inventory", label: "Estoque", exact: false },
+  { to: "/admin/marketing", label: "Marketing", exact: false },
   { to: "/admin/store", label: "Minha loja", exact: false },
   { to: "/admin/settings", label: "Configurações", exact: false },
 ] as const;

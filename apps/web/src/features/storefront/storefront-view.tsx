@@ -87,7 +87,7 @@ export function StorefrontView({ data }: Readonly<{ data: StorefrontSnapshot }>)
     "--sf-bg": data.settings.backgroundColor,
     "--sf-font": fontValue(data.settings.fontFamily),
   } as CSSProperties;
-  const phone = data.settings.checkoutMode === "online" ? null : data.settings.whatsappPhone;
+  const whatsappEnabled = data.settings.checkoutMode !== "online" && Boolean(data.settings.whatsappPhone);
 
   function add(product: Product, variantId: string | null): void {
     setCart((current) => addCartItem(current, product, variantId, 1));
@@ -107,7 +107,7 @@ export function StorefrontView({ data }: Readonly<{ data: StorefrontSnapshot }>)
       <Toolbar data={data} search={search} categoryId={categoryId} onSearch={setSearch} onCategory={setCategoryId} />
       <ProductGrid products={filtered} showPrice={data.settings.showPrice} onOpen={setSelected} />
       {selected ? <ProductDetail product={selected} showPrice={data.settings.showPrice} showStock={data.settings.showStock} onClose={() => { setSelected(null); }} onAdd={add} /> : null}
-      {cartOpen ? <CartPanel cart={cart} phone={phone} intro={data.settings.whatsappMessage} onChange={setCart} onClose={() => { setCartOpen(false); }} /> : null}
+      {cartOpen ? <CartPanel cart={cart} whatsappEnabled={whatsappEnabled} onChange={setCart} onClose={() => { setCartOpen(false); }} /> : null}
     </section>
   );
 }
