@@ -7,25 +7,30 @@ import {
   updateMerchantCoupon,
 } from "../../lib/server/operations-marketing.functions.ts";
 
-function toIso(value: FormDataEntryValue | null): string | null {
-  const text = String(value ?? "").trim();
+function field(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value : "";
+}
+
+function toIso(value: string): string | null {
+  const text = value.trim();
   return text ? new Date(text).toISOString() : null;
 }
 
 function readCoupon(form: FormData): CouponMutationInput {
-  const type = String(form.get("discountType")) === "fixed" ? "fixed" : "percentage";
-  const rawValue = String(form.get("discountValue") ?? "0");
-  const minimum = String(form.get("minimumOrder") ?? "").trim();
-  const limit = String(form.get("usageLimit") ?? "").trim();
+  const type = field(form, "discountType") === "fixed" ? "fixed" : "percentage";
+  const rawValue = field(form, "discountValue");
+  const minimum = field(form, "minimumOrder").trim();
+  const limit = field(form, "usageLimit").trim();
   return {
-    code: String(form.get("code") ?? ""),
-    name: String(form.get("name") ?? ""),
+    code: field(form, "code"),
+    name: field(form, "name"),
     active: form.get("active") === "on",
     discountType: type,
     discountValue: type === "percentage" ? Number(rawValue) : moneyToCents(rawValue),
     minimumOrderCents: minimum ? moneyToCents(minimum) : null,
-    startsAt: toIso(form.get("startsAt")),
-    endsAt: toIso(form.get("endsAt")),
+    startsAt: toIso(field(form, "startsAt")),
+    endsAt: toIso(field(form, "endsAt")),
     usageLimit: limit ? Number(limit) : null,
   };
 }
@@ -52,7 +57,7 @@ export function CouponManager({ coupons }: Readonly<{ coupons: Coupon[] }>): Rea
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function save(event: React.FormEvent<HTMLFormElement>, id?: string): Promise<void> {
+  async function save(event: React.SyntheticEvent<HTMLFormElement>, id?: string): Promise<void> {
     event.preventDefault();
     setBusy(true);
     setMessage("");

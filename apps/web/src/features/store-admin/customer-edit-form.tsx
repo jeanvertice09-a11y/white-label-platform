@@ -3,12 +3,17 @@ import { useRouter } from "@tanstack/react-router";
 import type { CustomerDetail } from "@white-label/customers";
 import { updateMerchantCustomer } from "../../lib/server/operations-customers.functions.ts";
 
+function field(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 export function CustomerEditForm({ customer }: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function submit(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setBusy(true);
@@ -17,12 +22,12 @@ export function CustomerEditForm({ customer }: Readonly<{ customer: CustomerDeta
       await updateMerchantCustomer({ data: {
         id: customer.id,
         input: {
-          name: String(form.get("name") ?? ""),
-          phone: String(form.get("phone") ?? "") || null,
-          email: String(form.get("email") ?? "") || null,
-          document: String(form.get("document") ?? "") || null,
-          birthDate: String(form.get("birthDate") ?? "") || null,
-          notes: String(form.get("notes") ?? "") || null,
+          name: field(form, "name"),
+          phone: field(form, "phone") || null,
+          email: field(form, "email") || null,
+          document: field(form, "document") || null,
+          birthDate: field(form, "birthDate") || null,
+          notes: field(form, "notes") || null,
         },
       } });
       setMessage("Cliente atualizado.");

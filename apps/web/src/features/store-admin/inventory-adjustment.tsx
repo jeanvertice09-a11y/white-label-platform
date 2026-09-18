@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { adjustMerchantInventory } from "../../lib/server/operations-inventory.functions.ts";
 
+function field(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 export function InventoryAdjustment(props: Readonly<{
   productId: string;
   variantId: string | null;
@@ -10,20 +15,18 @@ export function InventoryAdjustment(props: Readonly<{
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+  async function submit(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const delta = Number(form.get("delta"));
-    const reason = String(form.get("reason") ?? "");
     setBusy(true);
     setMessage("");
     try {
       await adjustMerchantInventory({ data: {
         productId: props.productId,
         variantId: props.variantId,
-        delta,
+        delta: Number(field(form, "delta")),
         type: "adjustment",
-        reason,
+        reason: field(form, "reason"),
       } });
       event.currentTarget.reset();
       await router.invalidate();
