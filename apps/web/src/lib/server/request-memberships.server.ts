@@ -54,7 +54,7 @@ export function createRequestMembershipReader(): MembershipReader {
         .select("role")
         .eq("user_id", userId);
       if (error) throw new Error("Falha ao consultar permissões da plataforma");
-      return (data ?? []).map((row) => requireString(row.role, "role") as PlatformRole);
+      return data.map((row) => requireString(row.role, "role") as PlatformRole);
     },
     async getTenantMemberships(userId: string): Promise<MembershipRow[]> {
       const [tenantResult, storeResult] = await Promise.all([
@@ -64,11 +64,11 @@ export function createRequestMembershipReader(): MembershipReader {
       if (tenantResult.error || storeResult.error) {
         throw new Error("Falha ao consultar permissões do usuário");
       }
-      const tenants: TenantMemberRow[] = (tenantResult.data ?? []).map((row) => ({
+      const tenants: TenantMemberRow[] = tenantResult.data.map((row) => ({
         tenant_id: requireString(row.tenant_id, "tenant_id"),
         role: requireString(row.role, "role"),
       }));
-      const stores: StoreMemberRow[] = (storeResult.data ?? []).map((row) => ({
+      const stores: StoreMemberRow[] = storeResult.data.map((row) => ({
         tenant_id: requireString(row.tenant_id, "tenant_id"),
         store_id: requireString(row.store_id, "store_id"),
         role: requireString(row.role, "role"),
