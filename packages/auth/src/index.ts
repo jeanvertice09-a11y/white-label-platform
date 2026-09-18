@@ -9,9 +9,11 @@ export {
   canAccessTenantControl,
   canAccessStoreAdmin,
   canManageWhiteLabels,
+  canManageTenantStores,
   assertCanAccessMaster,
   assertCanAccessTenantControl,
   assertCanAccessStoreAdmin,
   assertCanManageWhiteLabels,
+  assertCanManageTenantStores,
 } from "./authorize.ts";
 export type { RoleSet } from "./authorize.ts";
