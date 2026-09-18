@@ -16,7 +16,7 @@ jobs:
         with:
           bun-version: "1.4.2"
       - run: bun install --frozen-lockfile
-      - run: bun --cwd apps/web run build
+      - run: cd apps/web && bun run build
       - name: Ensure only generated route tree changed
         shell: bash
         run: |
