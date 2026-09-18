@@ -4,6 +4,7 @@ import { loadControlContext } from "../lib/client-guard.ts";
 import { getTenantControlDashboard } from "../lib/server/platform-console.functions.ts";
 import "../styles/control.css";
 import "../styles/dashboard-rich.css";
+import "../styles/dashboard-pages.css";
 import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/control")({
