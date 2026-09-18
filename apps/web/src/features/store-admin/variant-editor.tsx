@@ -12,39 +12,74 @@ interface VariantDraft {
   name: string;
   sku: string;
   price: string;
+  compareAt: string;
+  cost: string;
   stock: string;
-  attribute: string;
-  value: string;
+  position: string;
+  attributes: string;
   active: boolean;
 }
 
+function attributesToText(attributes: Record<string, string>): string {
+  return Object.entries(attributes).map(([key, value]) => `${key}=${value}`).join("\n");
+}
+
+function parseAttributes(value: string): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  for (const rawLine of value.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const separator = line.indexOf("=");
+    if (separator <= 0) throw new Error("Use um atributo por linha no formato atributo=valor");
+    const key = line.slice(0, separator).trim();
+    const itemValue = line.slice(separator + 1).trim();
+    if (!key || key.length > 80 || !itemValue || itemValue.length > 120) {
+      throw new Error("Atributo ou valor inválido");
+    }
+    if (Object.prototype.hasOwnProperty.call(attributes, key)) {
+      throw new Error(`Atributo duplicado: ${key}`);
+    }
+    attributes[key] = itemValue;
+  }
+  return attributes;
+}
+
 function initialDraft(variant?: ProductVariant): VariantDraft {
-  const attributes = variant?.attributes ?? {};
   return {
     name: variant?.name ?? "",
     sku: variant?.sku ?? "",
     price: centsToInput(variant?.priceCents ?? 0),
+    compareAt: centsToInput(variant?.compareAtPriceCents ?? null),
+    cost: centsToInput(variant?.costCents ?? null),
     stock: String(variant?.stockQuantity ?? 0),
-    attribute: Object.keys(attributes)[0] ?? "",
-    value: Object.values(attributes)[0] ?? "",
+    position: String(variant?.position ?? 0),
+    attributes: attributesToText(variant?.attributes ?? {}),
     active: variant?.active ?? true,
   };
 }
 
-function toInput(productId: string, draft: VariantDraft, variant?: ProductVariant): VariantMutationInput {
-  const key = draft.attribute.trim();
-  const value = draft.value.trim();
+function optionalCents(value: string): number | null {
+  return value.trim() ? moneyToCents(value) : null;
+}
+
+function nonNegativeInteger(value: string, label: string): number {
+  const parsed = Number.parseInt(value || "0", 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`${label} inválido`);
+  return parsed;
+}
+
+function toInput(productId: string, draft: VariantDraft): VariantMutationInput {
   return {
     productId,
     name: draft.name.trim(),
     sku: draft.sku.trim() || null,
-    attributes: key && value ? { [key]: value } : {},
+    attributes: parseAttributes(draft.attributes),
     priceCents: moneyToCents(draft.price),
-    compareAtPriceCents: variant?.compareAtPriceCents ?? null,
-    costCents: variant?.costCents ?? null,
+    compareAtPriceCents: optionalCents(draft.compareAt),
+    costCents: optionalCents(draft.cost),
     active: draft.active,
-    stockQuantity: Number.parseInt(draft.stock || "0", 10),
-    position: variant?.position ?? 0,
+    stockQuantity: nonNegativeInteger(draft.stock, "Estoque"),
+    position: nonNegativeInteger(draft.position, "Posição"),
   };
 }
 
@@ -58,9 +93,18 @@ function VariantFields(props: Readonly<{
       <div className="k-field"><label>Nome da variante</label><input value={draft.name} onChange={(event) => { setField("name", event.target.value); }} required /></div>
       <div className="k-field"><label>SKU</label><input value={draft.sku} onChange={(event) => { setField("sku", event.target.value); }} /></div>
       <div className="k-field"><label>Preço</label><input inputMode="decimal" value={draft.price} onChange={(event) => { setField("price", event.target.value); }} required /></div>
-      <div className="k-field"><label>Estoque</label><input type="number" min="0" value={draft.stock} onChange={(event) => { setField("stock", event.target.value); }} /></div>
-      <div className="k-field"><label>Atributo</label><input value={draft.attribute} onChange={(event) => { setField("attribute", event.target.value); }} placeholder="Ex.: tamanho" /></div>
-      <div className="k-field"><label>Valor</label><input value={draft.value} onChange={(event) => { setField("value", event.target.value); }} placeholder="Ex.: P" /></div>
+      <div className="k-field"><label>Preço comparativo</label><input inputMode="decimal" value={draft.compareAt} onChange={(event) => { setField("compareAt", event.target.value); }} /></div>
+      <div className="k-field"><label>Custo</label><input inputMode="decimal" value={draft.cost} onChange={(event) => { setField("cost", event.target.value); }} /></div>
+      <div className="k-field"><label>Estoque atual</label><input type="number" min="0" value={draft.stock} disabled readOnly /><span className="k-muted">Ajuste pela tela Estoque.</span></div>
+      <div className="k-field"><label>Ordem</label><input type="number" min="0" value={draft.position} onChange={(event) => { setField("position", event.target.value); }} /></div>
+      <div className="k-field k-field--full"><label>Atributos</label>
+        <textarea
+          value={draft.attributes}
+          onChange={(event) => { setField("attributes", event.target.value); }}
+          placeholder={"tamanho=P\ncor=Azul"}
+        />
+        <span className="k-muted">Um por linha no formato atributo=valor. A mesma combinação não pode ser repetida.</span>
+      </div>
     </div>
   );
 }
@@ -80,9 +124,13 @@ function VariantForm(props: Readonly<{ productId: string; variant?: ProductVaria
     setSaving(true);
     setStatus("");
     try {
-      const input = toInput(props.productId, draft, props.variant);
-      if (props.variant) await updateMerchantVariant({ data: { id: props.variant.id, input } });
-      else await createMerchantVariant({ data: input });
+      const input = toInput(props.productId, draft);
+      if (props.variant) {
+        const updated = await updateMerchantVariant({ data: { id: props.variant.id, input } });
+        if (!updated) throw new Error("Variante não encontrada neste produto");
+      } else {
+        await createMerchantVariant({ data: input });
+      }
       setStatus("Variante salva.");
       await router.invalidate();
       if (!props.variant) setDraft(initialDraft());
@@ -108,11 +156,11 @@ function VariantForm(props: Readonly<{ productId: string; variant?: ProductVaria
 export function VariantEditor(props: Readonly<{ productId: string; variants: ProductVariant[] }>): React.JSX.Element {
   return (
     <section className="k-page">
-      <div><h2>Variantes</h2><p className="k-muted">Cada variante mantém seu próprio preço e estoque.</p></div>
+      <div><h2>Variantes</h2><p className="k-muted">Cada combinação mantém seu próprio preço, SKU, disponibilidade e estoque.</p></div>
       <VariantForm productId={props.productId} />
       {props.variants.length ? (
         <div className="k-stack">{props.variants.map((variant) => <VariantForm key={variant.id} productId={props.productId} variant={variant} />)}</div>
-      ) : <div className="k-empty">Nenhuma variante cadastrada.</div>}
+      ) : <div className="k-empty">Nenhuma variante cadastrada. O produto continua funcionando como produto simples.</div>}
     </section>
   );
 }

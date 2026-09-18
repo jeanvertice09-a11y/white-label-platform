@@ -53,7 +53,11 @@ async function hydrateProducts(
 function publicProductFilter(): string {
   return "p.active=true and (p.category_id is null or exists (" +
     "select 1 from public.categories c where c.tenant_id=p.tenant_id " +
-    "and c.store_id=p.store_id and c.id=p.category_id and c.active=true))";
+    "and c.store_id=p.store_id and c.id=p.category_id and c.active=true)) " +
+    "and (not exists (select 1 from public.product_variants va " +
+    "where va.tenant_id=p.tenant_id and va.store_id=p.store_id and va.product_id=p.id) " +
+    "or exists (select 1 from public.product_variants vv where vv.tenant_id=p.tenant_id " +
+    "and vv.store_id=p.store_id and vv.product_id=p.id and vv.active=true))";
 }
 
 async function getProduct(

@@ -1,46 +1,43 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
-import { formatMoney } from "../features/store-admin/format.ts";
-import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
+import { ProductsList } from "../features/store-admin/products-list.tsx";
+import {
+  listMerchantCategories,
+  listMerchantProducts,
+} from "../lib/server/catalog.functions.ts";
 
 export const Route = createFileRoute("/admin/products")({
-  loader: () => getMerchantCatalogOverview(),
+  loader: async () => {
+    const [categories, products] = await Promise.all([
+      listMerchantCategories(),
+      listMerchantProducts({ data: { page: 1, pageSize: 20, sort: "position" } }),
+    ]);
+    return { categories, products };
+  },
+  pendingComponent: ProductsPending,
+  errorComponent: ProductsError,
   component: ProductsPage,
 });
 
-function ProductsPage() {
+function ProductsPending(): React.JSX.Element {
+  return <div className="k-empty">Carregando produtos…</div>;
+}
+
+function ProductsError(props: Readonly<{ error: unknown }>): React.JSX.Element {
+  const message = props.error instanceof Error ? props.error.message : "Não foi possível carregar os produtos.";
+  return <div className="k-empty"><p>{message}</p></div>;
+}
+
+function ProductsPage(): React.JSX.Element {
   const data = Route.useLoaderData();
-  const products = data.products.items;
   return (
     <div className="k-page">
       <PageHead
         title="Produtos"
-        description="Cadastre produtos, preços, estoque e variantes da loja."
+        description="Cadastre, busque e gerencie produtos, preços, estoque e variantes da loja."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
-      {products.length ? (
-        <div className="k-card k-table-wrap">
-          <table className="k-table">
-            <thead><tr><th>Produto</th><th>Preço</th><th>Variantes</th><th>Status</th><th /></tr></thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td><strong>{product.name}</strong><div className="k-row__meta">{product.sku || "Sem SKU"}</div></td>
-                  <td>{formatMoney(product.priceCents)}</td>
-                  <td>{product.variants.length}</td>
-                  <td><span className={product.active ? "k-badge k-badge--on" : "k-badge"}>{product.active ? "Ativo" : "Inativo"}</span></td>
-                  <td><Link className="k-button" to="/admin/products/$id" params={{ id: product.id }}>Editar</Link></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="k-empty">
-          <p>Nenhum produto cadastrado.</p>
-          <Link className="k-button" to="/admin/products/new">Cadastrar primeiro produto</Link>
-        </div>
-      )}
+      <ProductsList initialPage={data.products} categories={data.categories} />
     </div>
   );
 }

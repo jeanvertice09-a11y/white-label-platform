@@ -76,6 +76,19 @@ export const getPublicCatalogProduct = createServerFn({ method: "GET" })
 export const getMerchantCatalogOverview = createServerFn({ method: "GET" })
   .handler(async () => merchantSnapshot());
 
+export const listMerchantCategories = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const context = await createMerchantCatalogContext(getRequestHost());
+    return context.repository.listCategories(context.scope, false);
+  });
+
+export const listMerchantProducts = createServerFn({ method: "GET" })
+  .validator((data: QueryInput | undefined) => querySchema.parse(data ?? {}))
+  .handler(async ({ data }) => {
+    const context = await createMerchantCatalogContext(getRequestHost());
+    return context.repository.listProducts({ ...context.scope, ...data }, false);
+  });
+
 export const getMerchantProduct = createServerFn({ method: "GET" })
   .validator(idSchema)
   .handler(async ({ data }) => {

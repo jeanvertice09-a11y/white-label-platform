@@ -44,7 +44,24 @@ describe("catalog postgres repository scope", () => {
     await repository.listBanners(scope, true);
     await repository.listProducts({ ...scope, page: 1, pageSize: 20 }, true);
 
-    expect(statements.join("\n")).toContain("active=true");
-    expect(statements.join("\n")).toContain("p.active=true");
+    const all = statements.join("\n");
+    expect(all).toContain("p.active=true");
+    expect(all).toContain("vv.active=true");
+  });
+
+  test("produto com variantes somente inativas não é tratado como produto simples público", async () => {
+    const statements: string[] = [];
+    const sql: CatalogSqlExecutor = {
+      query(statement) {
+        statements.push(statement);
+        return Promise.resolve([]);
+      },
+    };
+    const repository = createCatalogReadRepository(sql);
+    await repository.listProducts({ tenantId: "t", storeId: "s", page: 1, pageSize: 20 }, true);
+    const statement = statements[0] ?? "";
+    expect(statement).toContain("not exists (select 1 from public.product_variants va");
+    expect(statement).toContain("or exists (select 1 from public.product_variants vv");
+    expect(statement).toContain("vv.active=true");
   });
 });
