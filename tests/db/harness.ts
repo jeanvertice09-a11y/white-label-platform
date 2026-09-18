@@ -28,6 +28,9 @@ const MIGRATIONS = [
   "0009_orders_inventory.sql",
   "0010_customers_marketing.sql",
   "0011_foundation_hardening.sql",
+  "0012_commercial_plans_entitlements.sql",
+  "0013_billing_events.sql",
+  "0014_billing_level_hardening.sql",
 ];
 
 class PGliteDb implements TestDb {
@@ -122,8 +125,6 @@ language sql stable
 as $$ select nullif(current_setting('app.test_uid', true), '')::uuid $$;
 `;
 
-// Em Supabase real esta função é gerenciada pela plataforma. O shim existe
-// apenas no PGlite para validar os REVOKEs da migration 0011.
 const RLS_AUTO_ENABLE_SHIM = `
 create or replace function public.rls_auto_enable()
 returns void

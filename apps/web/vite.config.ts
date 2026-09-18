@@ -18,6 +18,7 @@ export default defineConfig({
       "@tanstack/react-router",
       "@tanstack/react-start",
       "@white-label/auth",
+      "@white-label/billing",
       "@white-label/catalog",
       "@white-label/domains",
       "@white-label/tenant",
