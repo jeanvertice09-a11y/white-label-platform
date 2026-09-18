@@ -40,7 +40,12 @@ export {
 } from "./cart.ts";
 export type { CartItem, CartState } from "./cart.ts";
 export { buildWhatsappMessage, buildWhatsappCheckoutUrl } from "./whatsapp.ts";
-export { assertCatalogSettings, assertProductInput, assertCategoryInput } from "./validation.ts";
+export {
+  assertCatalogSettings,
+  assertProductInput,
+  assertVariantInput,
+  assertCategoryInput,
+} from "./validation.ts";
 export { PUBLIC_MEDIA_ORIGIN, getCatalogPublicMediaUrl } from "./storage.ts";
 export {
   StorefrontUnavailableError,

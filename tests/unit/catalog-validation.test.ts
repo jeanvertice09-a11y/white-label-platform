@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { assertCatalogSettings } from "../../packages/catalog/src/validation.ts";
+import {
+  assertCatalogSettings,
+  assertVariantInput,
+} from "../../packages/catalog/src/validation.ts";
+import type { VariantMutationInput } from "../../packages/catalog/src/admin-types.ts";
 import type { CatalogSettings } from "../../packages/catalog/src/types.ts";
 
 const settings: CatalogSettings = {
@@ -22,6 +26,19 @@ const settings: CatalogSettings = {
   seoDescription: null,
 };
 
+const variant: VariantMutationInput = {
+  productId: "p1",
+  name: "Azul P",
+  sku: "AZ-P",
+  attributes: { cor: "Azul", tamanho: "P" },
+  priceCents: 1299,
+  compareAtPriceCents: 1499,
+  costCents: 700,
+  active: true,
+  stockQuantity: 5,
+  position: 0,
+};
+
 describe("catalog settings validation", () => {
   test("aceita configuração estruturada válida", () => {
     expect(() => {
@@ -38,6 +55,24 @@ describe("catalog settings validation", () => {
   test("bloqueia cor fora do formato permitido", () => {
     expect(() => {
       assertCatalogSettings({ ...settings, primaryColor: "red; background:url(x)" });
+    }).toThrow();
+  });
+});
+
+describe("variant validation", () => {
+  test("aceita múltiplos atributos estruturados", () => {
+    expect(() => { assertVariantInput(variant); }).not.toThrow();
+  });
+
+  test("rejeita chave de atributo vazia", () => {
+    expect(() => {
+      assertVariantInput({ ...variant, attributes: { "": "Azul" } });
+    }).toThrow();
+  });
+
+  test("rejeita estoque negativo", () => {
+    expect(() => {
+      assertVariantInput({ ...variant, stockQuantity: -1 });
     }).toThrow();
   });
 });

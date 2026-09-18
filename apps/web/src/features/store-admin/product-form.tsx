@@ -23,6 +23,7 @@ interface ProductDraft {
   compareAt: string;
   cost: string;
   stock: string;
+  position: string;
   active: boolean;
   trackInventory: boolean;
 }
@@ -38,6 +39,7 @@ function initialDraft(product: Product | null): ProductDraft {
     compareAt: centsToInput(product?.compareAtPriceCents ?? null),
     cost: centsToInput(product?.costCents ?? null),
     stock: String(product?.stockQuantity ?? 0),
+    position: String(product?.position ?? 0),
     active: product?.active ?? true,
     trackInventory: product?.trackInventory ?? false,
   };
@@ -47,7 +49,13 @@ function optionalCents(value: string): number | null {
   return value.trim() ? moneyToCents(value) : null;
 }
 
-function toInput(draft: ProductDraft, product: Product | null): ProductMutationInput {
+function nonNegativeInteger(value: string, label: string): number {
+  const parsed = Number.parseInt(value || "0", 10);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`${label} inválido`);
+  return parsed;
+}
+
+function toInput(draft: ProductDraft): ProductMutationInput {
   return {
     name: draft.name.trim(),
     slug: draft.slug.trim(),
@@ -59,17 +67,18 @@ function toInput(draft: ProductDraft, product: Product | null): ProductMutationI
     costCents: optionalCents(draft.cost),
     active: draft.active,
     trackInventory: draft.trackInventory,
-    stockQuantity: Number.parseInt(draft.stock || "0", 10),
-    position: product?.position ?? 0,
+    stockQuantity: nonNegativeInteger(draft.stock, "Estoque"),
+    position: nonNegativeInteger(draft.position, "Posição"),
   };
 }
 
 function ProductFields(props: Readonly<{
   draft: ProductDraft;
   categories: Category[];
+  hasVariants: boolean;
   setField: <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => void;
 }>): React.JSX.Element {
-  const { draft, categories, setField } = props;
+  const { draft, categories, hasVariants, setField } = props;
   return (
     <div className="k-card k-form__grid">
       <div className="k-field"><label htmlFor="product-name">Nome</label>
@@ -87,10 +96,10 @@ function ProductFields(props: Readonly<{
       <div className="k-field"><label htmlFor="product-category">Categoria</label>
         <select id="product-category" value={draft.categoryId} onChange={(event) => { setField("categoryId", event.target.value); }}>
           <option value="">Sem categoria</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}{category.active ? "" : " (inativa)"}</option>)}
         </select>
       </div>
-      <div className="k-field"><label htmlFor="product-price">Preço</label>
+      <div className="k-field"><label htmlFor="product-price">Preço base</label>
         <input id="product-price" inputMode="decimal" value={draft.price} onChange={(event) => { setField("price", event.target.value); }} required />
       </div>
       <div className="k-field"><label htmlFor="product-compare">Preço comparativo</label>
@@ -99,11 +108,16 @@ function ProductFields(props: Readonly<{
       <div className="k-field"><label htmlFor="product-cost">Custo</label>
         <input id="product-cost" inputMode="decimal" value={draft.cost} onChange={(event) => { setField("cost", event.target.value); }} />
       </div>
-      <div className="k-field"><label htmlFor="product-stock">Estoque</label>
-        <input id="product-stock" type="number" min="0" value={draft.stock} onChange={(event) => { setField("stock", event.target.value); }} />
+      <div className="k-field"><label htmlFor="product-stock">Estoque atual</label>
+        <input id="product-stock" type="number" min="0" value={draft.stock} disabled readOnly />
+        <span className="k-muted">Ajuste o saldo pela tela Estoque para manter o histórico de movimentações.</span>
+      </div>
+      <div className="k-field"><label htmlFor="product-position">Ordem</label>
+        <input id="product-position" type="number" min="0" value={draft.position} onChange={(event) => { setField("position", event.target.value); }} />
       </div>
       <label className="k-check"><input type="checkbox" checked={draft.active} onChange={(event) => { setField("active", event.target.checked); }} />Produto ativo</label>
       <label className="k-check"><input type="checkbox" checked={draft.trackInventory} onChange={(event) => { setField("trackInventory", event.target.checked); }} />Controlar estoque</label>
+      {hasVariants ? <div className="k-field k-field--full"><span className="k-muted">Este produto possui variantes; preço e estoque de cada seleção são definidos nas variantes abaixo.</span></div> : null}
     </div>
   );
 }
@@ -123,9 +137,10 @@ export function ProductForm({ product, categories }: ProductFormProps): React.JS
     setSaving(true);
     setStatus("");
     try {
-      const input = toInput(draft, product);
+      const input = toInput(draft);
       if (product) {
-        await updateMerchantProduct({ data: { id: product.id, input } });
+        const updated = await updateMerchantProduct({ data: { id: product.id, input } });
+        if (!updated) throw new Error("Produto não encontrado nesta loja");
         setStatus("Produto salvo.");
         await router.invalidate();
       } else {
@@ -141,7 +156,12 @@ export function ProductForm({ product, categories }: ProductFormProps): React.JS
 
   return (
     <form className="k-form" onSubmit={(event) => { void submit(event); }}>
-      <ProductFields draft={draft} categories={categories} setField={setField} />
+      <ProductFields
+        draft={draft}
+        categories={categories}
+        hasVariants={Boolean(product?.variants.length)}
+        setField={setField}
+      />
       <div className="k-actions">
         {status ? <span className="k-status">{status}</span> : null}
         <button className="k-button k-button--primary" type="submit" disabled={saving}>

@@ -50,6 +50,38 @@ describe("catalog composite constraints", () => {
     );
   });
 
+  test("produto não pode usar categoria de outra store", async () => {
+    await expectReject(
+      h.db.query(`
+        update public.products set category_id='${CB}'
+        where tenant_id='${ids.tenantA}' and store_id='${ids.storeA}' and id='${P}'
+      `),
+      "product category cross-store",
+    );
+  });
+
+  test("combinação de atributos duplicada no mesmo produto é rejeitada", async () => {
+    await h.db.query(`
+      insert into public.product_variants
+        (tenant_id, store_id, product_id, name, attributes, price_cents)
+      values (
+        '${ids.tenantA}', '${ids.storeA}', '${P}', 'Azul P',
+        '{"cor":"Azul","tamanho":"P"}'::jsonb, 1299
+      )
+    `);
+    await expectReject(
+      h.db.query(`
+        insert into public.product_variants
+          (tenant_id, store_id, product_id, name, attributes, price_cents)
+        values (
+          '${ids.tenantA}', '${ids.storeA}', '${P}', 'P Azul duplicada',
+          '{"tamanho":"P","cor":"Azul"}'::jsonb, 1399
+        )
+      `),
+      "duplicate variant attribute combination",
+    );
+  });
+
   test("object key R2 fora da store é rejeitada no banco", async () => {
     await expectReject(
       h.db.query(`
