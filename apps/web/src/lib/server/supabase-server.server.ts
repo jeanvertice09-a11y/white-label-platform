@@ -1,5 +1,4 @@
-// SERVER-ONLY: validação de sessão via Supabase Auth SSR (@supabase/ssr).
-// Usa createServerClient com cookie adapter do TanStack Start (getCookies/setCookie/setResponseHeader).
+// SERVER-ONLY: cliente Supabase SSR autenticado pelo cookie do request.
 import { createServerClient } from "@supabase/ssr";
 import { getCookies, setCookie, setResponseHeader } from "@tanstack/react-start/server";
 import type { Session } from "./session.server.ts";
@@ -15,43 +14,37 @@ function readServerEnv(): { url: string; anonKey: string } {
   assertServer();
   const url = process.env["SUPABASE_URL"];
   const anonKey = process.env["SUPABASE_ANON_KEY"];
-  if (!url || !anonKey) throw new Error("[supabase-server] SUPABASE_URL/ANON_KEY ausentes");
+  if (!url || !anonKey) {
+    throw new Error("[supabase-server] SUPABASE_URL/ANON_KEY ausentes");
+  }
   return { url, anonKey };
 }
 
-/**
- * Validação server-side REAL: Auth.getUser() confirma o JWT contra o
- * servidor Supabase Auth (não apenas decodifica). Sem backend alcançável
- * ou sessão inválida -> null (fail closed). Usa anon key; service_role
- * nunca é necessária para validar sessão de usuário.
- * Cookie adapter usa getCookies/setCookie/setResponseHeader do TanStack Start
- * para ler/escrever cookies e headers de resposta corretamente.
- */
-export async function validateServerSession(): Promise<Session | null> {
-  assertServer();
+export function createRequestSupabaseClient() {
   const { url, anonKey } = readServerEnv();
-
-  // Headers de cache para rotas autenticadas
   setResponseHeader("Cache-Control", "private, no-store");
-
-  const client = createServerClient(url, anonKey, {
+  return createServerClient(url, anonKey, {
     cookies: {
       getAll() {
         const cookies = getCookies();
         return Object.entries(cookies).map(([name, value]) => ({ name, value }));
       },
-      setAll(_cookiesToSet, responseHeaders) {
-        for (const { name, value, options } of _cookiesToSet) {
+      setAll(cookiesToSet, responseHeaders) {
+        for (const { name, value, options } of cookiesToSet) {
           setCookie(name, value, options);
         }
-        // Aplica headers de resposta retornados pelo Supabase
         for (const [key, value] of Object.entries(responseHeaders)) {
           setResponseHeader(key, value);
         }
       },
     },
   });
+}
 
+/** Valida o JWT da sessão contra o Supabase Auth. */
+export async function validateServerSession(): Promise<Session | null> {
+  assertServer();
+  const client = createRequestSupabaseClient();
   try {
     const { data, error } = await client.auth.getUser();
     if (error) return null;

@@ -25,15 +25,15 @@ function readErrorMessage(err: unknown): string {
     const message = (err as { message?: unknown }).message;
     if (typeof message === "string") return message;
   }
-  return "Acesso negado";
+  return "Falha ao validar acesso";
 }
 
 async function responseMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { message?: unknown };
-    return typeof body.message === "string" ? body.message : "Acesso negado";
+    return typeof body.message === "string" ? body.message : "Falha ao validar acesso";
   } catch {
-    return "Acesso negado";
+    return "Falha ao validar acesso";
   }
 }
 
@@ -43,9 +43,9 @@ async function normalizeRouteError(err: unknown): Promise<never> {
     redirect({ to: "/login", replace: true, throw: true });
   }
   if (err instanceof Response) {
-    throw new RouteContextError(status ?? 403, await responseMessage(err));
+    throw new RouteContextError(status ?? 500, await responseMessage(err));
   }
-  throw new RouteContextError(status ?? 403, readErrorMessage(err));
+  throw new RouteContextError(status ?? 500, readErrorMessage(err));
 }
 
 async function callServerFn(fn: () => Promise<unknown>): Promise<void> {

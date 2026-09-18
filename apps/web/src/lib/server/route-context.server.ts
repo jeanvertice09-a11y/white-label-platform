@@ -21,7 +21,7 @@ export { stubSession };
 
 export class HttpError extends Error {
   constructor(
-    readonly status: 401 | 403,
+    readonly status: 401 | 403 | 500,
     message: string,
     readonly code: string,
   ) {
@@ -54,7 +54,6 @@ export interface RouteDeps {
   resolveTenantForHost: (host: string) => Promise<TenantResolution | null>;
 }
 
-/** Leitor pendente: sem DB configurado retorna vazio -> fail closed. */
 export const pendingMembershipReader: MembershipReader = {
   async getPlatformRoles(): Promise<PlatformRole[]> {
     await Promise.resolve();
@@ -77,18 +76,18 @@ export const defaultDeps: RouteDeps = {
   resolveTenantForHost: unresolvedHost,
 };
 
-/** Cria dependências reais conectadas ao Supabase (service_role para DB, anon para Auth). */
+/** Sessão e memberships usam o mesmo Supabase SSR do request. */
 export async function createRealDeps(): Promise<RouteDeps> {
   const sqlExecutor = createAdminSqlExecutor();
   const domainResolver = new DomainResolver(new PostgresDomainStore(sqlExecutor));
-  const { createDbMembershipReader } = await import("./db-memberships.server.ts");
-  const memberships = createDbMembershipReader(sqlExecutor);
+  const { createRequestMembershipReader } = await import("./request-memberships.server.ts");
+  const memberships = createRequestMembershipReader();
 
   return {
     resolveSession: resolveSessionFromRequest,
     memberships,
     resolveTenantForHost: async (host: string) => {
-      const normalized = host.toLowerCase().split(":")[0].replace(/\.$/, "");
+      const normalized = host.toLowerCase().split(":")[0]?.replace(/\.$/, "") ?? "";
       const resolved = await domainResolver.resolve(normalized);
       if (!resolved) return null;
       return {
@@ -99,29 +98,29 @@ export async function createRealDeps(): Promise<RouteDeps> {
   };
 }
 
-async function requireSession(input: RouteInput, deps: RouteDeps): Promise<Session> {
+async function requireSession(_input: RouteInput, deps: RouteDeps): Promise<Session> {
   const session = await deps.resolveSession();
   if (!session) throw new HttpError(401, "Sessão necessária", "UNAUTHENTICATED");
   return session;
 }
 
-function toHttp(e: unknown): never {
-  if (e instanceof HttpError) throw e;
-  if (e instanceof AuthorizationError || e instanceof TenantContextError) {
-    throw new HttpError(403, e.message, "FORBIDDEN");
+function toHttp(error: unknown): never {
+  if (error instanceof HttpError) throw error;
+  if (error instanceof AuthorizationError || error instanceof TenantContextError) {
+    throw new HttpError(403, error.message, "FORBIDDEN");
   }
-  throw new HttpError(403, "Acesso negado", "FORBIDDEN");
+  throw new HttpError(500, "Falha interna ao validar acesso", "AUTH_INTERNAL_ERROR");
 }
 
-/** /master: somente platform_owner/platform_admin. Sem service_role. */
+/** /master: somente platform_owner/platform_admin. */
 export async function loadMaster(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<MasterContext> {
   try {
     const session = await requireSession(input, deps);
     const roles = await deps.memberships.getPlatformRoles(session.userId);
     assertCanAccessMaster({ platformRoles: roles });
     return { userId: session.userId as UserId, platformRoles: roles };
-  } catch (e) {
-    return toHttp(e);
+  } catch (error) {
+    return toHttp(error);
   }
 }
 
@@ -167,7 +166,7 @@ function uniqueTenantIdForSystemApp(memberships: MembershipRow[]): TenantId {
   return tenantId;
 }
 
-/** /control: membership válida no tenant resolvido pelo host (servidor). */
+/** /control: membership válida no tenant resolvido pelo host. */
 export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
     const session = await requireSession(input, deps);
@@ -185,8 +184,8 @@ export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDe
     const ctx = buildContext(session, memberships, tenantId, undefined, host);
     assertCanAccessTenantControl({ tenantRoles: ctx.tenantRoles });
     return ctx;
-  } catch (e) {
-    return toHttp(e);
+  } catch (error) {
+    return toHttp(error);
   }
 }
 
@@ -204,7 +203,7 @@ export async function loadStoreAdmin(input: RouteInput, deps: RouteDeps = defaul
     const ctx = buildContext(session, memberships, resolved.tenantId, resolved.storeId, host);
     assertCanAccessStoreAdmin({ storeRoles: ctx.storeRoles });
     return ctx;
-  } catch (e) {
-    return toHttp(e);
+  } catch (error) {
+    return toHttp(error);
   }
 }

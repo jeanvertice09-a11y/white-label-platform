@@ -11,14 +11,22 @@ export function AccessDenied(props: { error: unknown }): React.JSX.Element {
     }
   }, [err.status, navigate]);
 
-  const title = err.status === 401 ? "Redirecionando para login..." : "Acesso negado";
+  if (err.status === 401) {
+    return (
+      <section>
+        <h1>Redirecionando para login...</h1>
+      </section>
+    );
+  }
+
+  const internalError = (err.status ?? 500) >= 500;
   return (
     <section>
-      <h1>{title}</h1>
-      <p>{err.message ?? "Você não tem permissão para acessar esta área."}</p>
-      {err.status !== 401 && (
-        <p><a href="/login">Ir para login</a></p>
-      )}
+      <h1>{internalError ? "Erro ao validar acesso" : "Acesso negado"}</h1>
+      <p>{err.message ?? (internalError
+        ? "Não foi possível validar suas permissões agora."
+        : "Você não tem permissão para acessar esta área.")}</p>
+      {!internalError ? <p><a href="/login">Ir para login</a></p> : null}
     </section>
   );
 }
