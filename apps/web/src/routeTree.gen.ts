@@ -15,6 +15,13 @@ import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as ControlRouteImport } from './routes/control'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MasterRouteImport } from './routes/master'
+import { Route as MasterIndexRouteImport } from './routes/master.index'
+import { Route as MasterAuditRouteImport } from './routes/master.audit'
+import { Route as MasterBillingRouteImport } from './routes/master.billing'
+import { Route as MasterInfrastructureRouteImport } from './routes/master.infrastructure'
+import { Route as MasterPlatformsRouteImport } from './routes/master.platforms'
+import { Route as MasterSettingsRouteImport } from './routes/master.settings'
+import { Route as MasterSupportRouteImport } from './routes/master.support'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminProductsRouteImport } from './routes/admin.products'
@@ -56,6 +63,41 @@ const MasterRoute = MasterRouteImport.update({
   id: '/master',
   path: '/master',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MasterIndexRoute = MasterIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterAuditRoute = MasterAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterBillingRoute = MasterBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterInfrastructureRoute = MasterInfrastructureRouteImport.update({
+  id: '/infrastructure',
+  path: '/infrastructure',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterPlatformsRoute = MasterPlatformsRouteImport.update({
+  id: '/platforms',
+  path: '/platforms',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterSettingsRoute = MasterSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterSupportRoute = MasterSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => MasterRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -119,7 +161,14 @@ export interface FileRoutesByFullPath {
   '/catalog': typeof CatalogRoute
   '/control': typeof ControlRoute
   '/login': typeof LoginRoute
-  '/master': typeof MasterRoute
+  '/master': typeof MasterRouteWithChildren
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
+  '/master/': typeof MasterIndexRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/settings': typeof AdminSettingsRoute
@@ -137,7 +186,13 @@ export interface FileRoutesByTo {
   '/catalog': typeof CatalogRoute
   '/control': typeof ControlRoute
   '/login': typeof LoginRoute
-  '/master': typeof MasterRoute
+  '/master': typeof MasterIndexRoute
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/settings': typeof AdminSettingsRoute
@@ -156,7 +211,14 @@ export interface FileRoutesById {
   '/catalog': typeof CatalogRoute
   '/control': typeof ControlRoute
   '/login': typeof LoginRoute
-  '/master': typeof MasterRoute
+  '/master': typeof MasterRouteWithChildren
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
+  '/master/': typeof MasterIndexRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/settings': typeof AdminSettingsRoute
@@ -178,6 +240,13 @@ export interface FileRouteTypes {
     | '/control'
     | '/login'
     | '/master'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/master/'
     | '/admin/categories'
     | '/admin/products'
     | '/admin/settings'
@@ -196,6 +265,12 @@ export interface FileRouteTypes {
     | '/control'
     | '/login'
     | '/master'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
     | '/admin/categories'
     | '/admin/products'
     | '/admin/settings'
@@ -214,6 +289,13 @@ export interface FileRouteTypes {
     | '/control'
     | '/login'
     | '/master'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/master/'
     | '/admin/categories'
     | '/admin/products'
     | '/admin/settings'
@@ -233,7 +315,7 @@ export interface RootRouteChildren {
   CatalogRoute: typeof CatalogRoute
   ControlRoute: typeof ControlRoute
   LoginRoute: typeof LoginRoute
-  MasterRoute: typeof MasterRoute
+  MasterRoute: typeof MasterRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -279,6 +361,55 @@ declare module '@tanstack/react-router' {
       fullPath: '/master'
       preLoaderRoute: typeof MasterRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/master/': {
+      id: '/master/'
+      path: '/'
+      fullPath: '/master/'
+      preLoaderRoute: typeof MasterIndexRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/audit': {
+      id: '/master/audit'
+      path: '/audit'
+      fullPath: '/master/audit'
+      preLoaderRoute: typeof MasterAuditRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/billing': {
+      id: '/master/billing'
+      path: '/billing'
+      fullPath: '/master/billing'
+      preLoaderRoute: typeof MasterBillingRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/infrastructure': {
+      id: '/master/infrastructure'
+      path: '/infrastructure'
+      fullPath: '/master/infrastructure'
+      preLoaderRoute: typeof MasterInfrastructureRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/platforms': {
+      id: '/master/platforms'
+      path: '/platforms'
+      fullPath: '/master/platforms'
+      preLoaderRoute: typeof MasterPlatformsRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/settings': {
+      id: '/master/settings'
+      path: '/settings'
+      fullPath: '/master/settings'
+      preLoaderRoute: typeof MasterSettingsRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/support': {
+      id: '/master/support'
+      path: '/support'
+      fullPath: '/master/support'
+      preLoaderRoute: typeof MasterSupportRouteImport
+      parentRoute: typeof MasterRoute
     }
     '/admin/': {
       id: '/admin/'
@@ -360,6 +491,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MasterRouteChildren {
+  MasterAuditRoute: typeof MasterAuditRoute
+  MasterBillingRoute: typeof MasterBillingRoute
+  MasterInfrastructureRoute: typeof MasterInfrastructureRoute
+  MasterPlatformsRoute: typeof MasterPlatformsRoute
+  MasterSettingsRoute: typeof MasterSettingsRoute
+  MasterSupportRoute: typeof MasterSupportRoute
+  MasterIndexRoute: typeof MasterIndexRoute
+}
+
+const MasterRouteChildren: MasterRouteChildren = {
+  MasterAuditRoute: MasterAuditRoute,
+  MasterBillingRoute: MasterBillingRoute,
+  MasterInfrastructureRoute: MasterInfrastructureRoute,
+  MasterPlatformsRoute: MasterPlatformsRoute,
+  MasterSettingsRoute: MasterSettingsRoute,
+  MasterSupportRoute: MasterSupportRoute,
+  MasterIndexRoute: MasterIndexRoute,
+}
+
+const MasterRouteWithChildren = MasterRoute._addFileChildren(MasterRouteChildren)
+
 interface AdminProductsRouteChildren {
   AdminProductsIdRoute: typeof AdminProductsIdRoute
   AdminProductsNewRoute: typeof AdminProductsNewRoute
@@ -416,7 +569,7 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogRoute: CatalogRoute,
   ControlRoute: ControlRoute,
   LoginRoute: LoginRoute,
-  MasterRoute: MasterRoute,
+  MasterRoute: MasterRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

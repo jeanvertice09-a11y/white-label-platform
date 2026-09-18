@@ -1,77 +1,61 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { getBrowserClient, signInWithPassword, signOut } from "../lib/supabase-client.ts";
+import { getBrowserClient, signInWithPassword } from "../lib/supabase-client.ts";
+import "../styles/master.css";
 
 function handleAuthError(err: unknown): string {
   return err instanceof Error ? err.message : "Falha na operação";
 }
 
-function handleChange<T extends HTMLInputElement>(setter: (value: string) => void) {
-  return (ev: React.ChangeEvent<T>): void => {
-    setter(ev.target.value);
-  };
-}
-
 export const Route = createFileRoute("/login")({
-  component: () => {
-    const navigate = useNavigate();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-
-    async function handleLogin(e: React.SyntheticEvent): Promise<void> {
-      e.preventDefault();
-      setError("");
-      setLoading(true);
-      try {
-        await signInWithPassword(email, password);
-        const { data } = await getBrowserClient().auth.getSession();
-        if (data.session) void navigate({ to: "/" });
-        else setError("Login falhou: sessão não criada");
-      } catch (err) {
-        setError(handleAuthError(err));
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    async function handleLogout(): Promise<void> {
-      try {
-        await signOut();
-        void navigate({ to: "/login" });
-      } catch (err) {
-        setError(handleAuthError(err));
-      }
-    }
-
-    function onSubmit(ev: React.SyntheticEvent): void {
-      ev.preventDefault();
-      void handleLogin(ev);
-    }
-
-    function onLogoutClick(): void {
-      void handleLogout();
-    }
-
-    return (
-      <section>
-        <h1>Login</h1>
-        <form onSubmit={onSubmit}>
-          <label>
-            Email
-            <input type="email" value={email} onChange={handleChange(setEmail)} required disabled={loading} />
-          </label>
-          <label>
-            Senha
-            <input type="password" value={password} onChange={handleChange(setPassword)} required disabled={loading} />
-          </label>
-          <button type="submit" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button>
-          <button type="button" onClick={onLogoutClick} disabled={loading}>Sair</button>
-        </form>
-        {error && <p role="alert" style={{ color: "red" }}>{error}</p>}
-      </section>
-    );
-  },
+  component: LoginPage,
 });
+
+function LoginPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(ev: FormEvent<HTMLFormElement>): Promise<void> {
+    ev.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await signInWithPassword(email, password);
+      const { data } = await getBrowserClient().auth.getSession();
+      if (!data.session) throw new Error("Login falhou: sessão não criada");
+      await navigate({ to: "/master" });
+    } catch (err) {
+      setError(handleAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card">
+        <div className="auth-brand"><span>K</span><strong>Kataluu</strong></div>
+        <div className="auth-heading">
+          <h1>Acessar Super Admin</h1>
+          <p>Use sua conta administrativa da plataforma.</p>
+        </div>
+        <form onSubmit={(ev) => { void submit(ev); }} className="auth-form">
+          <label htmlFor="email">E-mail</label>
+          <input id="email" type="email" autoComplete="email" required disabled={loading}
+            value={email} onChange={(ev: ChangeEvent<HTMLInputElement>) => setEmail(ev.target.value)} />
+          <label htmlFor="password">Senha</label>
+          <input id="password" type="password" autoComplete="current-password" required disabled={loading}
+            value={password} onChange={(ev: ChangeEvent<HTMLInputElement>) => setPassword(ev.target.value)} />
+          {error ? <p className="auth-error" role="alert">{error}</p> : null}
+          <button className="master-button master-button--primary" type="submit" disabled={loading}>
+            {loading ? "Entrando…" : "Entrar"}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
