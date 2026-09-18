@@ -1,5 +1,5 @@
 import { getRequestHost } from "@tanstack/react-start/server";
-import { assertCanManageTenantStores } from "@white-label/auth";
+import { assertCanManageTenantStores, canManageTenantStores } from "@white-label/auth";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createRealDeps, loadControl } from "./route-context.server.ts";
 
@@ -24,28 +24,19 @@ export function numberValue(row: Record<string, unknown>, key: string): number {
 async function context(requireAdmin: boolean) {
   const deps = await createRealDeps();
   const ctx = await loadControl({ host: getRequestHost() }, deps);
-  if (requireAdmin) {
-    assertCanManageTenantStores({ tenantRoles: ctx.tenantRoles });
-  }
+  if (requireAdmin) assertCanManageTenantStores({ tenantRoles: ctx.tenantRoles });
   return {
     actorUserId: String(ctx.userId),
     tenantId: String(ctx.tenantId),
+    canManageTenantStores: canManageTenantStores({ tenantRoles: ctx.tenantRoles }),
     sql: createAdminSqlExecutor(),
   };
 }
 
-export async function controlMerchantRead(): Promise<{
-  actorUserId: string;
-  tenantId: string;
-  sql: ControlSql;
-}> {
+export async function controlMerchantRead() {
   return context(false);
 }
 
-export async function controlMerchantMutation(): Promise<{
-  actorUserId: string;
-  tenantId: string;
-  sql: ControlSql;
-}> {
+export async function controlMerchantMutation() {
   return context(true);
 }
