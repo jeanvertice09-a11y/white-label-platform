@@ -4,6 +4,7 @@ import type { Harness } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
 
 let h: Harness;
+let templateId = "";
 const ids = seedIds();
 
 const LOT2_TABLES = [
@@ -21,12 +22,18 @@ const LOT2_TABLES = [
 beforeAll(async () => {
   h = await setupDatabase();
   await h.db.execScript(seedSql());
+  const templates = await h.db.query(
+    "select id from public.plan_templates where code='monthly_entry' limit 1",
+  );
+  if (templates.length === 0 || typeof templates[0]["id"] !== "string") {
+    throw new Error("template monthly_entry ausente");
+  }
+  templateId = templates[0]["id"];
   await h.db.query(
     `insert into public.tenant_plans
       (tenant_id,template_id,slug,name,price_cents,billing_interval,trial_enabled,trial_days)
-     select $1,id,'isolamento-a','Isolamento A',1000,'monthly',false,0
-     from public.plan_templates where code='monthly_entry'`,
-    [ids.tenantA],
+     values ($1,$2,'isolamento-a','Isolamento A',1000,'monthly',false,0)`,
+    [ids.tenantA, templateId],
   );
 });
 
@@ -71,9 +78,8 @@ describe("lot2 commercial billing isolation", () => {
         h.db.query(
           `insert into public.tenant_plans
             (tenant_id,template_id,slug,name,price_cents,billing_interval,trial_enabled,trial_days)
-           select $1,id,'rls-block','RLS Block',100,'monthly',false,0
-           from public.plan_templates where code='monthly_entry'`,
-          [ids.tenantA],
+           values ($1,$2,'rls-block','RLS Block',100,'monthly',false,0)`,
+          [ids.tenantA, templateId],
         ),
         "authenticated inserindo tenant_plan sem policy",
       );
