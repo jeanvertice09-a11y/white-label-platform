@@ -23,6 +23,12 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
+function mockFetch(
+  handler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
+): typeof fetch {
+  return Object.assign(handler, { preconnect: fetch.preconnect });
+}
+
 async function expectReject(promise: Promise<unknown>, fragment: string): Promise<void> {
   let caught: unknown;
   try {
@@ -65,10 +71,10 @@ describe("MercadoPagoProvider", () => {
 
   test("cria Pix e refund com X-Idempotency-Key somente quando writes habilitado", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
-    const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const fakeFetch = mockFetch((input, init) => {
       calls.push({ url: requestUrl(input), init });
       return Promise.resolve(jsonResponse({ id: "mp-pay-1" }));
-    };
+    });
     const provider = new MercadoPagoProvider({
       accessToken: "fixture-access-token",
       webhookSecret: "fixture-webhook",
@@ -85,7 +91,7 @@ describe("MercadoPagoProvider", () => {
       payerEmail: "buyer@example.test",
       paymentMethod: "pix",
     });
-    expect(String(created.providerPaymentId)).toBe("mp-pay-1");
+    expect(created.providerPaymentId === ("mp-pay-1" as ProviderPaymentId)).toBe(true);
     expect(new Headers(calls.at(0)?.init?.headers).get("X-Idempotency-Key")).toBe("idem-123");
     await provider.refund({
       providerPaymentId: "mp-pay-1" as ProviderPaymentId,
@@ -121,7 +127,7 @@ describe("MercadoPagoProvider", () => {
     });
     expect(event.externalEventId).toBe("123");
     expect(event.type).toBe("payment.updated");
-    expect(String(event.providerPaymentId)).toBe("999");
+    expect(event.providerPaymentId === ("999" as ProviderPaymentId)).toBe(true);
     expect(event.status).toBeNull();
     expect(event.occurredAt).toBe("2026-09-18T10:00:00Z");
   });
@@ -145,10 +151,10 @@ describe("AsaasProvider", () => {
 
   test("usa contrato oficial sandbox e normaliza evento", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
-    const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const fakeFetch = mockFetch((input, init) => {
       calls.push({ url: requestUrl(input), init });
       return Promise.resolve(jsonResponse({ id: "pay_asaas_1", status: "PENDING" }));
-    };
+    });
     const provider = new AsaasProvider({
       apiKey: "fixture-api-key",
       webhookSecret: "fixture-auth-token",
@@ -165,7 +171,7 @@ describe("AsaasProvider", () => {
       dueDate: "2026-09-30",
       paymentMethod: "pix",
     });
-    expect(String(created.providerPaymentId)).toBe("pay_asaas_1");
+    expect(created.providerPaymentId === ("pay_asaas_1" as ProviderPaymentId)).toBe(true);
     expect(calls.at(0)?.url).toBe("https://api-sandbox.asaas.com/v3/payments");
     expect(new Headers(calls.at(0)?.init?.headers).get("access_token")).toBe("fixture-api-key");
 
@@ -176,7 +182,7 @@ describe("AsaasProvider", () => {
       payment: { id: "pay_asaas_1", status: "RECEIVED" },
     });
     expect(event.status).toBe("captured");
-    expect(String(event.providerPaymentId)).toBe("pay_asaas_1");
+    expect(event.providerPaymentId === ("pay_asaas_1" as ProviderPaymentId)).toBe(true);
   });
 
   test("refund Asaas falha fechado sem idempotência oficial documentada", async () => {
