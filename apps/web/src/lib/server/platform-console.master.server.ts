@@ -1,103 +1,53 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SqlExecutor } from "@white-label/domains";
 import type { MasterConsoleData } from "./platform-console.types.ts";
+import { nullableString, numberValue, stringValue } from "./platform-console.values.ts";
 
-interface TenantRow { id: string; name: string; slug: string; status: string; created_at: string }
-interface StoreRow { id: string; tenant_id: string; status: string }
-interface PlanRow { id: string; name: string }
-interface SubscriptionRow {
-  id: string; tenant_id: string; status: string; plan_id: string | null;
-  created_at: string; level: string;
-}
-interface PaymentRow {
-  id: string; tenant_id: string | null; amount_cents: number; status: string;
-  created_at: string; level: string;
-}
-interface AuditRow {
-  id: string; action: string; resource_type: string; resource_id: string | null;
-  tenant_id: string | null; actor_user_id: string | null; created_at: string;
-}
-interface DomainRow {
-  id: string; hostname: string; type: string; status: string; tenant_id: string;
-  store_id: string | null; verified_at: string | null; created_at: string;
-}
-interface GatewayRow {
-  id: string; provider: string; label: string; level: string;
-  tenant_id: string | null; store_id: string | null; created_at: string;
-}
-interface QueryResult<T> { data: T | null; error: { message: string } | null }
-
-function dataOrThrow<T>(result: QueryResult<T>, label: string): T {
-  if (result.error) throw new Error(`${label}: ${result.error.message}`);
-  if (result.data === null) throw new Error(`${label}: resposta vazia`);
-  return result.data;
-}
-
-async function queryMaster(client: SupabaseClient) {
+async function queryMasterRows(sql: SqlExecutor) {
   return Promise.all([
-    client.from("tenants").select("id,name,slug,status,created_at").order("created_at", { ascending: false }),
-    client.from("stores").select("id,tenant_id,status"),
-    client.from("plans").select("id,name"),
-    client.from("subscriptions").select("id,tenant_id,status,plan_id,created_at,level").eq("level", "platform_billing").order("created_at", { ascending: false }),
-    client.from("payments").select("id,tenant_id,amount_cents,status,created_at,level").eq("level", "platform_billing").order("created_at", { ascending: false }),
-    client.from("audit_logs").select("id,action,resource_type,resource_id,tenant_id,actor_user_id,created_at").order("created_at", { ascending: false }).limit(50),
-    client.from("domains").select("id,hostname,type,status,tenant_id,store_id,verified_at,created_at").order("created_at", { ascending: false }),
-    client.from("gateway_accounts").select("id,provider,label,level,tenant_id,store_id,created_at").order("created_at", { ascending: false }).limit(100),
+    sql.query(`select
+      (select count(*) from public.tenants)::integer as tenants,
+      (select count(*) from public.tenants where status='active')::integer as active_tenants,
+      (select count(*) from public.tenants where status='trial')::integer as trial_tenants,
+      (select count(*) from public.stores where status='active')::integer as active_stores,
+      (select count(*) from public.subscriptions where level='platform_billing' and status='active')::integer as active_subscriptions,
+      (select coalesce(sum(amount_cents),0) from public.payments where level='platform_billing' and status='paid')::bigint as paid_cents,
+      (select count(*) from public.domains where status='active')::integer as active_domains`, []),
+    sql.query(`select t.id,t.name,t.slug,t.status,t.created_at,
+      count(distinct s.id)::integer as store_count,
+      count(distinct s.id) filter (where s.status='active')::integer as active_store_count,
+      latest.status as subscription_status,latest.plan_name
+      from public.tenants t left join public.stores s on s.tenant_id=t.id
+      left join lateral (select sub.status,p.name as plan_name from public.subscriptions sub
+        left join public.plans p on p.id=sub.plan_id where sub.tenant_id=t.id and sub.level='platform_billing'
+        order by sub.created_at desc limit 1) latest on true
+      group by t.id,t.name,t.slug,t.status,t.created_at,latest.status,latest.plan_name
+      order by t.created_at desc`, []),
+    sql.query(`select p.id,p.amount_cents,p.status,p.created_at,t.name as tenant_name
+      from public.payments p left join public.tenants t on t.id=p.tenant_id
+      where p.level='platform_billing' order by p.created_at desc limit 50`, []),
+    sql.query(`select id,action,resource_type,resource_id,tenant_id,actor_user_id,created_at
+      from public.audit_logs order by created_at desc limit 50`, []),
+    sql.query(`select id,hostname,type,status,tenant_id,store_id,verified_at,created_at
+      from public.domains order by created_at desc limit 100`, []),
+    sql.query(`select id,provider,label,level,tenant_id,store_id,created_at
+      from public.gateway_accounts order by created_at desc limit 100`, []),
   ]);
 }
 
-function tenantCards(
-  tenants: TenantRow[], stores: StoreRow[], subscriptions: SubscriptionRow[], plans: PlanRow[],
-): MasterConsoleData["tenants"] {
-  const planNames = new Map(plans.map((plan) => [plan.id, plan.name]));
-  const latest = new Map<string, SubscriptionRow>();
-  for (const subscription of subscriptions) {
-    if (!latest.has(subscription.tenant_id)) latest.set(subscription.tenant_id, subscription);
-  }
-  return tenants.map((tenant) => {
-    const scopedStores = stores.filter((store) => store.tenant_id === tenant.id);
-    const subscription = latest.get(tenant.id);
-    return {
-      id: tenant.id, name: tenant.name, slug: tenant.slug, status: tenant.status,
-      createdAt: tenant.created_at, storeCount: scopedStores.length,
-      activeStoreCount: scopedStores.filter((store) => store.status === "active").length,
-      subscriptionStatus: subscription?.status ?? null,
-      planName: subscription?.plan_id ? (planNames.get(subscription.plan_id) ?? null) : null,
-    };
-  });
-}
-
-function masterMetrics(
-  tenants: TenantRow[], stores: StoreRow[], subscriptions: SubscriptionRow[],
-  payments: PaymentRow[], domains: DomainRow[],
-): MasterConsoleData["metrics"] {
+export async function loadMasterConsoleData(sql: SqlExecutor): Promise<MasterConsoleData> {
+  const [metricsRows, tenants, payments, audits, domains, gateways] = await queryMasterRows(sql);
+  const metrics = metricsRows.at(0) ?? {};
   return {
-    tenants: tenants.length,
-    activeTenants: tenants.filter((tenant) => tenant.status === "active").length,
-    trialTenants: tenants.filter((tenant) => tenant.status === "trial").length,
-    activeStores: stores.filter((store) => store.status === "active").length,
-    activeSubscriptions: subscriptions.filter((item) => item.status === "active").length,
-    paidCents: payments.filter((item) => item.status === "paid").reduce((sum, item) => sum + item.amount_cents, 0),
-    activeDomains: domains.filter((domain) => domain.status === "active").length,
-  };
-}
-
-export async function loadMasterConsoleData(client: SupabaseClient): Promise<MasterConsoleData> {
-  const results = await queryMaster(client);
-  const tenants = dataOrThrow(results[0] as QueryResult<TenantRow[]>, "Tenants");
-  const stores = dataOrThrow(results[1] as QueryResult<StoreRow[]>, "Stores");
-  const plans = dataOrThrow(results[2] as QueryResult<PlanRow[]>, "Plans");
-  const subscriptions = dataOrThrow(results[3] as QueryResult<SubscriptionRow[]>, "Subscriptions");
-  const payments = dataOrThrow(results[4] as QueryResult<PaymentRow[]>, "Payments");
-  const audits = dataOrThrow(results[5] as QueryResult<AuditRow[]>, "Auditoria");
-  const domains = dataOrThrow(results[6] as QueryResult<DomainRow[]>, "Domínios");
-  const gateways = dataOrThrow(results[7] as QueryResult<GatewayRow[]>, "Gateways");
-  const tenantNames = new Map(tenants.map((tenant) => [tenant.id, tenant.name]));
-  return {
-    metrics: masterMetrics(tenants, stores, subscriptions, payments, domains),
-    tenants: tenantCards(tenants, stores, subscriptions, plans),
-    payments: payments.slice(0, 50).map((item) => ({ id: item.id, tenantName: item.tenant_id ? (tenantNames.get(item.tenant_id) ?? null) : null, amountCents: item.amount_cents, status: item.status, createdAt: item.created_at })),
-    audits: audits.map((item) => ({ id: item.id, action: item.action, resourceType: item.resource_type, resourceId: item.resource_id, tenantId: item.tenant_id, actorUserId: item.actor_user_id, createdAt: item.created_at })),
-    domains: domains.slice(0, 100).map((item) => ({ id: item.id, hostname: item.hostname, type: item.type, status: item.status, tenantId: item.tenant_id, storeId: item.store_id, verifiedAt: item.verified_at, createdAt: item.created_at })),
-    gateways: gateways.map((item) => ({ id: item.id, provider: item.provider, label: item.label, level: item.level, tenantId: item.tenant_id, storeId: item.store_id, createdAt: item.created_at })),
+    metrics: {
+      tenants: numberValue(metrics,"tenants"), activeTenants: numberValue(metrics,"active_tenants"),
+      trialTenants: numberValue(metrics,"trial_tenants"), activeStores: numberValue(metrics,"active_stores"),
+      activeSubscriptions: numberValue(metrics,"active_subscriptions"), paidCents: numberValue(metrics,"paid_cents"),
+      activeDomains: numberValue(metrics,"active_domains"),
+    },
+    tenants: tenants.map((r)=>({id:stringValue(r,"id"),name:stringValue(r,"name"),slug:stringValue(r,"slug"),status:stringValue(r,"status"),createdAt:stringValue(r,"created_at"),storeCount:numberValue(r,"store_count"),activeStoreCount:numberValue(r,"active_store_count"),subscriptionStatus:nullableString(r,"subscription_status"),planName:nullableString(r,"plan_name")})),
+    payments: payments.map((r)=>({id:stringValue(r,"id"),tenantName:nullableString(r,"tenant_name"),amountCents:numberValue(r,"amount_cents"),status:stringValue(r,"status"),createdAt:stringValue(r,"created_at")})),
+    audits: audits.map((r)=>({id:stringValue(r,"id"),action:stringValue(r,"action"),resourceType:stringValue(r,"resource_type"),resourceId:nullableString(r,"resource_id"),tenantId:nullableString(r,"tenant_id"),actorUserId:nullableString(r,"actor_user_id"),createdAt:stringValue(r,"created_at")})),
+    domains: domains.map((r)=>({id:stringValue(r,"id"),hostname:stringValue(r,"hostname"),type:stringValue(r,"type"),status:stringValue(r,"status"),tenantId:stringValue(r,"tenant_id"),storeId:nullableString(r,"store_id"),verifiedAt:nullableString(r,"verified_at"),createdAt:stringValue(r,"created_at")})),
+    gateways: gateways.map((r)=>({id:stringValue(r,"id"),provider:stringValue(r,"provider"),label:stringValue(r,"label"),level:stringValue(r,"level"),tenantId:nullableString(r,"tenant_id"),storeId:nullableString(r,"store_id"),createdAt:stringValue(r,"created_at")})),
   };
 }
