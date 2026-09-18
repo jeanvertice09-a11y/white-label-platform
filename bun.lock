@@ -71,6 +71,10 @@
         "@white-label/storage": "0.1.0",
       },
     },
+    "packages/customers": {
+      "name": "@white-label/customers",
+      "version": "0.1.0",
+    },
     "packages/database": {
       "name": "@white-label/database",
       "version": "0.1.0",
@@ -81,6 +85,10 @@
     },
     "packages/inventory": {
       "name": "@white-label/inventory",
+      "version": "0.1.0",
+    },
+    "packages/marketing": {
+      "name": "@white-label/marketing",
       "version": "0.1.0",
     },
     "packages/orders": {
@@ -448,11 +456,15 @@
 
     "@white-label/catalog": ["@white-label/catalog@workspace:packages/catalog"],
 
+    "@white-label/customers": ["@white-label/customers@workspace:packages/customers"],
+
     "@white-label/database": ["@white-label/database@workspace:packages/database"],
 
     "@white-label/domains": ["@white-label/domains@workspace:packages/domains"],
 
     "@white-label/inventory": ["@white-label/inventory@workspace:packages/inventory"],
+
+    "@white-label/marketing": ["@white-label/marketing@workspace:packages/marketing"],
 
     "@white-label/orders": ["@white-label/orders@workspace:packages/orders"],
 
