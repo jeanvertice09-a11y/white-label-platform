@@ -18,14 +18,20 @@ let templateId = "";
 let planA = "";
 let planB = "";
 
+function requiredString(rows: Record<string, unknown>[], key: string): string {
+  if (rows.length === 0) throw new Error(`linha ausente para ${key}`);
+  const value = rows[0][key];
+  if (typeof value !== "string") throw new Error(`campo inválido: ${key}`);
+  return value;
+}
+
 beforeAll(async () => {
   h = await setupDatabase();
   await h.db.execScript(seedSql());
   const templates = await h.db.query(
     "select id from public.plan_templates where code='monthly_complete' limit 1",
   );
-  templateId = String(templates[0]?.["id"] ?? "");
-  if (!templateId) throw new Error("template monthly_complete ausente");
+  templateId = requiredString(templates, "id");
   await h.db.query(
     `insert into public.plan_template_entitlements
       (template_id,entitlement_key,enabled,limit_value)
@@ -76,24 +82,27 @@ describe("commercial plans, subscriptions and billing", () => {
   });
 
   test("Tenant A não altera plano privado do Tenant B", async () => {
-    await expect(
+    await expectReject(
       replaceTenantPlanEntitlements(h.db, ids.tenantA, planB, [
         { key: "products", kind: "feature", enabled: false, limitValue: null },
       ]),
-    ).rejects.toThrow("Plano não pertence ao tenant");
+      "Tenant A alterando plano do Tenant B",
+    );
   });
 
   test("feature e limite não podem exceder teto Kataluu", async () => {
-    await expect(
+    await expectReject(
       replaceTenantPlanEntitlements(h.db, ids.tenantA, planA, [
         { key: "reports", kind: "feature", enabled: true, limitValue: null },
       ]),
-    ).rejects.toThrow();
-    await expect(
+      "feature bloqueada pelo template Kataluu",
+    );
+    await expectReject(
       replaceTenantPlanEntitlements(h.db, ids.tenantA, planA, [
         { key: "max_products", kind: "limit", enabled: null, limitValue: 101 },
       ]),
-    ).rejects.toThrow();
+      "limite acima do teto Kataluu",
+    );
     await replaceTenantPlanEntitlements(h.db, ids.tenantA, planA, [
       { key: "products", kind: "feature", enabled: true, limitValue: null },
       { key: "max_products", kind: "limit", enabled: null, limitValue: 25 },
@@ -101,14 +110,15 @@ describe("commercial plans, subscriptions and billing", () => {
   });
 
   test("Store A não assina plano do Tenant B", async () => {
-    await expect(
+    await expectReject(
       createStoreSubscription(
         h.db,
         { tenantId: ids.tenantA, storeId: ids.storeA },
         planB,
         false,
       ),
-    ).rejects.toThrow();
+      "Store A assinando plano do Tenant B",
+    );
   });
 
   test("plano inativo não recebe nova assinatura", async () => {
@@ -116,14 +126,15 @@ describe("commercial plans, subscriptions and billing", () => {
       "update public.tenant_plans set active=false where tenant_id=$1 and id=$2",
       [ids.tenantA, planA],
     );
-    await expect(
+    await expectReject(
       createStoreSubscription(
         h.db,
         { tenantId: ids.tenantA, storeId: ids.storeA },
         planA,
         false,
       ),
-    ).rejects.toThrow();
+      "assinatura em plano inativo",
+    );
     await h.db.query(
       "update public.tenant_plans set active=true where tenant_id=$1 and id=$2",
       [ids.tenantA, planA],
@@ -161,7 +172,7 @@ describe("commercial plans, subscriptions and billing", () => {
       "select id from public.store_subscriptions where tenant_id=$1 and store_id=$2 limit 1",
       [ids.tenantA, ids.storeA],
     );
-    const subscriptionId = String(current[0]?.["id"] ?? "");
+    const subscriptionId = requiredString(current, "id");
     await h.db.query(
       "update public.store_subscriptions set trial_ends_at=now()-interval '1 day' where id=$1",
       [subscriptionId],
@@ -239,7 +250,7 @@ describe("commercial plans, subscriptions and billing", () => {
        returning id`,
       [ids.tenantA],
     );
-    const invoiceId = String(invoice[0]?.["id"] ?? "");
+    const invoiceId = requiredString(invoice, "id");
     await expectReject(
       h.db.query(
         `insert into public.billing_events
