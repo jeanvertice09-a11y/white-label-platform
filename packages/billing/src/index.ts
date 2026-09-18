@@ -24,6 +24,13 @@ export {
   assertWithinLimit,
 } from "./entitlements.ts";
 
+export type {
+  PlatformAccessDecision,
+  PlatformAccessSnapshot,
+  PlatformSubscriptionAccessStatus,
+} from "./platform-access.ts";
+export { evaluatePlatformAccess } from "./platform-access.ts";
+
 export type { BillingSqlExecutor } from "./postgres-entitlements.ts";
 export { loadStoreEntitlementSnapshot } from "./postgres-entitlements.ts";
 export { listTenantPlanCatalog } from "./commercial-read.ts";

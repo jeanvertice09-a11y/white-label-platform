@@ -1,4 +1,5 @@
 import type { PaymentProvider, PaymentStatus, ProviderPaymentId } from "../types.ts";
+import { applyPlatformBillingEffect } from "./platform-billing-effect.ts";
 import {
   applyPaymentStatus,
   claimWebhook,
@@ -55,8 +56,9 @@ export async function processWebhookEvent(
       target.id,
       event.gatewayAccountId,
       status,
-      null,
+      normalized.occurredAt,
     );
+    await applyPlatformBillingEffect(sql, target.id, status);
     await markWebhookDone(sql, event.id, "processed", target.id, status);
     return { outcome: "processed", changed };
   } catch (error) {
@@ -90,6 +92,7 @@ export async function reconcilePaymentStatus(
     status,
     null,
   );
+  await applyPlatformBillingEffect(sql, target.id, status);
   await sql.query(
     `insert into public.audit_logs(
        actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata

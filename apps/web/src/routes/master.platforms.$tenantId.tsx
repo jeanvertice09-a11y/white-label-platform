@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { MasterPageHeader, MasterPanel } from "../components/master/ui.tsx";
+import { MasterPlatformBillingPanel } from "../features/master/master-platform-billing-panel.tsx";
 import { MasterWhiteLabelDetailForm } from "../features/master/master-white-label-detail-form.tsx";
 import { MasterWhiteLabelDomainManager } from "../features/master/master-white-label-domain-manager.tsx";
 import { getMasterWhiteLabel } from "../lib/server/master-white-label.functions.ts";
@@ -9,7 +10,9 @@ import type { MasterWhiteLabelDetail } from "../lib/server/master-white-label.ty
 export const Route = createFileRoute("/master/platforms/$tenantId")({
   loader: async (context) => {
     const params = context.params as Record<string, string>;
-    const detail = await getMasterWhiteLabel({ data: { tenantId: params["tenantId"] ?? "" } });
+    const detail = await getMasterWhiteLabel({
+      data: { tenantId: params["tenantId"] ?? "" },
+    });
     if (!detail) throw new Error("White Label não encontrada.");
     return detail;
   },
@@ -19,5 +22,52 @@ export const Route = createFileRoute("/master/platforms/$tenantId")({
 function MasterWhiteLabelDetailPage(): React.JSX.Element {
   const loaderData: unknown = Route.useLoaderData();
   const detail = loaderData as MasterWhiteLabelDetail;
-  return <div className="master-stack"><MasterPageHeader title={detail.tenant.name} description={`White Label ${detail.tenant.slug} · ${detail.tenant.status}`} action={<a className="k-button" href="/master/platforms">Voltar</a>}/><MasterWhiteLabelDetailForm detail={detail}/><MasterWhiteLabelDomainManager detail={detail}/><MasterPanel title="Membros"><div className="master-table-wrap"><table className="master-table"><thead><tr><th>Usuário</th><th>Role</th></tr></thead><tbody>{detail.members.map((member) => <tr key={member.userId}><td>{member.email ?? member.userId}</td><td>{member.role}</td></tr>)}</tbody></table></div></MasterPanel><MasterPanel title="Planos e capacidades"><p>Assinatura da plataforma: {detail.platformSubscription?.status ?? "—"} · Plano: {detail.platformSubscription?.planName ?? "—"}</p><div className="master-table-wrap"><table className="master-table"><thead><tr><th>Template Kataluu</th><th>Status</th><th>Entitlements configurados</th></tr></thead><tbody>{detail.planTemplates.map((template) => <tr key={template.id}><td>{template.name}<small>{template.code}</small></td><td>{template.active ? "Ativo" : "Inativo"}</td><td>{template.entitlementCount}</td></tr>)}</tbody></table></div>{detail.commercialPlans.length ? <p>Planos comerciais desta White Label: {detail.commercialPlans.map((plan) => plan.name).join(", ")}</p> : <p>Nenhum plano comercial configurado.</p>}</MasterPanel></div>;
+  return (
+    <div className="master-stack">
+      <MasterPageHeader
+        title={detail.tenant.name}
+        description={`White Label ${detail.tenant.slug} · ${detail.tenant.status}`}
+        action={<a className="k-button" href="/master/platforms">Voltar</a>}
+      />
+      <MasterWhiteLabelDetailForm detail={detail} />
+      <MasterPlatformBillingPanel detail={detail} />
+      <MasterWhiteLabelDomainManager detail={detail} />
+      <MasterPanel title="Membros">
+        <div className="master-table-wrap">
+          <table className="master-table">
+            <thead><tr><th>Usuário</th><th>Role</th></tr></thead>
+            <tbody>
+              {detail.members.map((member) => (
+                <tr key={member.userId}>
+                  <td>{member.email ?? member.userId}</td>
+                  <td>{member.role}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </MasterPanel>
+      <MasterPanel title="Planos comerciais da White Label">
+        <div className="master-table-wrap">
+          <table className="master-table">
+            <thead>
+              <tr><th>Template Kataluu</th><th>Status</th><th>Entitlements configurados</th></tr>
+            </thead>
+            <tbody>
+              {detail.planTemplates.map((template) => (
+                <tr key={template.id}>
+                  <td>{template.name}<small>{template.code}</small></td>
+                  <td>{template.active ? "Ativo" : "Inativo"}</td>
+                  <td>{template.entitlementCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {detail.commercialPlans.length
+          ? <p>Planos desta White Label: {detail.commercialPlans.map((plan) => plan.name).join(", ")}</p>
+          : <p>Nenhum plano comercial de lojista configurado.</p>}
+      </MasterPanel>
+    </div>
+  );
 }
