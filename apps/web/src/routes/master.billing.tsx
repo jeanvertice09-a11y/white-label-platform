@@ -15,9 +15,9 @@ function MasterBilling() {
     <div className="master-stack">
       <MasterPageHeader title="Faturamento" description="Cobranças reais do nível platform_billing." />
       <div className="master-metrics">
-        <MasterMetricCard label="Receita recebida" value={masterMoney(data.metrics.paidCents)} detail="Status paid" />
-        <MasterMetricCard label="Assinaturas ativas" value={String(data.metrics.activeSubscriptions)} detail="platform_billing" />
-        <MasterMetricCard label="Pagamentos pendentes" value={String(open)} detail="Status pending" />
+        <MasterMetricCard icon="revenue" label="Receita recebida" value={masterMoney(data.metrics.paidCents)} detail="Status paid" />
+        <MasterMetricCard icon="subscriptions" label="Assinaturas ativas" value={String(data.metrics.activeSubscriptions)} detail="platform_billing" />
+        <MasterMetricCard icon="billing" label="Pagamentos pendentes" value={String(open)} detail="Status pending" />
       </div>
       <MasterPanel title="Pagamentos recentes">
         {data.payments.length ? <div className="master-table-wrap"><table className="master-table">
