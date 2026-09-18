@@ -98,7 +98,7 @@ async function diagnoseCreate(
        ) end trial_allowed`,
     [tenantId, input.ownerEmail, input.slug, input.planId, input.useTrial],
   );
-  const row = rows[0] ?? {};
+  const row = rows.at(0) ?? {};
   if (row["owner_exists"] !== true) throw new Error("Usuário responsável não existe no Supabase Auth.");
   if (row["plan_exists"] !== true) throw new Error("Plano inexistente, inativo ou fora desta White Label.");
   if (row["trial_allowed"] !== true) throw new Error("Trial não está habilitado para o plano selecionado.");
@@ -121,7 +121,7 @@ export async function createControlMerchant(
     input.useTrial,
     actorUserId,
   ]);
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) return diagnoseCreate(sql, tenantId, input);
   return {
     id: text(row, "id"),
@@ -154,7 +154,7 @@ export async function updateControlMerchant(
      select id::text from changed`,
     [tenantId, input.storeId, input.name, input.slug, actorUserId],
   );
-  if (!rows[0]) throw new Error("Loja não encontrada nesta White Label.");
+  if (!rows.at(0)) throw new Error("Loja não encontrada nesta White Label.");
   return { ok: true };
 }
 
@@ -198,8 +198,9 @@ export async function changeControlMerchantOwner(
      select p.user_id::text,v.email::text from promoted p join valid_owner v on v.id=p.user_id`,
     [tenantId, storeId, ownerEmail, actorUserId],
   );
-  if (rows[0]) {
-    return { ownerUserId: text(rows[0], "user_id"), ownerEmail: nullableText(rows[0], "email") };
+  const row = rows.at(0);
+  if (row) {
+    return { ownerUserId: text(row, "user_id"), ownerEmail: nullableText(row, "email") };
   }
   return diagnoseOwner(sql, tenantId, storeId, ownerEmail);
 }
@@ -216,8 +217,9 @@ async function diagnoseOwner(
        exists(select 1 from auth.users where lower(email)=lower($3)) owner_exists`,
     [tenantId, storeId, ownerEmail],
   );
-  if (rows[0]?.["store_exists"] !== true) throw new Error("Loja não encontrada nesta White Label.");
-  if (rows[0]?.["owner_exists"] !== true) throw new Error("Usuário responsável não existe no Supabase Auth.");
+  const row = rows.at(0);
+  if (row?.["store_exists"] !== true) throw new Error("Loja não encontrada nesta White Label.");
+  if (row["owner_exists"] !== true) throw new Error("Usuário responsável não existe no Supabase Auth.");
   throw new Error("Não foi possível alterar o responsável.");
 }
 
@@ -245,6 +247,7 @@ export async function setControlMerchantStatus(
      from current c left join changed ch on ch.id=c.id`,
     [tenantId, storeId, status, actorUserId],
   );
-  if (!rows[0]) throw new Error("Loja não encontrada nesta White Label.");
-  return { id: text(rows[0], "id"), status: text(rows[0], "status") as "active" | "suspended" };
+  const row = rows.at(0);
+  if (!row) throw new Error("Loja não encontrada nesta White Label.");
+  return { id: text(row, "id"), status: text(row, "status") as "active" | "suspended" };
 }

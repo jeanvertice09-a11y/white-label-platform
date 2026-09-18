@@ -100,7 +100,7 @@ async function merchantCount(
        and ($3='all' or s.status=$3)`,
     [tenantId, input.query.trim(), input.status],
   );
-  return numberValue(rows[0] ?? {}, "total");
+  return numberValue(rows.at(0) ?? {}, "total");
 }
 
 export async function listControlMerchants(
@@ -208,7 +208,7 @@ export async function getControlMerchantDetail(
   storeId: string,
 ): Promise<ControlMerchantDetail | null> {
   const [storeRows, members, domains] = await detailCollections(sql, tenantId, storeId);
-  const row = storeRows[0];
+  const row = storeRows.at(0);
   if (!row) return null;
   const merchant = mapMerchant(row);
   return {
