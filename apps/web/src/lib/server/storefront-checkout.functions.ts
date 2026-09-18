@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { normalizeCustomerPhone } from "@white-label/customers";
 import {
   buildOrderWhatsappUrl,
   createOrderRepository,
@@ -32,12 +33,15 @@ export const createWhatsappOrder = createServerFn({ method: "POST" })
     if (!settings.whatsappPhone) {
       throw new Error("WhatsApp não configurado");
     }
+    const customerPhone = data.customerPhone
+      ? normalizeCustomerPhone(data.customerPhone)
+      : null;
     const orders = createOrderRepository(createAdminSqlExecutor());
     const order = await orders.createFromCart(catalog.scope, {
       idempotencyKey: data.idempotencyKey,
       origin: "whatsapp",
       customerName: data.customerName,
-      customerPhone: data.customerPhone,
+      customerPhone,
       couponCode: data.couponCode,
       notes: null,
       shippingCents: 0,

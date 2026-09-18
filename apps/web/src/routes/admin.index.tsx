@@ -17,6 +17,19 @@ function Stat(props: Readonly<{ label: string; value: string | number }>): React
   );
 }
 
+function accountStatus(
+  status: "trial" | "active" | "suspended",
+  trialEndsAt: string | null,
+): string {
+  if (status === "trial") {
+    return trialEndsAt
+      ? "Trial até " + new Date(trialEndsAt).toLocaleDateString("pt-BR")
+      : "Trial";
+  }
+  if (status === "active") return "Ativa";
+  return "Suspensa";
+}
+
 function AdminDashboard(): React.JSX.Element {
   const data = Route.useLoaderData();
   const metrics = data.metrics;
@@ -35,6 +48,8 @@ function AdminDashboard(): React.JSX.Element {
         <Stat label="Produtos ativos" value={metrics.activeProducts} />
         <Stat label="Estoque baixo" value={metrics.lowStockProducts} />
         <Stat label="Clientes" value={metrics.customers} />
+        <Stat label="Plano" value={data.plan?.name ?? data.plan?.slug ?? "Sem plano identificado"} />
+        <Stat label="Conta" value={accountStatus(data.store.tenantStatus, data.store.trialEndsAt)} />
         <Stat label="Layout do catálogo" value={data.layout === "modern" ? "Modern" : "Classic"} />
       </div>
       <div className="k-card">
@@ -44,6 +59,7 @@ function AdminDashboard(): React.JSX.Element {
           falho, estornado ou cancelado. Ticket médio = faturamento dividido pelos
           pedidos válidos do mesmo período.
         </p>
+        {data.plan ? <p className="k-muted">Status da assinatura: {data.plan.status}.</p> : null}
       </div>
     </div>
   );

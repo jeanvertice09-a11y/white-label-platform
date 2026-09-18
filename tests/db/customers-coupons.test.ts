@@ -46,10 +46,11 @@ describe("customers + coupons", () => {
       shippingCents: 0,
       items: [{ productId: PRODUCT, variantId: null, quantity: 2 }],
     });
+    expect(order.customerId).toBe(customer.id);
     await h.db.query(
-      `update public.orders set customer_id=$4,status='completed',payment_status='paid',
+      `update public.orders set status='completed',payment_status='paid',
        completed_at=now() where tenant_id=$1 and store_id=$2 and id=$3`,
-      [ids.tenantA, ids.storeA, order.id, customer.id],
+      [ids.tenantA, ids.storeA, order.id],
     );
 
     const search = await customers.list(scopeA, "99999", 20);
