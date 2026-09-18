@@ -12,10 +12,10 @@ import {
 import type { MembershipRow, TenantContext } from "@white-label/tenant";
 import type { StoreId, TenantId, UserId } from "@white-label/tenant";
 import { asTenantId, asStoreId } from "@white-label/tenant";
+import { DomainResolver } from "@white-label/domains";
 import { resolveSessionFromRequest, stubSession } from "./session.server.ts";
 import type { Session } from "./session.server.ts";
-import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
-import { DomainResolver, PostgresDomainStore } from "@white-label/domains";
+import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
 
 export { stubSession };
 
@@ -76,10 +76,9 @@ export const defaultDeps: RouteDeps = {
   resolveTenantForHost: unresolvedHost,
 };
 
-/** Sessão e memberships usam o mesmo Supabase SSR do request. */
+/** Sessão e memberships usam o Supabase SSR do request; domínios usam a fonte autoritativa server-side. */
 export async function createRealDeps(): Promise<RouteDeps> {
-  const sqlExecutor = createAdminSqlExecutor();
-  const domainResolver = new DomainResolver(new PostgresDomainStore(sqlExecutor));
+  const domainResolver = new DomainResolver(createServiceDomainStore());
   const { createRequestMembershipReader } = await import("./request-memberships.server.ts");
   const memberships = createRequestMembershipReader();
 
@@ -166,7 +165,7 @@ function uniqueTenantIdForSystemApp(memberships: MembershipRow[]): TenantId {
   return tenantId;
 }
 
-/** /control: membership válida no tenant resolvido pelo host. */
+/** /control: membership válida no tenant resolvido pelo host ou pela sessão no app Kataluu. */
 export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
     const session = await requireSession(input, deps);

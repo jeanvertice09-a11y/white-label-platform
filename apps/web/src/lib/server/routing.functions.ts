@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
-import { DomainResolver, PostgresDomainStore } from "@white-label/domains";
-import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
+import { DomainResolver } from "@white-label/domains";
+import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
 
 export type RootTarget = "/master" | "/control" | "/admin" | "/catalog" | null;
 
@@ -18,8 +18,7 @@ async function resolveTarget(rawHost: string | null): Promise<RootTarget> {
     return null;
   }
 
-  const sql = createAdminSqlExecutor();
-  const resolver = new DomainResolver(new PostgresDomainStore(sql));
+  const resolver = new DomainResolver(createServiceDomainStore());
   const resolved = await resolver.resolve(host);
   if (!resolved) return null;
 

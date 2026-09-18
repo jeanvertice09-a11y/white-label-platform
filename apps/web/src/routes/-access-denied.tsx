@@ -1,8 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-export function AccessDenied(props: { error: unknown }): React.JSX.Element {
-  const err = props.error as { status?: number; message?: string };
+interface RouteErrorShape {
+  status?: number;
+  message?: string;
+}
+
+export function AccessDenied(props: Readonly<{ error: unknown }>): React.JSX.Element {
+  const err = props.error as RouteErrorShape;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -12,21 +17,23 @@ export function AccessDenied(props: { error: unknown }): React.JSX.Element {
   }, [err.status, navigate]);
 
   if (err.status === 401) {
+    return <section><h1>Redirecionando para login...</h1></section>;
+  }
+
+  if (err.status === 403) {
     return (
       <section>
-        <h1>Redirecionando para login...</h1>
+        <h1>Acesso negado</h1>
+        <p>{err.message ?? "Você não tem permissão para acessar esta área."}</p>
+        <p><a href="/login">Ir para login</a></p>
       </section>
     );
   }
 
-  const internalError = (err.status ?? 500) >= 500;
   return (
     <section>
-      <h1>{internalError ? "Erro ao validar acesso" : "Acesso negado"}</h1>
-      <p>{err.message ?? (internalError
-        ? "Não foi possível validar suas permissões agora."
-        : "Você não tem permissão para acessar esta área.")}</p>
-      {!internalError ? <p><a href="/login">Ir para login</a></p> : null}
+      <h1>Não foi possível carregar o painel</h1>
+      <p>Ocorreu uma falha interna ao carregar os dados. Tente novamente.</p>
     </section>
   );
 }
