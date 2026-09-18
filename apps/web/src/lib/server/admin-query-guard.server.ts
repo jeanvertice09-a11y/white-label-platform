@@ -2,7 +2,7 @@ export class AdminQueryTimeoutError extends Error {
   readonly code = "ADMIN_DB_QUERY_TIMEOUT";
 
   constructor(readonly timeoutMs: number) {
-    super(`Consulta administrativa excedeu ${timeoutMs}ms`);
+    super(`Consulta administrativa excedeu ${String(timeoutMs)}ms`);
     this.name = "AdminQueryTimeoutError";
   }
 }

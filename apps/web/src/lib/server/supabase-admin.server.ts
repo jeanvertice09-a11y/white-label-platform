@@ -47,7 +47,7 @@ function retireTimedOutSql(sqlFn: ReturnType<typeof postgres>): void {
   if (cachedSql === sqlFn) cachedSql = null;
   void sqlFn.end({ timeout: ADMIN_DB_DESTROY_TIMEOUT_SECONDS }).catch(() => undefined);
   console.error(
-    `[supabase-admin] consulta excedeu ${ADMIN_DB_QUERY_TIMEOUT_MS}ms; conexão descartada`,
+    `[supabase-admin] consulta excedeu ${String(ADMIN_DB_QUERY_TIMEOUT_MS)}ms; conexão descartada`,
   );
 }
 

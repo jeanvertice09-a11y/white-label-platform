@@ -13,6 +13,7 @@ describe("admin query guard", () => {
     const guard = createAdminQueryGuard(25);
     let timeoutCalls = 0;
     let secondStarted = false;
+    let timeoutError: unknown;
 
     const stuck = guard.run(
       () => new Promise<never>(() => undefined),
@@ -20,13 +21,20 @@ describe("admin query guard", () => {
         timeoutCalls += 1;
       },
     );
-    const second = guard.run(async () => {
+    const second = guard.run(() => {
       secondStarted = true;
-      return "ok";
+      return Promise.resolve("ok");
     });
 
-    await expect(stuck).rejects.toBeInstanceOf(AdminQueryTimeoutError);
-    expect(await second).toBe("ok");
+    try {
+      await stuck;
+    } catch (error) {
+      timeoutError = error;
+    }
+    const secondResult = await second;
+
+    expect(timeoutError).toBeInstanceOf(AdminQueryTimeoutError);
+    expect(secondResult).toBe("ok");
     expect(timeoutCalls).toBe(1);
     expect(secondStarted).toBe(true);
   });
