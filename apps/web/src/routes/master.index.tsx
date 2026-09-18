@@ -5,38 +5,38 @@ import {
   MasterPageHeader,
   MasterPanel,
 } from "../components/master/ui.tsx";
+import { masterMoney } from "../components/master/format.ts";
+import { getMasterConsoleData } from "../lib/server/platform-console.functions.ts";
 
 export const Route = createFileRoute("/master/")({
+  loader: () => getMasterConsoleData(),
   component: MasterDashboard,
 });
 
 function MasterDashboard() {
+  const data = Route.useLoaderData();
+  const attention = data.tenants.filter((tenant) => tenant.status !== "active").slice(0, 6);
   return (
     <div className="master-stack">
-      <MasterPageHeader
-        title="Visão geral"
-        description="Resumo operacional da plataforma Kataluu."
-      />
+      <MasterPageHeader title="Visão geral" description="Resumo operacional real da plataforma Kataluu." />
       <div className="master-metrics">
-        <MasterMetricCard label="Receita recebida" detail="Sem dados consolidados ainda" />
-        <MasterMetricCard label="Plataformas ativas" detail="Sem dados consolidados ainda" />
-        <MasterMetricCard label="Lojistas faturáveis" detail="Sem dados consolidados ainda" />
-        <MasterMetricCard label="Em trial" detail="Sem dados consolidados ainda" />
-        <MasterMetricCard label="Faturas em aberto" detail="Sem dados consolidados ainda" />
-        <MasterMetricCard label="Faturas vencidas" detail="Sem dados consolidados ainda" />
+        <MasterMetricCard label="Receita recebida" value={masterMoney(data.metrics.paidCents)} detail="Pagamentos platform_billing com status paid" />
+        <MasterMetricCard label="Plataformas" value={String(data.metrics.tenants)} detail={`${String(data.metrics.activeTenants)} ativas`} />
+        <MasterMetricCard label="Lojas ativas" value={String(data.metrics.activeStores)} detail="Stores com status active" />
+        <MasterMetricCard label="Em trial" value={String(data.metrics.trialTenants)} detail="Tenants em período de teste" />
+        <MasterMetricCard label="Assinaturas ativas" value={String(data.metrics.activeSubscriptions)} detail="Nível platform_billing" />
+        <MasterMetricCard label="Domínios ativos" value={String(data.metrics.activeDomains)} detail="Fonte: domains" />
       </div>
       <div className="master-grid master-grid--two">
         <MasterPanel title="Atividade recente">
-          <MasterEmptyState
-            title="Sem atividade consolidada"
-            description="Eventos auditáveis aparecerão aqui quando a fonte de dados estiver conectada."
-          />
+          {data.audits.length ? <div className="master-list">{data.audits.slice(0, 8).map((item) => (
+            <div className="master-list__row" key={item.id}><div><strong>{item.action}</strong><small>{item.resourceType}{item.resourceId ? ` · ${item.resourceId}` : ""}</small></div><span>{new Date(item.createdAt).toLocaleString("pt-BR")}</span></div>
+          ))}</div> : <MasterEmptyState title="Sem atividade" description="Nenhum audit_log foi registrado ainda." />}
         </MasterPanel>
         <MasterPanel title="Requer atenção">
-          <MasterEmptyState
-            title="Nenhum alerta carregado"
-            description="Alertas operacionais serão exibidos somente quando houver dados verificáveis."
-          />
+          {attention.length ? <div className="master-list">{attention.map((tenant) => (
+            <div className="master-list__row" key={tenant.id}><div><strong>{tenant.name}</strong><small>{tenant.slug}</small></div><span>{tenant.status}</span></div>
+          ))}</div> : <MasterEmptyState title="Tudo normal" description="Nenhuma White Label fora do status ativo." />}
         </MasterPanel>
       </div>
     </div>

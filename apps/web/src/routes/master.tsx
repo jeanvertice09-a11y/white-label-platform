@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MasterShell } from "../components/master/MasterShell.tsx";
 import { loadMasterContext } from "../lib/client-guard.ts";
 import "../styles/master.css";
+import "../styles/master-data.css";
 import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/master")({
