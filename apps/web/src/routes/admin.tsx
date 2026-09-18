@@ -3,6 +3,7 @@ import { AdminShell } from "../features/store-admin/admin-shell.tsx";
 import { loadStoreAdminContext } from "../lib/client-guard.ts";
 import "../styles/admin.css";
 import "../styles/dashboard-rich.css";
+import "../styles/dashboard-pages.css";
 import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/admin")({
