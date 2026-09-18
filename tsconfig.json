@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
@@ -21,25 +25,64 @@
     "declaration": false,
     "baseUrl": ".",
     "paths": {
-      "@white-label/audit": ["./packages/audit/src/index.ts"],
-      "@white-label/auth": ["./packages/auth/src/index.ts"],
-      "@white-label/billing": ["./packages/billing/src/index.ts"],
-      "@white-label/catalog": ["./packages/catalog/src/index.ts"],
-      "@white-label/database": ["./packages/database/src/index.ts"],
-      "@white-label/domains": ["./packages/domains/src/index.ts"],
-      "@white-label/payments": ["./packages/payments/src/index.ts"],
-      "@white-label/orders": ["./packages/orders/src/index.ts"],
-      "@white-label/inventory": ["./packages/inventory/src/index.ts"],
-      "@white-label/customers": ["./packages/customers/src/index.ts"],
-      "@white-label/marketing": ["./packages/marketing/src/index.ts"],
-      "@white-label/platform": ["./packages/platform/src/index.ts"],
-      "@white-label/storage": ["./packages/storage/src/index.ts"],
-      "@white-label/stores": ["./packages/stores/src/index.ts"],
-      "@white-label/tenant": ["./packages/tenant/src/index.ts"],
-      "@white-label/ui": ["./packages/ui/src/index.ts"],
-      "@white-label/validation": ["./packages/validation/src/index.ts"]
+      "@white-label/audit": [
+        "./packages/audit/src/index.ts"
+      ],
+      "@white-label/auth": [
+        "./packages/auth/src/index.ts"
+      ],
+      "@white-label/billing": [
+        "./packages/billing/src/index.ts"
+      ],
+      "@white-label/catalog": [
+        "./packages/catalog/src/index.ts"
+      ],
+      "@white-label/database": [
+        "./packages/database/src/index.ts"
+      ],
+      "@white-label/domains": [
+        "./packages/domains/src/index.ts"
+      ],
+      "@white-label/payments": [
+        "./packages/payments/src/index.ts"
+      ],
+      "@white-label/payments/server": [
+        "./packages/payments/src/server.ts"
+      ],
+      "@white-label/orders": [
+        "./packages/orders/src/index.ts"
+      ],
+      "@white-label/inventory": [
+        "./packages/inventory/src/index.ts"
+      ],
+      "@white-label/customers": [
+        "./packages/customers/src/index.ts"
+      ],
+      "@white-label/marketing": [
+        "./packages/marketing/src/index.ts"
+      ],
+      "@white-label/platform": [
+        "./packages/platform/src/index.ts"
+      ],
+      "@white-label/storage": [
+        "./packages/storage/src/index.ts"
+      ],
+      "@white-label/stores": [
+        "./packages/stores/src/index.ts"
+      ],
+      "@white-label/tenant": [
+        "./packages/tenant/src/index.ts"
+      ],
+      "@white-label/ui": [
+        "./packages/ui/src/index.ts"
+      ],
+      "@white-label/validation": [
+        "./packages/validation/src/index.ts"
+      ]
     },
-    "types": ["bun"]
+    "types": [
+      "bun"
+    ]
   },
   "include": [
     "apps/*/src/**/*",
@@ -53,5 +96,10 @@
     "playwright.config.ts",
     "eslint.config.*"
   ],
-  "exclude": ["node_modules", "dist", "build", "**/dist/**"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "**/dist/**"
+  ]
 }

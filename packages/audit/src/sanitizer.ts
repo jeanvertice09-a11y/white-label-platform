@@ -29,6 +29,11 @@ const SECRET_KEYS = [
   "token",
   "credential",
   "credentials",
+  "ciphertext",
+  "master_key",
+  "encryption_key",
+  "vault_key",
+  "keyring",
 ];
 
 function isSecretKey(key: string): boolean {
@@ -49,7 +54,9 @@ function sanitizeValue(value: unknown): unknown {
 }
 
 /** Remove segredos de metadata/logs antes de persistir. */
-export function sanitizeAuditMetadata(meta: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+export function sanitizeAuditMetadata(
+  meta: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
   if (!meta) return meta;
   return sanitizeValue(meta) as Record<string, unknown>;
 }
