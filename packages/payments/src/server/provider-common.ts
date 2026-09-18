@@ -12,7 +12,7 @@ export function asProviderPaymentId(value: unknown): ProviderPaymentId {
 
 export async function readJson(response: Response): Promise<Record<string, unknown>> {
   if (!response.ok) {
-    throw new Error(`Provider HTTP ${response.status}.`);
+    throw new Error(`Provider HTTP ${String(response.status)}.`);
   }
   const body: unknown = await response.json();
   if (!body || typeof body !== "object" || Array.isArray(body)) {

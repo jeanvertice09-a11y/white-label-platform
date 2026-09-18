@@ -22,27 +22,27 @@ let currentStatus: PaymentStatus = "pending";
 function provider(): PaymentProvider {
   return {
     name: "mercadopago",
-    async createIntent() {
-      throw new Error("not used");
+    createIntent() {
+      return Promise.reject(new Error("not used"));
     },
-    async fetchStatus() {
-      return currentStatus;
+    fetchStatus() {
+      return Promise.resolve(currentStatus);
     },
-    async verifyWebhook() {
-      return true;
+    verifyWebhook() {
+      return Promise.resolve(true);
     },
-    async normalizeWebhook(payload) {
+    normalizeWebhook(payload) {
       const body = payload as { eventId: string; paymentId: string };
-      return {
+      return Promise.resolve({
         externalEventId: body.eventId,
         type: "payment.updated",
         providerPaymentId: body.paymentId as ProviderPaymentId,
         status: null,
         occurredAt: null,
-      };
+      });
     },
-    async refund() {
-      throw new Error("not used");
+    refund() {
+      return Promise.reject(new Error("not used"));
     },
   };
 }
@@ -118,7 +118,7 @@ describe("fase 11 payment webhooks", () => {
     const stockBefore = await h.db.query(
       "select count(*)::int total from public.stock_movements",
     );
-    const deps = { loadProvider: async () => provider() };
+    const deps = { loadProvider: () => Promise.resolve(provider()) };
     const results = await Promise.all([
       processWebhookEvent(h.db, event.id, deps),
       processWebhookEvent(h.db, event.id, deps),
@@ -145,7 +145,7 @@ describe("fase 11 payment webhooks", () => {
     currentStatus = "pending";
     const event = await persist("evt-old");
     await processWebhookEvent(h.db, event.id, {
-      loadProvider: async () => provider(),
+      loadProvider: () => Promise.resolve(provider()),
     });
     const payment = await h.db.query(
       "select status from public.payments where id=$1::uuid",
@@ -158,7 +158,7 @@ describe("fase 11 payment webhooks", () => {
     currentStatus = "refunded";
     const event = await persist("evt-cross", gatewayB, "pay-a");
     const result = await processWebhookEvent(h.db, event.id, {
-      loadProvider: async () => provider(),
+      loadProvider: () => Promise.resolve(provider()),
     });
     expect(result.outcome).toBe("ignored");
     const payment = await h.db.query(
@@ -172,13 +172,13 @@ describe("fase 11 payment webhooks", () => {
     const event = await persist("evt-retry");
     const failing: PaymentProvider = {
       ...provider(),
-      async fetchStatus() {
-        throw new Error("fixture provider outage");
+      fetchStatus() {
+        return Promise.reject(new Error("fixture provider outage"));
       },
     };
     const deps = {
       maxAttempts: 2,
-      loadProvider: async () => failing,
+      loadProvider: () => Promise.resolve(failing),
     };
     expect((await processWebhookEvent(h.db, event.id, deps)).outcome).toBe("retry");
     await h.db.query(

@@ -17,6 +17,24 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.toString();
+  return input.url;
+}
+
+async function expectReject(promise: Promise<unknown>, fragment: string): Promise<void> {
+  let caught: unknown;
+  try {
+    await promise;
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(Error);
+  if (!(caught instanceof Error)) throw new Error("Expected Error instance.");
+  expect(caught.message).toContain(fragment);
+}
+
 describe("MercadoPagoProvider", () => {
   test("valida assinatura oficial x-signature", async () => {
     const secret = "fixture-webhook-secret";
@@ -47,9 +65,9 @@ describe("MercadoPagoProvider", () => {
 
   test("cria Pix e refund com X-Idempotency-Key somente quando writes habilitado", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
-    const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      calls.push({ url: String(input), init });
-      return jsonResponse({ id: "mp-pay-1" });
+    const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      calls.push({ url: requestUrl(input), init });
+      return Promise.resolve(jsonResponse({ id: "mp-pay-1" }));
     };
     const provider = new MercadoPagoProvider({
       accessToken: "fixture-access-token",
@@ -79,7 +97,7 @@ describe("MercadoPagoProvider", () => {
       accessToken: "fixture-access-token",
       webhookSecret: null,
     });
-    await expect(disabled.createIntent({
+    await expectReject(disabled.createIntent({
       level: "tenant_billing",
       tenantId: "tenant",
       storeId: null,
@@ -87,7 +105,7 @@ describe("MercadoPagoProvider", () => {
       amountCents: 100,
       idempotencyKey: "x",
       payerEmail: "buyer@example.test",
-    })).rejects.toThrow("desabilitadas");
+    }), "desabilitadas");
   });
 
   test("normaliza webhook sem confiar nele como status final", async () => {
@@ -129,9 +147,9 @@ describe("AsaasProvider", () => {
 
   test("usa contrato oficial sandbox e normaliza evento", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
-    const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-      calls.push({ url: String(input), init });
-      return jsonResponse({ id: "pay_asaas_1", status: "PENDING" });
+    const fakeFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      calls.push({ url: requestUrl(input), init });
+      return Promise.resolve(jsonResponse({ id: "pay_asaas_1", status: "PENDING" }));
     };
     const provider = new AsaasProvider({
       apiKey: "fixture-api-key",
@@ -169,8 +187,8 @@ describe("AsaasProvider", () => {
       webhookSecret: "fixture-auth-token",
       writesEnabled: true,
     });
-    await expect(provider.refund({
+    await expectReject(provider.refund({
       providerPaymentId: "pay_asaas_1" as ProviderPaymentId,
-    })).rejects.toThrow("desabilitado");
+    }), "desabilitado");
   });
 });

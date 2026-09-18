@@ -5,8 +5,12 @@ import { handlePaymentWebhook } from "../lib/server/payment-webhook.server.ts";
 export const Route = createFileRoute("/api/webhooks/$provider/$gatewayAccountId")({
   server: {
     handlers: {
-      POST: ({ request, params }) =>
-        handlePaymentWebhook(request, params.provider, params.gatewayAccountId),
+      POST: ({ request }) => {
+        const parts = new URL(request.url).pathname.split("/").filter(Boolean);
+        const provider = parts.at(-2) ?? "";
+        const gatewayAccountId = parts.at(-1) ?? "";
+        return handlePaymentWebhook(request, provider, gatewayAccountId);
+      },
     },
   },
 });

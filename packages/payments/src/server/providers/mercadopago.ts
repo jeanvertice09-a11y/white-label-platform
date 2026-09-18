@@ -23,8 +23,8 @@ const BASE_URL = "https://api.mercadopago.com";
 interface MercadoPagoOptions {
   accessToken: string;
   webhookSecret: string | null;
-  fetch?: HttpFetch;
-  writesEnabled?: boolean;
+  fetch?: HttpFetch | undefined;
+  writesEnabled?: boolean | undefined;
 }
 
 export class MercadoPagoProvider implements PaymentProvider {
@@ -65,35 +65,33 @@ export class MercadoPagoProvider implements PaymentProvider {
       { headers: this.headers() },
     );
     const body = await readJson(response);
-    const status = normalizeCommonStatus(String(body["status"] ?? ""));
+    const rawStatus = typeof body["status"] === "string" ? body["status"] : "";
+    const status = normalizeCommonStatus(rawStatus);
     if (!status) throw new Error("Status Mercado Pago desconhecido.");
     return status;
   }
 
-  async verifyWebhook(input: ProviderWebhookInput): Promise<boolean> {
+  verifyWebhook(input: ProviderWebhookInput): Promise<boolean> {
     const secret = this.options.webhookSecret;
     const signature = input.headers["x-signature"];
     const requestId = input.headers["x-request-id"];
     const dataId = input.query?.["data.id"] ?? input.query?.["data_id"];
-    if (!secret || !signature || !requestId || !dataId) return false;
-    const parts = Object.fromEntries(
-      signature.split(",").map((part) => part.trim().split("=", 2)),
-    );
-    const timestamp = parts["ts"];
-    const expected = parts["v1"];
-    if (!timestamp || !expected) return false;
+    if (!secret || !signature || !requestId || !dataId) return Promise.resolve(false);
+    const timestamp = signatureValue(signature, "ts");
+    const expected = signatureValue(signature, "v1");
+    if (!timestamp || !expected) return Promise.resolve(false);
     const manifest =
       `id:${dataId.toLowerCase()};request-id:${requestId};ts:${timestamp};`;
     const digest = createHmac("sha256", secret).update(manifest).digest("hex");
-    return safeEqual(digest, expected);
+    return Promise.resolve(safeEqual(digest, expected));
   }
 
-  async normalizeWebhook(payload: unknown): Promise<NormalizedProviderEvent> {
+  normalizeWebhook(payload: unknown): Promise<NormalizedProviderEvent> {
     const body = objectBody(payload);
     const data = objectBody(body["data"]);
-    return {
-      externalEventId: String(body["id"] ?? ""),
-      type: String(body["action"] ?? body["type"] ?? "unknown"),
+    return Promise.resolve({
+      externalEventId: textValue(body["id"]),
+      type: textValue(body["action"]) || textValue(body["type"]) || "unknown",
       providerPaymentId: data["id"] === undefined
         ? null
         : asProviderPaymentId(data["id"]),
@@ -101,7 +99,7 @@ export class MercadoPagoProvider implements PaymentProvider {
       occurredAt: typeof body["date_created"] === "string"
         ? body["date_created"]
         : null,
-    };
+    });
   }
 
   async refund(
@@ -133,6 +131,19 @@ export class MercadoPagoProvider implements PaymentProvider {
       throw new Error("Operações de escrita Mercado Pago desabilitadas.");
     }
   }
+}
+
+function signatureValue(signature: string, key: string): string | null {
+  for (const part of signature.split(",")) {
+    const [name, value] = part.trim().split("=", 2);
+    if (name === key && value) return value.trim();
+  }
+  return null;
+}
+
+function textValue(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return "";
 }
 
 function objectBody(value: unknown): Record<string, unknown> {

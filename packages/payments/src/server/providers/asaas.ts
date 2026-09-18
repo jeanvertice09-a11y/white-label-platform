@@ -19,9 +19,9 @@ import type { HttpFetch } from "../provider-common.ts";
 interface AsaasOptions {
   apiKey: string;
   webhookSecret: string | null;
-  baseUrl?: string;
-  fetch?: HttpFetch;
-  writesEnabled?: boolean;
+  baseUrl?: string | undefined;
+  fetch?: HttpFetch | undefined;
+  writesEnabled?: boolean | undefined;
 }
 
 export class AsaasProvider implements PaymentProvider {
@@ -64,26 +64,27 @@ export class AsaasProvider implements PaymentProvider {
       { headers: this.headers() },
     );
     const body = await readJson(response);
-    const status = normalizeCommonStatus(String(body["status"] ?? ""));
+    const rawStatus = typeof body["status"] === "string" ? body["status"] : "";
+    const status = normalizeCommonStatus(rawStatus);
     if (!status) throw new Error("Status Asaas desconhecido.");
     return status;
   }
 
-  async verifyWebhook(input: ProviderWebhookInput): Promise<boolean> {
+  verifyWebhook(input: ProviderWebhookInput): Promise<boolean> {
     const secret = this.options.webhookSecret;
     const provided = input.headers["asaas-access-token"];
-    return Boolean(secret && provided && safeEqual(secret, provided));
+    return Promise.resolve(Boolean(secret && provided && safeEqual(secret, provided)));
   }
 
-  async normalizeWebhook(payload: unknown): Promise<NormalizedProviderEvent> {
+  normalizeWebhook(payload: unknown): Promise<NormalizedProviderEvent> {
     const body = objectBody(payload);
     const payment = objectBody(body["payment"]);
     const rawStatus = typeof payment["status"] === "string"
       ? payment["status"]
       : "";
-    return {
-      externalEventId: String(body["id"] ?? ""),
-      type: String(body["event"] ?? "unknown"),
+    return Promise.resolve({
+      externalEventId: textValue(body["id"]),
+      type: textValue(body["event"]) || "unknown",
       providerPaymentId: payment["id"] === undefined
         ? null
         : asProviderPaymentId(payment["id"]),
@@ -91,15 +92,15 @@ export class AsaasProvider implements PaymentProvider {
       occurredAt: typeof body["dateCreated"] === "string"
         ? body["dateCreated"]
         : null,
-    };
+    });
   }
 
-  async refund(
+  refund(
     _input: RefundPaymentInput,
   ): Promise<{ providerPaymentId: ProviderPaymentId }> {
-    throw new Error(
+    return Promise.reject(new Error(
       "Refund Asaas desabilitado: API oficial não documenta chave idempotente para este endpoint.",
-    );
+    ));
   }
 
   private headers(): Record<string, string> {
@@ -119,6 +120,11 @@ export class AsaasProvider implements PaymentProvider {
 function paymentMethod(value: CreatePaymentIntentInput["paymentMethod"]): string {
   if (value === "boleto") return "BOLETO";
   return "PIX";
+}
+
+function textValue(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  return "";
 }
 
 function objectBody(value: unknown): Record<string, unknown> {
