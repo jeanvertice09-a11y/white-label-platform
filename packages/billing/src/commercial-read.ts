@@ -8,6 +8,13 @@ import type { BillingSqlExecutor } from "./postgres-entitlements.ts";
 
 type Row = Record<string, unknown>;
 
+interface CatalogRows {
+  templates: Row[];
+  templateEntitlements: Row[];
+  plans: Row[];
+  planEntitlements: Row[];
+}
+
 function text(row: Row, key: string): string {
   const value = row[key];
   if (typeof value !== "string") throw new Error(`Campo inválido: ${key}`);
@@ -55,11 +62,8 @@ function groupEntitlements(rows: Row[], idKey: string): Map<string, PlanEntitlem
   return out;
 }
 
-export async function listTenantPlanCatalog(
-  sql: BillingSqlExecutor,
-  tenantId: string,
-): Promise<TenantPlanCatalog> {
-  const [templateRows, templateEntitlementRows, planRows, planEntitlementRows] = await Promise.all([
+async function loadCatalogRows(sql: BillingSqlExecutor, tenantId: string): Promise<CatalogRows> {
+  const [templates, templateEntitlements, plans, planEntitlements] = await Promise.all([
     sql.query(
       `select id,code,name,description,active,sort_order
        from public.plan_templates
@@ -96,21 +100,25 @@ export async function listTenantPlanCatalog(
       [tenantId],
     ),
   ]);
+  return { templates, templateEntitlements, plans, planEntitlements };
+}
 
-  const templateEntitlements = groupEntitlements(templateEntitlementRows, "template_id");
-  const planEntitlements = groupEntitlements(planEntitlementRows, "tenant_plan_id");
-
-  const templates: PlanTemplateView[] = templateRows.map((row) => ({
+function mapTemplates(rows: CatalogRows): PlanTemplateView[] {
+  const entitlements = groupEntitlements(rows.templateEntitlements, "template_id");
+  return rows.templates.map((row) => ({
     id: text(row, "id"),
     code: text(row, "code"),
     name: text(row, "name"),
     description: nullableText(row, "description"),
     active: boolValue(row, "active"),
     sortOrder: numberValue(row, "sort_order"),
-    entitlements: templateEntitlements.get(text(row, "id")) ?? [],
+    entitlements: entitlements.get(text(row, "id")) ?? [],
   }));
+}
 
-  const plans: TenantCommercialPlan[] = planRows.map((row) => ({
+function mapPlans(rows: CatalogRows): TenantCommercialPlan[] {
+  const entitlements = groupEntitlements(rows.planEntitlements, "tenant_plan_id");
+  return rows.plans.map((row) => ({
     id: text(row, "id"),
     tenantId: text(row, "tenant_id"),
     templateId: text(row, "template_id"),
@@ -125,8 +133,14 @@ export async function listTenantPlanCatalog(
     trialDays: numberValue(row, "trial_days"),
     displayOrder: numberValue(row, "display_order"),
     recommended: boolValue(row, "recommended"),
-    entitlements: planEntitlements.get(text(row, "id")) ?? [],
+    entitlements: entitlements.get(text(row, "id")) ?? [],
   }));
+}
 
-  return { templates, plans };
+export async function listTenantPlanCatalog(
+  sql: BillingSqlExecutor,
+  tenantId: string,
+): Promise<TenantPlanCatalog> {
+  const rows = await loadCatalogRows(sql, tenantId);
+  return { templates: mapTemplates(rows), plans: mapPlans(rows) };
 }
