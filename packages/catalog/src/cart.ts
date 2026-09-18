@@ -41,10 +41,12 @@ export function addCartItem(
   const selection = resolvePurchasableSelection(product, variantId);
   const key = itemKey(selection.productId, selection.variantId);
   const existing = cart.items.find((item) => itemKey(item.productId, item.variantId) === key);
+  const nextQuantity = (existing?.quantity ?? 0) + quantity;
+  assertQuantity(nextQuantity);
   const items = existing
     ? cart.items.map((item) =>
         itemKey(item.productId, item.variantId) === key
-          ? { ...item, quantity: item.quantity + quantity, unitPriceCents: selection.unitPriceCents }
+          ? { ...item, quantity: nextQuantity, unitPriceCents: selection.unitPriceCents }
           : item,
       )
     : [
@@ -90,6 +92,10 @@ export function removeCartItem(
     ...cart,
     items: cart.items.filter((item) => itemKey(item.productId, item.variantId) !== key),
   };
+}
+
+export function clearCart(cart: CartState): CartState {
+  return { ...cart, items: [] };
 }
 
 export function cartTotalCents(cart: CartState): number {

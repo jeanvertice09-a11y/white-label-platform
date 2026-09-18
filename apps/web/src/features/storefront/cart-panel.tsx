@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { CartState } from "@white-label/catalog";
 import {
   cartTotalCents,
+  clearCart,
   removeCartItem,
   setCartItemQuantity,
 } from "@white-label/catalog";
@@ -17,10 +18,18 @@ function CartRows(props: Readonly<{
       ? removeCartItem(props.cart, productId, variantId)
       : setCartItemQuantity(props.cart, productId, variantId, next));
   }
+  function remove(productId: string, variantId: string | null): void {
+    props.onChange(removeCartItem(props.cart, productId, variantId));
+  }
   if (!props.cart.items.length) return <div className="sf__empty">Seu carrinho está vazio.</div>;
   return <>{props.cart.items.map((item) => (
     <div className="sf__cart-row" key={item.productId + ":" + (item.variantId ?? "base")}>
-      <div><strong>{item.name}</strong>{item.variantName ? <div className="sf__meta">{item.variantName}</div> : null}<div className="sf__meta">{storefrontMoney(item.unitPriceCents)} cada</div></div>
+      <div>
+        <strong>{item.name}</strong>
+        {item.variantName ? <div className="sf__meta">{item.variantName}</div> : null}
+        <div className="sf__meta">{storefrontMoney(item.unitPriceCents)} cada</div>
+        <button type="button" onClick={() => { remove(item.productId, item.variantId); }}>Remover</button>
+      </div>
       <div className="sf__qty">
         <button type="button" onClick={() => { change(item.productId, item.variantId, item.quantity - 1); }}>−</button>
         <span>{item.quantity}</span>
@@ -90,6 +99,7 @@ export function CartPanel(props: Readonly<{
         <div className="sf__cart"><CartRows cart={props.cart} onChange={props.onChange} /></div>
         {props.cart.items.length ? (
           <div className="sf__checkout">
+            <button type="button" onClick={() => { props.onChange(clearCart(props.cart)); }}>Limpar carrinho</button>
             <CheckoutFields name={name} phone={phone} coupon={coupon} onName={setName} onPhone={setPhone} onCoupon={setCoupon} />
             <div className="sf__total"><span>Subtotal do carrinho</span><span>{storefrontMoney(cartTotalCents(props.cart))}</span></div>
             <div className="sf__meta">Preço, cupom e total são recalculados no servidor antes do pedido ser criado.</div>
