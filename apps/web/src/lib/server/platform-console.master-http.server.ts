@@ -12,6 +12,17 @@ interface LatestSubscription {
   planName: string | null;
 }
 
+interface MasterRows {
+  tenants: Row[];
+  stores: Row[];
+  subscriptions: Row[];
+  plans: Row[];
+  payments: Row[];
+  audits: Row[];
+  domains: Row[];
+  gateways: Row[];
+}
+
 type Row = Record<string, unknown>;
 
 function asRows(value: unknown): Row[] {
@@ -63,70 +74,94 @@ function sumPaidCents(rows: Row[]): number {
   }, 0);
 }
 
-function mapMasterData(rows: {
-  tenants: Row[];
-  stores: Row[];
-  subscriptions: Row[];
-  plans: Row[];
-  payments: Row[];
-  audits: Row[];
-  domains: Row[];
-  gateways: Row[];
-}): MasterConsoleData {
-  const storeCounts = buildStoreCounts(rows.stores);
-  const planNames = buildPlanNames(rows.plans);
-  const latestSubscriptions = buildLatestSubscriptions(rows.subscriptions, planNames);
+function buildMetrics(rows: MasterRows): MasterConsoleData["metrics"] {
   return {
-    metrics: {
-      tenants: rows.tenants.length,
-      activeTenants: rows.tenants.filter((row) => stringValue(row, "status") === "active").length,
-      trialTenants: rows.tenants.filter((row) => stringValue(row, "status") === "trial").length,
-      activeStores: rows.stores.filter((row) => stringValue(row, "status") === "active").length,
-      activeSubscriptions: rows.subscriptions.filter((row) => stringValue(row, "status") === "active").length,
-      paidCents: sumPaidCents(rows.payments),
-      activeDomains: rows.domains.filter((row) => stringValue(row, "status") === "active").length,
-    },
-    tenants: rows.tenants.map((row) => {
-      const id = stringValue(row, "id");
-      const counts = storeCounts.get(id) ?? { total: 0, active: 0 };
-      const subscription = latestSubscriptions.get(id);
-      return {
-        id,
-        name: stringValue(row, "name"),
-        slug: stringValue(row, "slug"),
-        status: stringValue(row, "status"),
-        createdAt: stringValue(row, "created_at"),
-        storeCount: counts.total,
-        activeStoreCount: counts.active,
-        subscriptionStatus: subscription?.status ?? null,
-        planName: subscription?.planName ?? null,
-      };
-    }),
-    payments: rows.payments.slice(0, 50).map((row) => ({
-      id: stringValue(row, "id"),
-      tenantName: nullableString(row, "tenant_name"),
-      amountCents: numberValue(row, "amount_cents"),
+    tenants: rows.tenants.length,
+    activeTenants: rows.tenants.filter((row) => stringValue(row, "status") === "active").length,
+    trialTenants: rows.tenants.filter((row) => stringValue(row, "status") === "trial").length,
+    activeStores: rows.stores.filter((row) => stringValue(row, "status") === "active").length,
+    activeSubscriptions: rows.subscriptions.filter((row) => stringValue(row, "status") === "active").length,
+    paidCents: sumPaidCents(rows.payments),
+    activeDomains: rows.domains.filter((row) => stringValue(row, "status") === "active").length,
+  };
+}
+
+function mapTenants(rows: MasterRows): MasterConsoleData["tenants"] {
+  const storeCounts = buildStoreCounts(rows.stores);
+  const subscriptions = buildLatestSubscriptions(rows.subscriptions, buildPlanNames(rows.plans));
+  return rows.tenants.map((row) => {
+    const id = stringValue(row, "id");
+    const counts = storeCounts.get(id) ?? { total: 0, active: 0 };
+    const subscription = subscriptions.get(id);
+    return {
+      id,
+      name: stringValue(row, "name"),
+      slug: stringValue(row, "slug"),
       status: stringValue(row, "status"),
       createdAt: stringValue(row, "created_at"),
-    })),
-    audits: rows.audits.map((row) => ({
-      id: stringValue(row, "id"), action: stringValue(row, "action"),
-      resourceType: stringValue(row, "resource_type"), resourceId: nullableString(row, "resource_id"),
-      tenantId: nullableString(row, "tenant_id"), actorUserId: nullableString(row, "actor_user_id"),
-      createdAt: stringValue(row, "created_at"),
-    })),
-    domains: rows.domains.slice(0, 100).map((row) => ({
-      id: stringValue(row, "id"), hostname: stringValue(row, "hostname"), type: stringValue(row, "type"),
-      status: stringValue(row, "status"), tenantId: stringValue(row, "tenant_id"),
-      storeId: nullableString(row, "store_id"), verifiedAt: nullableString(row, "verified_at"),
-      createdAt: stringValue(row, "created_at"),
-    })),
-    gateways: rows.gateways.slice(0, 100).map((row) => ({
-      id: stringValue(row, "id"), provider: stringValue(row, "provider"), label: stringValue(row, "label"),
-      level: stringValue(row, "level"), tenantId: nullableString(row, "tenant_id"),
-      storeId: nullableString(row, "store_id"), createdAt: stringValue(row, "created_at"),
-    })),
+      storeCount: counts.total,
+      activeStoreCount: counts.active,
+      subscriptionStatus: subscription?.status ?? null,
+      planName: subscription?.planName ?? null,
+    };
+  });
+}
+
+function mapPayments(rows: Row[]): MasterConsoleData["payments"] {
+  return rows.slice(0, 50).map((row) => ({
+    id: stringValue(row, "id"),
+    tenantName: nullableString(row, "tenant_name"),
+    amountCents: numberValue(row, "amount_cents"),
+    status: stringValue(row, "status"),
+    createdAt: stringValue(row, "created_at"),
+  }));
+}
+
+function mapAudits(rows: Row[]): MasterConsoleData["audits"] {
+  return rows.map((row) => ({
+    id: stringValue(row, "id"), action: stringValue(row, "action"),
+    resourceType: stringValue(row, "resource_type"), resourceId: nullableString(row, "resource_id"),
+    tenantId: nullableString(row, "tenant_id"), actorUserId: nullableString(row, "actor_user_id"),
+    createdAt: stringValue(row, "created_at"),
+  }));
+}
+
+function mapDomains(rows: Row[]): MasterConsoleData["domains"] {
+  return rows.slice(0, 100).map((row) => ({
+    id: stringValue(row, "id"), hostname: stringValue(row, "hostname"), type: stringValue(row, "type"),
+    status: stringValue(row, "status"), tenantId: stringValue(row, "tenant_id"),
+    storeId: nullableString(row, "store_id"), verifiedAt: nullableString(row, "verified_at"),
+    createdAt: stringValue(row, "created_at"),
+  }));
+}
+
+function mapGateways(rows: Row[]): MasterConsoleData["gateways"] {
+  return rows.slice(0, 100).map((row) => ({
+    id: stringValue(row, "id"), provider: stringValue(row, "provider"), label: stringValue(row, "label"),
+    level: stringValue(row, "level"), tenantId: nullableString(row, "tenant_id"),
+    storeId: nullableString(row, "store_id"), createdAt: stringValue(row, "created_at"),
+  }));
+}
+
+function mapMasterData(rows: MasterRows): MasterConsoleData {
+  return {
+    metrics: buildMetrics(rows),
+    tenants: mapTenants(rows),
+    payments: mapPayments(rows.payments),
+    audits: mapAudits(rows.audits),
+    domains: mapDomains(rows.domains),
+    gateways: mapGateways(rows.gateways),
   };
+}
+
+function attachTenantNames(rows: Row[]): Row[] {
+  return rows.map((row) => {
+    const tenant = row["tenants"];
+    const tenantName = typeof tenant === "object" && tenant !== null && "name" in tenant
+      ? (tenant as { name?: unknown }).name
+      : null;
+    return { ...row, tenant_name: tenantName };
+  });
 }
 
 export async function loadMasterConsoleDataHttp(client: SupabaseClient): Promise<MasterConsoleData> {
@@ -141,16 +176,9 @@ export async function loadMasterConsoleDataHttp(client: SupabaseClient): Promise
     client.from("gateway_accounts").select("id,provider,label,level,tenant_id,store_id,created_at").order("created_at", { ascending: false }),
   ]);
   assertResults([tenants, stores, subscriptions, plans, payments, audits, domains, gateways]);
-  const paymentRows = asRows(payments.data).map((row) => {
-    const tenant = row["tenants"];
-    const tenantName = typeof tenant === "object" && tenant !== null && "name" in tenant
-      ? (tenant as { name?: unknown }).name
-      : null;
-    return { ...row, tenant_name: tenantName };
-  });
   return mapMasterData({
     tenants: asRows(tenants.data), stores: asRows(stores.data), subscriptions: asRows(subscriptions.data),
-    plans: asRows(plans.data), payments: paymentRows, audits: asRows(audits.data),
+    plans: asRows(plans.data), payments: attachTenantNames(asRows(payments.data)), audits: asRows(audits.data),
     domains: asRows(domains.data), gateways: asRows(gateways.data),
   });
 }
