@@ -1,16 +1,11 @@
+import { processPaymentWebhook } from "../payment-runtime.ts";
 import type { Job } from "./types.ts";
 
-// Pipeline: HTTP webhook -> autentica provider -> persiste evento ->
-// idempotência -> responde rápido -> enqueue -> worker processa -> retry -> DLQ.
-export async function handleWebhookJob(job: Job): Promise<void> {
-  await Promise.resolve(job);
-  if (job.attempts > job.maxAttempts) {
-    await sendToDlq(job);
-  }
-  // Fundação: processamento real de gateway entra aqui (reconciliação via API
-  // do provider, nunca confiando só no payload). Marcado como pendente.
+interface WebhookPayload {
+  eventId: string;
 }
 
-async function sendToDlq(job: Job): Promise<void> {
-  await Promise.resolve(job);
+export async function handleWebhookJob(job: Job<WebhookPayload>): Promise<void> {
+  if (!job.payload.eventId) throw new Error("Webhook job sem eventId.");
+  await processPaymentWebhook(job.payload.eventId);
 }
