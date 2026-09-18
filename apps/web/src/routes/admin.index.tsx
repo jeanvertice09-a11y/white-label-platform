@@ -1,4 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  DashboardIcon,
+  type DashboardIconName,
+} from "../components/dashboard/DashboardIcon.tsx";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
 import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
@@ -8,9 +12,10 @@ export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
 });
 
-function Stat(props: Readonly<{ label: string; value: string | number }>): React.JSX.Element {
+function Stat(props: Readonly<{ label: string; value: string | number; icon: DashboardIconName }>): React.JSX.Element {
   return (
-    <div className="k-card">
+    <div className="k-card k-stat">
+      <span className="k-stat__icon" aria-hidden="true"><DashboardIcon name={props.icon} /></span>
       <div className="k-stat__label">{props.label}</div>
       <div className="k-stat__value">{props.value}</div>
     </div>
@@ -41,16 +46,16 @@ function AdminDashboard(): React.JSX.Element {
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
       <div className="k-grid">
-        <Stat label="Pedidos hoje" value={metrics.ordersToday} />
-        <Stat label="Pedidos pendentes" value={metrics.pendingOrders} />
-        <Stat label="Faturamento — 30 dias" value={formatMoney(metrics.revenuePeriodCents)} />
-        <Stat label="Ticket médio — 30 dias" value={formatMoney(metrics.averageTicketCents)} />
-        <Stat label="Produtos ativos" value={metrics.activeProducts} />
-        <Stat label="Estoque baixo" value={metrics.lowStockProducts} />
-        <Stat label="Clientes" value={metrics.customers} />
-        <Stat label="Plano" value={data.plan?.name ?? data.plan?.slug ?? "Sem plano identificado"} />
-        <Stat label="Conta" value={accountStatus(data.store.tenantStatus, data.store.trialEndsAt)} />
-        <Stat label="Layout do catálogo" value={data.layout === "modern" ? "Modern" : "Classic"} />
+        <Stat icon="orders" label="Pedidos hoje" value={metrics.ordersToday} />
+        <Stat icon="activity" label="Pedidos pendentes" value={metrics.pendingOrders} />
+        <Stat icon="revenue" label="Faturamento — 30 dias" value={formatMoney(metrics.revenuePeriodCents)} />
+        <Stat icon="billing" label="Ticket médio — 30 dias" value={formatMoney(metrics.averageTicketCents)} />
+        <Stat icon="products" label="Produtos ativos" value={metrics.activeProducts} />
+        <Stat icon="inventory" label="Estoque baixo" value={metrics.lowStockProducts} />
+        <Stat icon="customers" label="Clientes" value={metrics.customers} />
+        <Stat icon="subscriptions" label="Plano" value={data.plan?.name ?? data.plan?.slug ?? "Sem plano identificado"} />
+        <Stat icon="check" label="Conta" value={accountStatus(data.store.tenantStatus, data.store.trialEndsAt)} />
+        <Stat icon="palette" label="Layout do catálogo" value={data.layout === "modern" ? "Modern" : "Classic"} />
       </div>
       <div className="k-card">
         <h2>Definição de faturamento</h2>
