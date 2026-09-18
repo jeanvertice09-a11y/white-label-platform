@@ -28,6 +28,8 @@
       "@white-label/database": ["./packages/database/src/index.ts"],
       "@white-label/domains": ["./packages/domains/src/index.ts"],
       "@white-label/payments": ["./packages/payments/src/index.ts"],
+      "@white-label/orders": ["./packages/orders/src/index.ts"],
+      "@white-label/inventory": ["./packages/inventory/src/index.ts"],
       "@white-label/platform": ["./packages/platform/src/index.ts"],
       "@white-label/storage": ["./packages/storage/src/index.ts"],
       "@white-label/stores": ["./packages/stores/src/index.ts"],
