@@ -14,6 +14,10 @@ const TENANT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" as TenantId;
 const STORE = "aaaaaaaa-0000-4000-8000-aaaaaaaaaaaa" as StoreId;
 
 function deps(overrides: Partial<RouteDeps> = {}): RouteDeps {
+  const getTenantStatus: RouteDeps["getTenantStatus"] = async () => {
+    await Promise.resolve();
+    return "active";
+  };
   return {
     resolveSession: async () => {
       await Promise.resolve();
@@ -34,6 +38,7 @@ function deps(overrides: Partial<RouteDeps> = {}): RouteDeps {
       return null;
     },
     ...overrides,
+    getTenantStatus: overrides.getTenantStatus ?? getTenantStatus,
   };
 }
 

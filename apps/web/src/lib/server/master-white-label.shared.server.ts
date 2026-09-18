@@ -1,6 +1,7 @@
 import { getRequestHost } from "@tanstack/react-start/server";
 import { assertCanManageWhiteLabels } from "@white-label/auth";
 import type { DomainType } from "@white-label/domains";
+import type { JsonObject } from "./master-white-label.types.ts";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createRealDeps, loadMaster } from "./route-context.server.ts";
 
@@ -9,9 +10,9 @@ export function text(row: Record<string, unknown>, key: string): string { const 
 export function nullableText(row: Record<string, unknown>, key: string): string | null { const value = row[key]; return typeof value === "string" ? value : null; }
 export function numberValue(row: Record<string, unknown>, key: string): number { const value = row[key]; return typeof value === "number" ? value : Number(value ?? 0); }
 export function boolValue(row: Record<string, unknown>, key: string): boolean { return row[key] === true; }
-export function objectValue(row: Record<string, unknown>, key: string): Record<string, unknown> {
+export function objectValue(row: Record<string, unknown>, key: string): JsonObject {
   const value = row[key];
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : {};
 }
 export async function masterRead(): Promise<{ actorUserId: string; sql: AdminSql }> {
   const deps = await createRealDeps(); const ctx = await loadMaster({ host: getRequestHost() }, deps);
