@@ -39,22 +39,56 @@ const CREATE_ORDER_SQL = `with raw_input as (
     count(*) as resolved_count,
     coalesce(sum(qty * unit_cents),0)::bigint as subtotal
   from resolved
+), coupon_eval as (
+  select c.id,c.code,
+    case
+      when c.discount_type='percentage'
+        then least(v.subtotal, floor(v.subtotal*c.discount_value/100.0)::bigint)
+      else least(v.subtotal,c.discount_value)
+    end as discount_cents
+  from public.coupons c cross join valid v
+  where $9::text is not null
+    and c.tenant_id=$1 and c.store_id=$2 and c.code=$9
+    and c.active=true
+    and (c.starts_at is null or c.starts_at<=now())
+    and (c.ends_at is null or c.ends_at>now())
+    and (c.usage_limit is null or c.usage_count<c.usage_limit)
+    and (c.minimum_order_cents is null or v.subtotal>=c.minimum_order_cents)
+  for update of c
+), priced as (
+  select v.*,ce.id as coupon_id,ce.code as coupon_code,
+    coalesce(ce.discount_cents,0)::bigint as discount_cents
+  from valid v left join coupon_eval ce on true
 ), existing as (
   select id from public.orders
   where tenant_id=$1 and store_id=$2 and idempotency_key=$3
 ), inserted as (
   insert into public.orders (
-    tenant_id,store_id,origin,status,payment_status,customer_name,customer_phone,
-    notes,subtotal_cents,discount_cents,shipping_cents,total_cents,idempotency_key
+    tenant_id,store_id,origin,status,payment_status,customer_id,customer_name,
+    customer_phone,coupon_id,coupon_code_snapshot,notes,subtotal_cents,
+    discount_cents,shipping_cents,total_cents,idempotency_key
   )
   select $1,$2,$5,'pending','pending',$6,$7,$8,
-    valid.subtotal,0,$9,valid.subtotal+$9,$3
-  from valid
-  where valid.input_count > 0
-    and valid.input_count = valid.resolved_count
+    p.coupon_id,p.coupon_code,$10,p.subtotal,p.discount_cents,$11,
+    p.subtotal-p.discount_cents+$11,$3
+  from priced p
+  where p.input_count > 0
+    and p.input_count = p.resolved_count
+    and ($6::uuid is null or exists (
+      select 1 from public.customers c
+      where c.tenant_id=$1 and c.store_id=$2 and c.id=$6
+    ))
+    and ($9::text is null or p.coupon_id is not null)
     and not exists (select 1 from existing)
   on conflict do nothing
-  returning id
+  returning id,coupon_id
+), coupon_used as (
+  update public.coupons c
+  set usage_count=c.usage_count+1,updated_at=now()
+  from inserted i
+  where i.coupon_id is not null
+    and c.tenant_id=$1 and c.store_id=$2 and c.id=i.coupon_id
+  returning c.id
 ), selected_order as (
   select id from existing union all select id from inserted limit 1
 ), inserted_items as (
@@ -87,8 +121,10 @@ function orderParams(
     input.idempotencyKey,
     cartPayload(input),
     input.origin,
+    input.customerId ?? null,
     input.customerName,
     input.customerPhone,
+    input.couponCode?.trim().toUpperCase() ?? null,
     input.notes,
     input.shippingCents,
   ];
@@ -102,7 +138,9 @@ export async function createOrderFromCart(
   assertOrderScope(scope);
   assertCreateOrderInput(input);
   const rows = await sql.query(CREATE_ORDER_SQL, orderParams(scope, input));
-  if (rows.length === 0) throw new Error("Carrinho inválido ou produto indisponível");
+  if (rows.length === 0) {
+    throw new Error("Carrinho, cliente ou cupom inválido");
+  }
   const order = await getOrderById(sql, scope, String(rows[0]["id"]));
   if (!order) throw new Error("Pedido não encontrado após criação");
   return order;

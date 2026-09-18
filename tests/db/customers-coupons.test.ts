@@ -67,6 +67,42 @@ describe("customers + coupons", () => {
     expect(other).toBeNull();
   });
 
+  test("checkout aplica cupom uma vez e grava snapshot", async () => {
+    const coupons = createCouponRepository(h.db);
+    const orders = createOrderRepository(h.db);
+    const scope = { tenantId: ids.tenantA, storeId: ids.storeA };
+    await coupons.create(scope, {
+      code: "CHECKOUT10",
+      name: "Checkout 10",
+      active: true,
+      discountType: "percentage",
+      discountValue: 10,
+      minimumOrderCents: 1000,
+      startsAt: null,
+      endsAt: null,
+      usageLimit: 5,
+    });
+    const input = {
+      idempotencyKey: "coupon-checkout",
+      origin: "whatsapp" as const,
+      customerName: null,
+      customerPhone: null,
+      couponCode: "checkout10",
+      notes: null,
+      shippingCents: 0,
+      items: [{ productId: PRODUCT, variantId: null, quantity: 2 }],
+    };
+    const first = await orders.createFromCart(scope, input);
+    const second = await orders.createFromCart(scope, input);
+    expect(first.id).toBe(second.id);
+    expect(first.subtotalCents).toBe(5000);
+    expect(first.discountCents).toBe(500);
+    expect(first.totalCents).toBe(4500);
+    expect(first.couponCodeSnapshot).toBe("CHECKOUT10");
+    const coupon = await coupons.getByCode(scope, "CHECKOUT10");
+    expect(coupon?.usageCount).toBe(1);
+  });
+
   test("cupom da outra loja não é encontrado", async () => {
     const coupons = createCouponRepository(h.db);
     const coupon = await coupons.create(

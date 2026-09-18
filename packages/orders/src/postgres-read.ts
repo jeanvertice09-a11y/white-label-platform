@@ -5,8 +5,9 @@ import type { Order, OrderScope } from "./types.ts";
 
 export const ORDER_COLUMNS =
   "id,tenant_id,store_id,order_number,origin,status,payment_status," +
-  "customer_name,customer_phone,notes,subtotal_cents,discount_cents," +
-  "shipping_cents,total_cents,created_at,updated_at,confirmed_at,completed_at,cancelled_at";
+  "customer_id,customer_name,customer_phone,coupon_id,coupon_code_snapshot," +
+  "notes,subtotal_cents,discount_cents,shipping_cents,total_cents,created_at," +
+  "updated_at,confirmed_at,completed_at,cancelled_at";
 
 const ITEM_COLUMNS =
   "id,tenant_id,store_id,order_id,product_id,variant_id,product_name," +

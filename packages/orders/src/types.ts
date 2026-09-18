@@ -32,8 +32,11 @@ export interface Order extends OrderScope {
   origin: OrderOrigin;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
+  customerId: string | null;
   customerName: string | null;
   customerPhone: string | null;
+  couponId: string | null;
+  couponCodeSnapshot: string | null;
   notes: string | null;
   subtotalCents: number;
   discountCents: number;
@@ -56,8 +59,10 @@ export interface OrderCartItemInput {
 export interface CreateOrderFromCartInput {
   idempotencyKey: string;
   origin: OrderOrigin;
+  customerId?: string | null;
   customerName: string | null;
   customerPhone: string | null;
+  couponCode?: string | null;
   notes: string | null;
   shippingCents: number;
   items: OrderCartItemInput[];
