@@ -58,7 +58,7 @@ function authenticated(memberships: MembershipRow[] = []): RouteDeps {
 
 async function expectHttpError(
   promise: Promise<unknown>,
-  status: number,
+  status: HttpError["status"],
   code: string,
 ): Promise<void> {
   try {
