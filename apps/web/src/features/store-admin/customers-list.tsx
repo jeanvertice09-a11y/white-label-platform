@@ -65,26 +65,54 @@ function Pagination(props: Readonly<{
   const pages = Math.max(1, Math.ceil(props.data.total / props.data.pageSize));
   return (
     <div className="k-actions">
-      <button
-        className="k-button"
-        type="button"
+      <button className="k-button" type="button"
         disabled={props.loading || props.data.page <= 1}
-        onClick={() => { void props.load(props.data.page - 1); }}
-      >
+        onClick={() => { void props.load(props.data.page - 1); }}>
         Anterior
       </button>
       <span className="k-status">
         Página {props.data.page} de {pages} · {props.data.total} cliente(s)
       </span>
-      <button
-        className="k-button"
-        type="button"
+      <button className="k-button" type="button"
         disabled={props.loading || props.data.page >= pages}
-        onClick={() => { void props.load(props.data.page + 1); }}
-      >
+        onClick={() => { void props.load(props.data.page + 1); }}>
         Próxima
       </button>
     </div>
+  );
+}
+
+interface FiltersProps {
+  search: string;
+  loading: boolean;
+  setSearch: (value: string) => void;
+  load: LoadPage;
+}
+
+function CustomerFilters(props: Readonly<FiltersProps>): React.JSX.Element {
+  function submit(event: SyntheticEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    void props.load(1);
+  }
+  return (
+    <form className="k-card k-form" onSubmit={submit}>
+      <div className="k-field">
+        <label htmlFor="customer-search">Buscar clientes</label>
+        <input id="customer-search" value={props.search}
+          onChange={(event) => { props.setSearch(event.target.value); }}
+          placeholder="Nome, telefone, e-mail ou documento" />
+      </div>
+      <div className="k-actions">
+        <button className="k-button k-button--primary" disabled={props.loading}>
+          Buscar
+        </button>
+        <button className="k-button" type="button" disabled={props.loading}
+          onClick={() => { void props.load(1, true); }}>
+          Limpar
+        </button>
+        {props.loading ? <span className="k-status">Carregando…</span> : null}
+      </div>
+    </form>
   );
 }
 
@@ -97,59 +125,25 @@ export function CustomersList({
   const [error, setError] = useState("");
 
   async function load(page: number, clear = false): Promise<void> {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     if (clear) setSearch("");
     try {
-      const result = await listMerchantCustomers({
-        data: {
-          page,
-          pageSize: PAGE_SIZE,
-          search: clear ? undefined : search.trim() || undefined,
-        },
-      });
-      setData(result);
+      setData(await listMerchantCustomers({ data: {
+        page,
+        pageSize: PAGE_SIZE,
+        search: clear ? undefined : search.trim() || undefined,
+      } }));
     } catch (loadError) {
       setError(loadError instanceof Error
         ? loadError.message
         : "Não foi possível carregar os clientes.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function submit(event: SyntheticEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    void load(1);
+    } finally { setLoading(false); }
   }
 
   return (
     <div className="k-stack">
-      <form className="k-card k-form" onSubmit={submit}>
-        <div className="k-field">
-          <label htmlFor="customer-search">Buscar clientes</label>
-          <input
-            id="customer-search"
-            value={search}
-            onChange={(event) => { setSearch(event.target.value); }}
-            placeholder="Nome, telefone, e-mail ou documento"
-          />
-        </div>
-        <div className="k-actions">
-          <button className="k-button k-button--primary" disabled={loading}>
-            Buscar
-          </button>
-          <button
-            className="k-button"
-            type="button"
-            disabled={loading}
-            onClick={() => { void load(1, true); }}
-          >
-            Limpar
-          </button>
-          {loading ? <span className="k-status">Carregando…</span> : null}
-        </div>
-      </form>
+      <CustomerFilters search={search} loading={loading}
+        setSearch={setSearch} load={load} />
       {error ? <div className="k-empty">{error}</div> : null}
       {!error && !loading && data.items.length === 0
         ? <div className="k-empty">Nenhum cliente encontrado.</div>
