@@ -36,6 +36,7 @@ export {
   addCartItem,
   setCartItemQuantity,
   removeCartItem,
+  clearCart,
   cartTotalCents,
 } from "./cart.ts";
 export type { CartItem, CartState } from "./cart.ts";
