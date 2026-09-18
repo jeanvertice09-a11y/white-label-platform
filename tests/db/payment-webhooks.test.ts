@@ -7,6 +7,7 @@ import type {
 import {
   persistVerifiedWebhook,
   processWebhookEvent,
+  reconcilePaymentStatus,
 } from "../../packages/payments/src/server.ts";
 import { setupDatabase, type Harness } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
@@ -56,6 +57,18 @@ async function persist(eventId: string, account = gatewayA, providerPaymentId = 
     payload: { eventId, paymentId: providerPaymentId },
     occurredAt: "2026-09-18T10:00:00Z",
   });
+}
+
+async function expectReject(promise: Promise<unknown>, fragment: string): Promise<void> {
+  let caught: unknown;
+  try {
+    await promise;
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toBeInstanceOf(Error);
+  if (!(caught instanceof Error)) throw new Error("Expected Error instance.");
+  expect(caught.message).toContain(fragment);
 }
 
 beforeAll(async () => {
@@ -166,6 +179,34 @@ describe("fase 11 payment webhooks", () => {
       [paymentId],
     );
     expect(payment.at(0)?.["status"]).toBe("captured");
+  });
+
+  test("reconciliação valida payment + gateway + provider payment e é idempotente", async () => {
+    currentStatus = "refunded";
+    const first = await reconcilePaymentStatus(
+      h.db,
+      paymentId,
+      gatewayA,
+      provider(),
+      "pay-a" as ProviderPaymentId,
+    );
+    const second = await reconcilePaymentStatus(
+      h.db,
+      paymentId,
+      gatewayA,
+      provider(),
+      "pay-a" as ProviderPaymentId,
+    );
+    expect(first.status).toBe("refunded");
+    expect(first.changed).toBe(true);
+    expect(second.changed).toBe(false);
+    await expectReject(reconcilePaymentStatus(
+      h.db,
+      paymentId,
+      gatewayB,
+      provider(),
+      "pay-a" as ProviderPaymentId,
+    ), "não pertence");
   });
 
   test("falha transitória vira retry e depois DLQ sem perder evento", async () => {
