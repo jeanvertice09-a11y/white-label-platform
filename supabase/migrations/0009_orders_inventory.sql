@@ -50,6 +50,26 @@ alter table public.orders
     and total_cents = subtotal_cents - discount_cents + shipping_cents
   );
 
+-- Compatibilidade com código legado que ainda informa apenas total_cents.
+create or replace function private.orders_fill_legacy_subtotal()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $
+begin
+  if NEW.subtotal_cents is null then
+    NEW.subtotal_cents := NEW.total_cents + NEW.discount_cents - NEW.shipping_cents;
+  end if;
+  return NEW;
+end;
+$;
+
+drop trigger if exists orders_fill_legacy_subtotal_trg on public.orders;
+create trigger orders_fill_legacy_subtotal_trg
+  before insert or update of subtotal_cents,discount_cents,shipping_cents,total_cents
+  on public.orders
+  for each row execute function private.orders_fill_legacy_subtotal();
+
 create unique index orders_number_uidx on public.orders (order_number);
 create unique index orders_store_idempotency_uidx
   on public.orders (tenant_id, store_id, idempotency_key)

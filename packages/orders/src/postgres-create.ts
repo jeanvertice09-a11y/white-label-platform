@@ -1,4 +1,4 @@
-import { getOrderById, ORDER_COLUMNS } from "./postgres-read.ts";
+import { getOrderById } from "./postgres-read.ts";
 import { assertCreateOrderInput, assertOrderScope } from "./validation.ts";
 import type { OrderSqlExecutor } from "./repository.ts";
 import type {
@@ -67,9 +67,7 @@ const CREATE_ORDER_SQL = `with raw_input as (
   from inserted cross join resolved r
   returning id
 )
-select ${ORDER_COLUMNS} from public.orders
-where tenant_id=$1 and store_id=$2
-  and id=(select id from selected_order)`;
+select id from selected_order`;
 
 function cartPayload(input: CreateOrderFromCartInput): string {
   return JSON.stringify(input.items.map((item) => ({
