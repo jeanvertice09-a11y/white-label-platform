@@ -19,6 +19,13 @@ function assertPlanInput(input: TenantPlanInput): void {
   }
 }
 
+function requiredId(rows: Record<string, unknown>[], message: string): string {
+  if (rows.length === 0) throw new Error(message);
+  const id = rows[0]["id"];
+  if (typeof id !== "string") throw new Error(message);
+  return id;
+}
+
 export async function saveTenantPlan(
   sql: BillingSqlExecutor,
   tenantId: string,
@@ -54,11 +61,7 @@ export async function saveTenantPlan(
       input.recommended,
     ],
   );
-  const row = rows[0];
-  if (!row || typeof row["id"] !== "string") {
-    throw new Error("Template inexistente/inativo ou plano não salvo");
-  }
-  return row["id"];
+  return requiredId(rows, "Template inexistente/inativo ou plano não salvo");
 }
 
 function normalizedEntitlements(values: TenantPlanEntitlementInput[]): TenantPlanEntitlementInput[] {
@@ -70,7 +73,12 @@ function normalizedEntitlements(values: TenantPlanEntitlementInput[]): TenantPla
       if (typeof value.enabled !== "boolean" || value.limitValue !== null) {
         throw new Error(`Feature inválida: ${value.key}`);
       }
-    } else if (value.enabled !== null || !Number.isSafeInteger(value.limitValue) || (value.limitValue ?? -1) < 0) {
+    } else if (
+      value.enabled !== null
+      || value.limitValue === null
+      || !Number.isSafeInteger(value.limitValue)
+      || value.limitValue < 0
+    ) {
       throw new Error(`Limite inválido: ${value.key}`);
     }
     return value;
@@ -116,7 +124,7 @@ export async function replaceTenantPlanEntitlements(
       }))),
     ],
   );
-  if (Number(rows[0]?.["owned_count"] ?? 0) !== 1) {
+  if (rows.length === 0 || Number(rows[0]["owned_count"]) !== 1) {
     throw new Error("Plano não pertence ao tenant");
   }
 }
@@ -139,11 +147,7 @@ export async function createStoreSubscription(
      returning id`,
     [scope.tenantId, scope.storeId, tenantPlanId, useTrial],
   );
-  const row = rows[0];
-  if (!row || typeof row["id"] !== "string") {
-    throw new Error("Plano inativo/inexistente ou fora do tenant");
-  }
-  return row["id"];
+  return requiredId(rows, "Plano inativo/inexistente ou fora do tenant");
 }
 
 const ALLOWED_TRANSITIONS: Readonly<Record<StoreSubscriptionStatus, readonly StoreSubscriptionStatus[]>> = {
@@ -166,7 +170,8 @@ export async function updateStoreSubscriptionStatus(
      where tenant_id=$1 and store_id=$2 and id=$3 limit 1`,
     [scope.tenantId, scope.storeId, subscriptionId],
   );
-  const status = current[0]?.["status"];
+  if (current.length === 0) throw new Error("Assinatura não encontrada");
+  const status = current[0]["status"];
   if (typeof status !== "string") throw new Error("Assinatura não encontrada");
   const allowed = ALLOWED_TRANSITIONS[status as StoreSubscriptionStatus];
   if (!allowed.includes(nextStatus)) throw new Error(`Transição de assinatura inválida: ${status} -> ${nextStatus}`);
