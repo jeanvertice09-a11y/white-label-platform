@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { loadControl } from "../../apps/web/src/lib/server/route-context.server.ts";
+import {
+  HttpError,
+  loadControl,
+} from "../../apps/web/src/lib/server/route-context.server.ts";
 import type { RouteDeps } from "../../apps/web/src/lib/server/route-context.server.ts";
 import { stubSession } from "../../apps/web/src/lib/server/session.server.ts";
 import type { MembershipRow, TenantId } from "../../packages/tenant/src/index.ts";
@@ -31,12 +34,12 @@ function deps(memberships: MembershipRow[]): RouteDeps {
   };
 }
 
-async function canOpen(memberships: MembershipRow[]): Promise<boolean> {
+async function errorFor(memberships: MembershipRow[]): Promise<HttpError | null> {
   try {
     await loadControl({ host: "app.kataluu.com.br" }, deps(memberships));
-    return true;
-  } catch {
-    return false;
+    return null;
+  } catch (error) {
+    return error instanceof HttpError ? error : null;
   }
 }
 
@@ -47,18 +50,22 @@ describe("system White Label control host", () => {
       tenantRoles: ["tenant_owner"],
       storeRoles: [],
     }];
-    expect(await canOpen(memberships)).toBe(true);
+    expect(await errorFor(memberships)).toBeNull();
   });
 
-  test("nega usuário sem White Label vinculada", async () => {
-    expect(await canOpen([])).toBe(false);
+  test("nega usuário sem White Label vinculada com 403 explícito", async () => {
+    const error = await errorFor([]);
+    expect(error?.status).toBe(403);
+    expect(error?.code).toBe("TENANT_UNRESOLVED");
   });
 
-  test("nega seleção ambígua quando há mais de uma White Label", async () => {
+  test("mantém seleção explícita obrigatória quando há múltiplas White Labels", async () => {
     const memberships: MembershipRow[] = [
       { tenantId: TENANT_A, tenantRoles: ["tenant_owner"], storeRoles: [] },
       { tenantId: TENANT_B, tenantRoles: ["tenant_admin"], storeRoles: [] },
     ];
-    expect(await canOpen(memberships)).toBe(false);
+    const error = await errorFor(memberships);
+    expect(error?.status).toBe(403);
+    expect(error?.code).toBe("TENANT_SELECTION_REQUIRED");
   });
 });

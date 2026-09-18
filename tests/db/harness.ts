@@ -27,6 +27,7 @@ const MIGRATIONS = [
   "0008_storefront_trial_window.sql",
   "0009_orders_inventory.sql",
   "0010_customers_marketing.sql",
+  "0011_foundation_hardening.sql",
 ];
 
 class PGliteDb implements TestDb {
@@ -121,6 +122,18 @@ language sql stable
 as $$ select nullif(current_setting('app.test_uid', true), '')::uuid $$;
 `;
 
+// Em Supabase real esta função é gerenciada pela plataforma. O shim existe
+// apenas no PGlite para validar os REVOKEs da migration 0011.
+const RLS_AUTO_ENABLE_SHIM = `
+create or replace function public.rls_auto_enable()
+returns void
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $$ begin null; end $$;
+grant execute on function public.rls_auto_enable() to anon, authenticated;
+`;
+
 const TEST_ROLES = `
 grant usage on schema public to anon, authenticated;
 grant usage on schema private to authenticated;
@@ -155,6 +168,7 @@ export async function setupDatabase(): Promise<Harness> {
 
   await db.execScript(PRELUDE);
   await db.execScript(AUTH_SHIM);
+  if (db.backend === "pglite") await db.execScript(RLS_AUTO_ENABLE_SHIM);
   for (const file of listMigrationFiles()) {
     await db.execScript(readFileSync(join(migrationsDir(), file), "utf8"));
   }
