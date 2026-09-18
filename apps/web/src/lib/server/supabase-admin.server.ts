@@ -2,6 +2,12 @@
 // NUNCA importar no client bundle. A URL deve apontar para o Transaction Pooler do Supabase.
 import postgres from "postgres";
 import type { SqlExecutor } from "@white-label/domains";
+import { createAdminQueryGuard } from "./admin-query-guard.server.ts";
+
+const ADMIN_DB_TIMEOUT_SECONDS = 10;
+const ADMIN_DB_QUERY_TIMEOUT_MS = ADMIN_DB_TIMEOUT_SECONDS * 1000;
+const ADMIN_DB_DESTROY_TIMEOUT_SECONDS = 1;
+const adminQueryGuard = createAdminQueryGuard(ADMIN_DB_QUERY_TIMEOUT_MS);
 
 function assertServer(): void {
   const g = globalThis as Record<string, unknown>;
@@ -30,20 +36,36 @@ function getSql(): ReturnType<typeof postgres> {
       max: 1,
       prepare: false,
       ssl: "require",
-      connect_timeout: 10,
+      connect_timeout: ADMIN_DB_TIMEOUT_SECONDS,
       idle_timeout: 20,
     });
   }
   return cachedSql;
 }
 
-/** Executor SQL administrativo server-side. */
+function retireTimedOutSql(sqlFn: ReturnType<typeof postgres>): void {
+  if (cachedSql === sqlFn) cachedSql = null;
+  void sqlFn.end({ timeout: ADMIN_DB_DESTROY_TIMEOUT_SECONDS }).catch(() => undefined);
+  console.error(
+    `[supabase-admin] consulta excedeu ${String(ADMIN_DB_QUERY_TIMEOUT_MS)}ms; conexão descartada`,
+  );
+}
+
+/** Executor SQL administrativo server-side com serialização e deadline fail-fast. */
 export function createAdminSqlExecutor(): SqlExecutor {
   return {
     async query(sql: string, params: unknown[]): Promise<Record<string, unknown>[]> {
-      const sqlFn = getSql();
-      const rows = await sqlFn.unsafe(sql, params as never[]);
-      return rows as Record<string, unknown>[];
+      let activeSql: ReturnType<typeof postgres> | null = null;
+      return adminQueryGuard.run(
+        async () => {
+          activeSql = getSql();
+          const rows = await activeSql.unsafe(sql, params as never[]).execute();
+          return rows as Record<string, unknown>[];
+        },
+        () => {
+          if (activeSql) retireTimedOutSql(activeSql);
+        },
+      );
     },
   };
 }
@@ -51,7 +73,7 @@ export function createAdminSqlExecutor(): SqlExecutor {
 /** Fecha a conexão (útil para testes/graceful shutdown). */
 export async function closeAdminSql(): Promise<void> {
   if (cachedSql) {
-    await cachedSql.end();
+    await cachedSql.end({ timeout: ADMIN_DB_DESTROY_TIMEOUT_SECONDS });
     cachedSql = null;
   }
 }
