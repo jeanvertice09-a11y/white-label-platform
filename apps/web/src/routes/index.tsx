@@ -5,6 +5,8 @@ export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     const target = await getRootTarget();
     if (target !== null) {
+      // TanStack Router redirects are intentionally thrown control-flow objects.
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: target });
     }
   },
