@@ -66,8 +66,8 @@ export async function getMerchantDashboardMetrics(
         where c.tenant_id=$1 and c.store_id=$2)::integer as customers`,
     [scope.tenantId, scope.storeId],
   );
+  if (rows.length === 0) throw new Error("Métricas indisponíveis");
   const row = rows[0];
-  if (!row) throw new Error("Métricas indisponíveis");
   const revenue = Number(row["revenue"]);
   const validOrders = Number(row["valid_orders"]);
   return {
