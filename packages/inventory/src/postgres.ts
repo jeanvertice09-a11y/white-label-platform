@@ -199,7 +199,7 @@ function operationType(kind: StockOperationInput["kind"]): StockMovementType {
 function movementFragments(variant: boolean) {
   return {
     table: variant ? "public.product_variants" : "public.products", alias: variant ? "v" : "p",
-    variantPredicate: variant ? "and v.product_id=$3 and v.id=$4" : `and $4::uuid is null and not exists (
+    variantPredicate: variant ? "and v.product_id=$3 and v.id=$4" : `and p.id=$3::uuid and $4::uuid is null and not exists (
       select 1 from public.product_variants vx where vx.tenant_id=p.tenant_id and vx.store_id=p.store_id and vx.product_id=p.id
     )`,
     productJoin: variant ? `join public.products p on p.tenant_id=v.tenant_id and p.store_id=v.store_id and p.id=v.product_id and p.track_inventory=true` : "",
