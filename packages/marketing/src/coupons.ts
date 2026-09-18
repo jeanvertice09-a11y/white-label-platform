@@ -18,21 +18,31 @@ export function normalizeCouponCode(code: string): string {
   return normalized;
 }
 
+function isSafeMoney(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
 export function normalizeCouponInput(input: CouponMutationInput): CouponMutationInput {
   const code = normalizeCouponCode(input.code);
   const name = input.name.trim();
   if (!name || name.length > 160) throw new Error("Nome de cupom inválido");
-  if (!Number.isInteger(input.discountValue) || input.discountValue < 1) {
+  if (!Number.isSafeInteger(input.discountValue) || input.discountValue < 1) {
     throw new Error("Desconto inválido");
   }
   if (input.discountType === "percentage" && input.discountValue > 100) {
     throw new Error("Percentual deve ficar entre 1 e 100");
   }
-  if (input.minimumOrderCents !== null && input.minimumOrderCents < 0) {
+  if (input.minimumOrderCents !== null && !isSafeMoney(input.minimumOrderCents)) {
     throw new Error("Mínimo inválido");
   }
   if (input.usageLimit !== null && (!Number.isInteger(input.usageLimit) || input.usageLimit < 1)) {
     throw new Error("Limite inválido");
+  }
+  if (input.startsAt && Number.isNaN(Date.parse(input.startsAt))) {
+    throw new Error("Início inválido");
+  }
+  if (input.endsAt && Number.isNaN(Date.parse(input.endsAt))) {
+    throw new Error("Fim inválido");
   }
   if (input.startsAt && input.endsAt && Date.parse(input.endsAt) <= Date.parse(input.startsAt)) {
     throw new Error("Período inválido");
@@ -40,11 +50,18 @@ export function normalizeCouponInput(input: CouponMutationInput): CouponMutation
   return { ...input, code, name };
 }
 
+function percentageDiscount(subtotalCents: number, percentage: number): number {
+  const hundreds = Math.floor(subtotalCents / 100);
+  const remainder = subtotalCents % 100;
+  return hundreds * percentage + Math.floor(remainder * percentage / 100);
+}
+
 export function evaluateCoupon(
   coupon: Coupon,
   subtotalCents: number,
   now = new Date(),
 ): CouponEvaluation {
+  if (!isSafeMoney(subtotalCents)) throw new Error("Subtotal inválido");
   if (!coupon.active) throw new CouponError("INACTIVE");
   const time = now.getTime();
   if (coupon.startsAt && Date.parse(coupon.startsAt) > time) throw new CouponError("NOT_STARTED");
@@ -54,7 +71,7 @@ export function evaluateCoupon(
     throw new CouponError("MINIMUM");
   }
   const raw = coupon.discountType === "percentage"
-    ? Math.floor(subtotalCents * coupon.discountValue / 100)
+    ? percentageDiscount(subtotalCents, coupon.discountValue)
     : coupon.discountValue;
   return {
     couponId: coupon.id,

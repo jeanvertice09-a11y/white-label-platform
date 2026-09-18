@@ -20,11 +20,16 @@ export interface MarketingSqlExecutor {
 export interface CouponRepository {
   list(scope: MarketingScope): Promise<Coupon[]>;
   getByCode(scope: MarketingScope, code: string): Promise<Coupon | null>;
-  create(scope: MarketingScope, input: CouponMutationInput): Promise<Coupon>;
+  create(
+    scope: MarketingScope,
+    input: CouponMutationInput,
+    actorUserId?: string | null,
+  ): Promise<Coupon>;
   update(
     scope: MarketingScope,
     id: string,
     input: CouponMutationInput,
+    actorUserId?: string | null,
   ): Promise<Coupon | null>;
 }
 

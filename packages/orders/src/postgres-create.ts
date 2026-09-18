@@ -53,7 +53,10 @@ const CREATE_ORDER_SQL = `with raw_input as (
   select c.id,c.code,
     case
       when c.discount_type='percentage'
-        then least(v.subtotal, floor(v.subtotal*c.discount_value/100.0)::bigint)
+        then least(
+          v.subtotal,
+          floor((v.subtotal::numeric * c.discount_value::numeric) / 100)::bigint
+        )
       else least(v.subtotal,c.discount_value)
     end as discount_cents
   from public.coupons c cross join valid v

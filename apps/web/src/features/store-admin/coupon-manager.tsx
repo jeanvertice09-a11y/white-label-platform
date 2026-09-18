@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import type { Coupon, CouponMutationInput } from "@white-label/marketing";
 import { centsToInput, moneyToCents } from "./format.ts";
@@ -52,10 +52,22 @@ function CouponFields({ coupon }: Readonly<{ coupon?: Coupon }>): React.JSX.Elem
   );
 }
 
+function matches(coupon: Coupon, rawSearch: string): boolean {
+  const search = rawSearch.trim().toLocaleLowerCase("pt-BR");
+  if (!search) return true;
+  return coupon.code.toLocaleLowerCase("pt-BR").includes(search)
+    || coupon.name.toLocaleLowerCase("pt-BR").includes(search);
+}
+
 export function CouponManager({ coupons }: Readonly<{ coupons: Coupon[] }>): React.JSX.Element {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState("");
+  const visible = useMemo(
+    () => coupons.filter((coupon) => matches(coupon, search)),
+    [coupons, search],
+  );
 
   async function save(event: React.SyntheticEvent<HTMLFormElement>, id?: string): Promise<void> {
     event.preventDefault();
@@ -82,10 +94,17 @@ export function CouponManager({ coupons }: Readonly<{ coupons: Coupon[] }>): Rea
         <CouponFields />
         <div className="k-actions"><button className="k-button k-button--primary" disabled={busy} type="submit">Criar cupom</button></div>
       </form>
+      <div className="k-card k-form">
+        <div className="k-field">
+          <label htmlFor="coupon-search">Pesquisar cupons</label>
+          <input id="coupon-search" value={search} onChange={(event) => { setSearch(event.target.value); }} placeholder="Código ou nome" />
+        </div>
+      </div>
       {message ? <div className="k-status">{message}</div> : null}
-      {coupons.map((coupon) => (
+      {visible.length === 0 ? <div className="k-status">Nenhum cupom encontrado.</div> : null}
+      {visible.map((coupon) => (
         <details className="k-card" key={coupon.id}>
-          <summary><strong>{coupon.code}</strong> — {coupon.name} · {coupon.usageCount}{coupon.usageLimit ? "/" + String(coupon.usageLimit) : ""} usos</summary>
+          <summary><strong>{coupon.code}</strong> — {coupon.name} · {coupon.active ? "ativo" : "inativo"} · {coupon.usageCount}{coupon.usageLimit ? "/" + String(coupon.usageLimit) : ""} usos</summary>
           <form className="k-form" onSubmit={(event) => { void save(event, coupon.id); }}>
             <CouponFields coupon={coupon} />
             <div className="k-actions"><button className="k-button" disabled={busy} type="submit">Salvar cupom</button></div>
