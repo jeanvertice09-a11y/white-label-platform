@@ -14,9 +14,9 @@ function MasterInfrastructure() {
     <div className="master-stack">
       <MasterPageHeader title="Infraestrutura" description="Domínios e integrações de gateway registrados na plataforma." />
       <div className="master-metrics">
-        <MasterMetricCard label="Domínios ativos" value={String(data.metrics.activeDomains)} detail="Status active" />
-        <MasterMetricCard label="Domínios pendentes" value={String(pendingDomains)} detail="Aguardando ativação/verificação" />
-        <MasterMetricCard label="Gateways" value={String(data.gateways.length)} detail="Contas registradas" />
+        <MasterMetricCard icon="domains" label="Domínios ativos" value={String(data.metrics.activeDomains)} detail="Status active" />
+        <MasterMetricCard icon="activity" label="Domínios pendentes" value={String(pendingDomains)} detail="Aguardando ativação/verificação" />
+        <MasterMetricCard icon="integrations" label="Gateways" value={String(data.gateways.length)} detail="Contas registradas" />
       </div>
       <MasterPanel title="Domínios recentes">
         {data.domains.length ? <div className="master-table-wrap"><table className="master-table">
