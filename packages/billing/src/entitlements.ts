@@ -12,6 +12,10 @@ export class EntitlementError extends Error {
   }
 }
 
+function ownValue<T>(record: Record<string, T>, key: string): T | undefined {
+  return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
 function statusError(
   snapshot: StoreSubscriptionSnapshot | null,
   now: Date,
@@ -44,7 +48,9 @@ export function assertSubscriptionAccess(
 ): StoreSubscriptionSnapshot {
   const error = statusError(snapshot, now);
   if (error) throw error;
-  if (!snapshot) throw new EntitlementError("SUBSCRIPTION_MISSING", "Assinatura inexistente");
+  if (snapshot === null) {
+    throw new EntitlementError("SUBSCRIPTION_MISSING", "Assinatura inexistente");
+  }
   return snapshot;
 }
 
@@ -55,7 +61,7 @@ export function hasFeature(
 ): boolean {
   try {
     const active = assertSubscriptionAccess(snapshot, now);
-    return active.features[featureKey] === true;
+    return ownValue(active.features, featureKey) ?? false;
   } catch (error) {
     if (error instanceof EntitlementError) return false;
     throw error;
@@ -69,8 +75,7 @@ export function getLimit(
 ): number | null {
   try {
     const active = assertSubscriptionAccess(snapshot, now);
-    const value = active.limits[limitKey];
-    return value === undefined ? null : value;
+    return ownValue(active.limits, limitKey) ?? null;
   } catch (error) {
     if (error instanceof EntitlementError) return null;
     throw error;
@@ -83,7 +88,7 @@ export function assertFeature(
   now = new Date(),
 ): void {
   const active = assertSubscriptionAccess(snapshot, now);
-  if (active.features[featureKey] !== true) {
+  if (!(ownValue(active.features, featureKey) ?? false)) {
     throw new EntitlementError(
       "FEATURE_NOT_INCLUDED",
       `Recurso não incluído no plano: ${featureKey}`,
@@ -99,7 +104,7 @@ export function assertWithinLimit(
   now = new Date(),
 ): void {
   const active = assertSubscriptionAccess(snapshot, now);
-  const limit = active.limits[limitKey];
+  const limit = ownValue(active.limits, limitKey);
   if (limit === undefined) {
     throw new EntitlementError("LIMIT_NOT_INCLUDED", `Limite não incluído no plano: ${limitKey}`);
   }
