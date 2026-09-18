@@ -37,19 +37,31 @@ function expectFeatureBlocked(run: () => void): void {
 
 describe("marketing entitlements", () => {
   test("sem assinatura ou regra configurada não inventa bloqueio", () => {
-    expect(() => assertConfiguredCampaignsEntitlement(null)).not.toThrow();
-    expect(() => assertConfiguredCouponsEntitlement(null)).not.toThrow();
-    expect(() => assertConfiguredCampaignsEntitlement(snapshot())).not.toThrow();
-    expect(() => assertConfiguredCouponsEntitlement(snapshot())).not.toThrow();
+    expect(() => {
+      assertConfiguredCampaignsEntitlement(null);
+    }).not.toThrow();
+    expect(() => {
+      assertConfiguredCouponsEntitlement(null);
+    }).not.toThrow();
+    expect(() => {
+      assertConfiguredCampaignsEntitlement(snapshot());
+    }).not.toThrow();
+    expect(() => {
+      assertConfiguredCouponsEntitlement(snapshot());
+    }).not.toThrow();
   });
 
   test("features configuradas como true permitem acesso", () => {
-    expect(() => assertConfiguredCampaignsEntitlement(
-      snapshot({ features: { campaigns: true } }),
-    )).not.toThrow();
-    expect(() => assertConfiguredCouponsEntitlement(
-      snapshot({ features: { coupons: true } }),
-    )).not.toThrow();
+    expect(() => {
+      assertConfiguredCampaignsEntitlement(
+        snapshot({ features: { campaigns: true } }),
+      );
+    }).not.toThrow();
+    expect(() => {
+      assertConfiguredCouponsEntitlement(
+        snapshot({ features: { coupons: true } }),
+      );
+    }).not.toThrow();
   });
 
   test("features configuradas como false bloqueiam", () => {
@@ -66,13 +78,17 @@ describe("marketing entitlements", () => {
   });
 
   test("assinatura suspensa bloqueia campanhas e cupons", () => {
-    expect(() => assertConfiguredCampaignsEntitlement(snapshot({
-      status: "suspended",
-      features: { campaigns: true },
-    }))).toThrow();
-    expect(() => assertConfiguredCouponsEntitlement(snapshot({
-      status: "suspended",
-      features: { coupons: true },
-    }))).toThrow();
+    expect(() => {
+      assertConfiguredCampaignsEntitlement(snapshot({
+        status: "suspended",
+        features: { campaigns: true },
+      }));
+    }).toThrow();
+    expect(() => {
+      assertConfiguredCouponsEntitlement(snapshot({
+        status: "suspended",
+        features: { coupons: true },
+      }));
+    }).toThrow();
   });
 });
