@@ -134,7 +134,7 @@ async function listPage(
     items: rows.map(mapItem),
     page,
     pageSize,
-    total: rows.length ? safeInteger(rows[0]!, "total_count") : 0,
+    total: rows.length ? safeInteger(rows[0], "total_count") : 0,
   };
 }
 
@@ -177,7 +177,7 @@ async function history(
     items: rows.map(mapMovement),
     page,
     pageSize,
-    total: rows.length ? safeInteger(rows[0]!, "total_count") : 0,
+    total: rows.length ? safeInteger(rows[0], "total_count") : 0,
   };
 }
 
@@ -196,23 +196,19 @@ function operationType(kind: StockOperationInput["kind"]): StockMovementType {
   return "manual";
 }
 
-function movementSql(variant: boolean): string {
-  const table = variant ? "public.product_variants" : "public.products";
-  const alias = variant ? "v" : "p";
-  const variantPredicate = variant
-    ? "and v.product_id=$3 and v.id=$4"
-    : `and $4::uuid is null and not exists (
-         select 1 from public.product_variants vx
-         where vx.tenant_id=p.tenant_id and vx.store_id=p.store_id and vx.product_id=p.id
-       )`;
-  const productJoin = variant
-    ? `join public.products p
-         on p.tenant_id=v.tenant_id and p.store_id=v.store_id and p.id=v.product_id
-        and p.track_inventory=true`
-    : "";
-  const productId = variant ? "v.product_id" : "p.id";
-  const variantId = variant ? "v.id" : "null::uuid";
+function movementFragments(variant: boolean) {
+  return {
+    table: variant ? "public.product_variants" : "public.products", alias: variant ? "v" : "p",
+    variantPredicate: variant ? "and v.product_id=$3 and v.id=$4" : `and $4::uuid is null and not exists (
+      select 1 from public.product_variants vx where vx.tenant_id=p.tenant_id and vx.store_id=p.store_id and vx.product_id=p.id
+    )`,
+    productJoin: variant ? `join public.products p on p.tenant_id=v.tenant_id and p.store_id=v.store_id and p.id=v.product_id and p.track_inventory=true` : "",
+    productId: variant ? "v.product_id" : "p.id", variantId: variant ? "v.id" : "null::uuid",
+  };
+}
 
+function movementSql(variant: boolean): string {
+  const { table, alias, variantPredicate, productJoin, productId, variantId } = movementFragments(variant);
   return `with target as (
       select ${alias}.stock_quantity::integer as current_quantity,
         ${productId} as product_id,${variantId} as variant_id
@@ -285,8 +281,9 @@ async function move(
       input.createdBy,
     ],
   );
+  if (rows.length === 0) throw new Error("Falha ao movimentar estoque");
   const row = rows[0];
-  if (!row || row["found"] !== true) throw new Error("Produto ou variante não encontrado");
+  if (row["found"] !== true) throw new Error("Produto ou variante não encontrado");
   if (row["allowed"] !== true) throw new Error("Estoque insuficiente");
   return {
     currentQuantity: safeInteger(row, "current_quantity"),

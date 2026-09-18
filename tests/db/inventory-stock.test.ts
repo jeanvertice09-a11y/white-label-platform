@@ -15,6 +15,15 @@ const VAR_B = "f2000000-0000-4000-8000-000000000002";
 const OTHER_VARIANT = "f2000000-0000-4000-8000-000000000003";
 const ACTOR = ids.users.storeA;
 
+async function rejectionMessage(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("Esperava rejeição");
+}
+
 function op(id: string, productId = SIMPLE) {
   return {
     operationId: id,
@@ -121,26 +130,30 @@ describe("inventory stock movements", () => {
   });
 
   test("quantidade inválida é rejeitada", async () => {
-    await expect(createInventoryRepository(h.db).move(
+    const message = await rejectionMessage(createInventoryRepository(h.db).move(
       { tenantId: ids.tenantA, storeId: ids.storeA },
       { ...op("30000000-0000-4000-8000-000000000001"), quantity: 0 },
-    )).rejects.toThrow("Quantidade inválida");
+    ));
+    expect(message).toContain("Quantidade inválida");
   });
 
   test("produto inexistente, IDOR e variante de outro produto são rejeitados", async () => {
     const repo = createInventoryRepository(h.db);
-    await expect(repo.move(
+    const missing = await rejectionMessage(repo.move(
       { tenantId: ids.tenantA, storeId: ids.storeA },
       { ...op("30000000-0000-4000-8000-000000000002", "ffffffff-ffff-4fff-8fff-ffffffffffff") },
-    )).rejects.toThrow("não encontrado");
-    await expect(repo.move(
+    ));
+    const wrongVariant = await rejectionMessage(repo.move(
       { tenantId: ids.tenantA, storeId: ids.storeA },
       { ...op("30000000-0000-4000-8000-000000000003", VAR_PRODUCT), variantId: OTHER_VARIANT },
-    )).rejects.toThrow("não encontrado");
-    await expect(repo.move(
+    ));
+    const crossStore = await rejectionMessage(repo.move(
       { tenantId: ids.tenantB, storeId: ids.storeB },
       { ...op("30000000-0000-4000-8000-000000000004", SIMPLE) },
-    )).rejects.toThrow("não encontrado");
+    ));
+    expect(missing).toContain("não encontrado");
+    expect(wrongVariant).toContain("não encontrado");
+    expect(crossStore).toContain("não encontrado");
   });
 
   test("histórico é real, filtrável e isolado por store", async () => {

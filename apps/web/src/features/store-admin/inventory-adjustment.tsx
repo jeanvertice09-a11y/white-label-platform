@@ -29,7 +29,7 @@ export function InventoryAdjustment(props: Readonly<{
         quantity: Number(field(form, "quantity")),
         reason: field(form, "reason"),
       } });
-      setMessage(result.applied ? `Saldo atualizado: ${result.currentQuantity}` : `Saldo já processado: ${result.currentQuantity}`);
+      setMessage(result.applied ? `Saldo atualizado: ${String(result.currentQuantity)}` : `Saldo já processado: ${String(result.currentQuantity)}`);
       event.currentTarget.reset();
       await props.onCompleted();
     } catch (error) {
