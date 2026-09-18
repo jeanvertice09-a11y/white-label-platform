@@ -8,9 +8,12 @@ export function MasterShell() {
 
   return (
     <div className="master-shell">
-      <MasterSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <MasterSidebar
+        open={mobileOpen}
+        onClose={() => { setMobileOpen(false); }}
+      />
       <div className="master-shell__content">
-        <MasterHeader onMenuClick={() => setMobileOpen(true)} />
+        <MasterHeader onMenuClick={() => { setMobileOpen(true); }} />
         <main className="master-main">
           <div className="master-container">
             <Outlet />

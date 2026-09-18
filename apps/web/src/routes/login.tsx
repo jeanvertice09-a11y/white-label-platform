@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, SyntheticEvent } from "react";
 import { useState } from "react";
 import { getBrowserClient, signInWithPassword } from "../lib/supabase-client.ts";
 import "../styles/master.css";
@@ -19,7 +19,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function submit(ev: FormEvent<HTMLFormElement>): Promise<void> {
+  async function submit(ev: SyntheticEvent<HTMLFormElement>): Promise<void> {
     ev.preventDefault();
     setError("");
     setLoading(true);
@@ -45,11 +45,25 @@ function LoginPage() {
         </div>
         <form onSubmit={(ev) => { void submit(ev); }} className="auth-form">
           <label htmlFor="email">E-mail</label>
-          <input id="email" type="email" autoComplete="email" required disabled={loading}
-            value={email} onChange={(ev: ChangeEvent<HTMLInputElement>) => setEmail(ev.target.value)} />
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            disabled={loading}
+            value={email}
+            onChange={(ev: ChangeEvent<HTMLInputElement>) => { setEmail(ev.target.value); }}
+          />
           <label htmlFor="password">Senha</label>
-          <input id="password" type="password" autoComplete="current-password" required disabled={loading}
-            value={password} onChange={(ev: ChangeEvent<HTMLInputElement>) => setPassword(ev.target.value)} />
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            disabled={loading}
+            value={password}
+            onChange={(ev: ChangeEvent<HTMLInputElement>) => { setPassword(ev.target.value); }}
+          />
           {error ? <p className="auth-error" role="alert">{error}</p> : null}
           <button className="master-button master-button--primary" type="submit" disabled={loading}>
             {loading ? "Entrando…" : "Entrar"}
