@@ -9,9 +9,7 @@ function formText(form: FormData, key: string, fallback = ""): string {
 }
 
 export function MasterWhiteLabelDetailForm({ detail }: Readonly<{ detail: MasterWhiteLabelDetail }>): React.JSX.Element {
-  const router = useRouter();
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
+  const router = useRouter(); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
 
   async function save(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
