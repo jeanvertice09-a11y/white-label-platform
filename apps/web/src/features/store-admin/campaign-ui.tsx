@@ -71,6 +71,112 @@ export function CampaignFields({
   );
 }
 
+export function CampaignComposer({
+  busy,
+  save,
+}: Readonly<{
+  busy: boolean;
+  save: (event: React.SyntheticEvent<HTMLFormElement>) => Promise<void>;
+}>): React.JSX.Element {
+  return (
+    <form
+      className="k-card k-form"
+      onSubmit={(event) => {
+        void save(event);
+      }}
+    >
+      <h2>Nova campanha</h2>
+      <CampaignFields />
+      <div className="k-actions">
+        <button
+          className="k-button k-button--primary"
+          disabled={busy}
+          type="submit"
+        >
+          Criar campanha
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function CampaignSearch({
+  busy,
+  search,
+  setSearch,
+  reload,
+}: Readonly<{
+  busy: boolean;
+  search: string;
+  setSearch: (value: string) => void;
+  reload: (page?: number) => Promise<void>;
+}>): React.JSX.Element {
+  return (
+    <form
+      className="k-card k-actions"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void reload(1);
+      }}
+    >
+      <input
+        aria-label="Buscar campanhas"
+        onChange={(event) => {
+          setSearch(event.currentTarget.value);
+        }}
+        placeholder="Buscar campanha"
+        value={search}
+      />
+      <button className="k-button" disabled={busy} type="submit">
+        Buscar
+      </button>
+    </form>
+  );
+}
+
+export function CampaignPagination({
+  busy,
+  page,
+  pageSize,
+  total,
+  reload,
+}: Readonly<{
+  busy: boolean;
+  page: number;
+  pageSize: number;
+  total: number;
+  reload: (page?: number) => Promise<void>;
+}>): React.JSX.Element {
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <div className="k-actions">
+      <button
+        className="k-button"
+        disabled={busy || page <= 1}
+        onClick={() => {
+          void reload(page - 1);
+        }}
+        type="button"
+      >
+        Anterior
+      </button>
+      <span>
+        Página {page} de {lastPage}
+      </span>
+      <button
+        className="k-button"
+        disabled={busy || page >= lastPage}
+        onClick={() => {
+          void reload(page + 1);
+        }}
+        type="button"
+      >
+        Próxima
+      </button>
+    </div>
+  );
+}
+
 export function statusLabel(status: Campaign["status"]): string {
   if (status === "draft") return "Rascunho";
   if (status === "prepared") return "Preparada";

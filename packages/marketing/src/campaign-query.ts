@@ -94,7 +94,7 @@ export async function getCampaignById(
     [scope.tenantId, scope.storeId, id],
   );
   return {
-    ...mapCampaign(rows[0] as Record<string, unknown>),
+    ...mapCampaign(rows[0]),
     recipients: recipientRows.map(mapRecipient),
     history: mapHistory(historyRows),
   };
@@ -117,5 +117,5 @@ export async function getCampaignRecipientById(
      limit 1`,
     [scope.tenantId, scope.storeId, id],
   );
-  return rows.length ? mapRecipient(rows[0] as Record<string, unknown>) : null;
+  return rows.length ? mapRecipient(rows[0]) : null;
 }

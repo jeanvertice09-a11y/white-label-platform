@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { createCustomerRepository } from "../../packages/customers/src/index.ts";
 import { createOrderRepository } from "../../packages/orders/src/index.ts";
 import { createCampaignRepository } from "../../packages/marketing/src/index.ts";
-import { setupDatabase } from "./harness.ts";
+import { expectReject, setupDatabase } from "./harness.ts";
 import type { Harness } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
 
@@ -265,13 +265,14 @@ describe("phase 14 marketing campaigns", () => {
 
   test("customer de outra loja não pode receber consentimento por UUID conhecido", async () => {
     const marketing = createCampaignRepository(h.db);
-    await expect(
+    await expectReject(
       marketing.recordConsent(scopeB, {
         customerId: customerA,
         status: "opted_in",
         source: "invalid_cross_store",
       }),
-    ).rejects.toThrow();
+      "consentimento cross-store",
+    );
   });
 
   test("audit não contém PII/conteúdo e não existem métricas fake", async () => {

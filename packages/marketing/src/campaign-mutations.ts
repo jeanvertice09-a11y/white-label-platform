@@ -11,6 +11,63 @@ import {
   normalizeCampaignInput,
 } from "./campaign-mapper.ts";
 
+const PREPARE_CAMPAIGN_SQL = `with prepared as (
+  update public.marketing_campaigns set
+    status=case when scheduled_at is not null and scheduled_at>now()
+      then 'scheduled' else 'prepared' end,
+    prepared_at=now(),updated_at=now()
+  where tenant_id=$1 and store_id=$2 and id=$3 and status='draft'
+  returning ${CAMPAIGN_COLUMNS}
+), eligible as (
+  select c.id as customer_id,p.scheduled_at
+  from prepared p
+  join public.customers c
+    on c.tenant_id=p.tenant_id and c.store_id=p.store_id
+  join public.marketing_consents mc
+    on mc.tenant_id=c.tenant_id and mc.store_id=c.store_id
+   and mc.customer_id=c.id and mc.status='opted_in'
+  where p.segment_type='all'
+    or (p.segment_type='with_orders' and exists (
+      select 1 from public.orders o
+      where o.tenant_id=c.tenant_id and o.store_id=c.store_id
+        and o.customer_id=c.id
+    ))
+    or (p.segment_type='without_orders' and not exists (
+      select 1 from public.orders o
+      where o.tenant_id=c.tenant_id and o.store_id=c.store_id
+        and o.customer_id=c.id
+    ))
+), inserted as (
+  insert into public.marketing_campaign_recipients
+    (tenant_id,store_id,campaign_id,customer_id,status,
+     consent_snapshot_status,available_at)
+  select $1::uuid,$2::uuid,$3::uuid,e.customer_id,'queued','opted_in',
+    coalesce(e.scheduled_at,now())
+  from eligible e
+  on conflict (tenant_id,store_id,campaign_id,customer_id) do nothing
+  returning id
+), audit as (
+  insert into public.audit_logs
+    (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+  select $4::uuid,$1::uuid,$2::uuid,
+    case when p.status='scheduled'
+      then 'campaign.scheduled' else 'campaign.prepared' end,
+    'campaign',p.id::text,
+    jsonb_build_object(
+      'recipient_count',(select count(*) from inserted),
+      'segment_type',p.segment_type
+    )
+  from prepared p where $4::uuid is not null
+  returning id
+)
+select c.*,
+  (select count(*)::integer from public.marketing_campaign_recipients r
+   where r.tenant_id=$1 and r.store_id=$2 and r.campaign_id=$3)
+  as recipient_count
+from public.marketing_campaigns c
+where c.tenant_id=$1 and c.store_id=$2 and c.id=$3
+  and c.status in ('prepared','scheduled')`;
+
 export async function createCampaign(
   sql: MarketingSqlExecutor,
   scope: MarketingScope,
@@ -45,7 +102,7 @@ export async function createCampaign(
     ],
   );
   if (!rows.length) throw new Error("Falha ao criar campanha");
-  return mapCampaign(rows[0] as Record<string, unknown>);
+  return mapCampaign(rows[0]);
 }
 
 export async function updateCampaign(
@@ -83,7 +140,7 @@ export async function updateCampaign(
       actorUserId,
     ],
   );
-  return rows.length ? mapCampaign(rows[0] as Record<string, unknown>) : null;
+  return rows.length ? mapCampaign(rows[0]) : null;
 }
 
 export async function cancelCampaign(
@@ -120,7 +177,7 @@ export async function cancelCampaign(
      from cancelled c`,
     [scope.tenantId, scope.storeId, id, actorUserId],
   );
-  return rows.length ? mapCampaign(rows[0] as Record<string, unknown>) : null;
+  return rows.length ? mapCampaign(rows[0]) : null;
 }
 
 export async function prepareCampaign(
@@ -130,64 +187,11 @@ export async function prepareCampaign(
   actorUserId: string | null,
 ): Promise<Campaign | null> {
   assertScope(scope);
-  const rows = await sql.query(
-    `with prepared as (
-       update public.marketing_campaigns set
-         status=case when scheduled_at is not null and scheduled_at>now()
-           then 'scheduled' else 'prepared' end,
-         prepared_at=now(),updated_at=now()
-       where tenant_id=$1 and store_id=$2 and id=$3 and status='draft'
-       returning ${CAMPAIGN_COLUMNS}
-     ), eligible as (
-       select c.id as customer_id,p.scheduled_at
-       from prepared p
-       join public.customers c
-         on c.tenant_id=p.tenant_id and c.store_id=p.store_id
-       join public.marketing_consents mc
-         on mc.tenant_id=c.tenant_id and mc.store_id=c.store_id
-        and mc.customer_id=c.id and mc.status='opted_in'
-       where p.segment_type='all'
-         or (p.segment_type='with_orders' and exists (
-           select 1 from public.orders o
-           where o.tenant_id=c.tenant_id and o.store_id=c.store_id
-             and o.customer_id=c.id
-         ))
-         or (p.segment_type='without_orders' and not exists (
-           select 1 from public.orders o
-           where o.tenant_id=c.tenant_id and o.store_id=c.store_id
-             and o.customer_id=c.id
-         ))
-     ), inserted as (
-       insert into public.marketing_campaign_recipients
-         (tenant_id,store_id,campaign_id,customer_id,status,
-          consent_snapshot_status,available_at)
-       select $1::uuid,$2::uuid,$3::uuid,e.customer_id,'queued','opted_in',
-         coalesce(e.scheduled_at,now())
-       from eligible e
-       on conflict (tenant_id,store_id,campaign_id,customer_id) do nothing
-       returning id
-     ), audit as (
-       insert into public.audit_logs
-         (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
-       select $4::uuid,$1::uuid,$2::uuid,
-         case when p.status='scheduled'
-           then 'campaign.scheduled' else 'campaign.prepared' end,
-         'campaign',p.id::text,
-         jsonb_build_object(
-           'recipient_count',(select count(*) from inserted),
-           'segment_type',p.segment_type
-         )
-       from prepared p where $4::uuid is not null
-       returning id
-     )
-     select c.*,
-       (select count(*)::integer from public.marketing_campaign_recipients r
-        where r.tenant_id=$1 and r.store_id=$2 and r.campaign_id=$3)
-       as recipient_count
-     from public.marketing_campaigns c
-     where c.tenant_id=$1 and c.store_id=$2 and c.id=$3
-       and c.status in ('prepared','scheduled')`,
-    [scope.tenantId, scope.storeId, id, actorUserId],
-  );
-  return rows.length ? mapCampaign(rows[0] as Record<string, unknown>) : null;
+  const rows = await sql.query(PREPARE_CAMPAIGN_SQL, [
+    scope.tenantId,
+    scope.storeId,
+    id,
+    actorUserId,
+  ]);
+  return rows.length ? mapCampaign(rows[0]) : null;
 }
