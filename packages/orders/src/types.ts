@@ -67,3 +67,25 @@ export interface CreateOrderFromCartInput {
   shippingCents: number;
   items: OrderCartItemInput[];
 }
+
+export interface OrderListQuery {
+  page: number;
+  pageSize: number;
+  search?: string;
+  status?: OrderStatus;
+  date?: string;
+}
+
+export interface OrderPage {
+  items: Order[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface OrderTimelineEntry {
+  id: string;
+  action: string;
+  actorUserId: string | null;
+  createdAt: string;
+}

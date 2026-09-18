@@ -1,103 +1,162 @@
+import { orderStockSqlFragments } from "../../inventory/src/order-stock.ts";
 import { getOrderById } from "./postgres-read.ts";
 import { assertOrderScope } from "./validation.ts";
 import type { OrderSqlExecutor } from "./repository.ts";
 import type { Order, OrderScope, OrderStatus } from "./types.ts";
 
-const APPLY_STOCK_SQL = `
-, variant_delta as (
-  select tenant_id,store_id,product_id,variant_id,sum(delta)::integer as delta
-  from movements where variant_id is not null
-  group by tenant_id,store_id,product_id,variant_id
-), update_variants as (
-  update public.product_variants v
-  set stock_quantity=v.stock_quantity+d.delta,updated_at=now()
-  from variant_delta d
-  where v.tenant_id=d.tenant_id and v.store_id=d.store_id
-    and v.product_id=d.product_id and v.id=d.variant_id
-  returning v.id
-), product_delta as (
-  select tenant_id,store_id,product_id,sum(delta)::integer as delta
-  from movements where variant_id is null
-  group by tenant_id,store_id,product_id
-)
-update public.products p
-set stock_quantity=p.stock_quantity+d.delta,updated_at=now()
-from product_delta d
-where p.tenant_id=d.tenant_id and p.store_id=d.store_id and p.id=d.product_id
-returning p.id`;
+const stockSql = orderStockSqlFragments();
+
+function previousStatus(row: Record<string, unknown>): OrderStatus {
+  return String(row["previous_status"]) as OrderStatus;
+}
+
+function changed(row: Record<string, unknown>): boolean {
+  return row["changed"] === true;
+}
+
+async function loadedOrder(
+  sql: OrderSqlExecutor,
+  scope: OrderScope,
+  id: string,
+): Promise<Order> {
+  const order = await getOrderById(sql, scope, id);
+  if (!order) throw new Error("Pedido não encontrado após alteração");
+  return order;
+}
 
 export async function confirmOrder(
   sql: OrderSqlExecutor,
   scope: OrderScope,
   id: string,
+  actorUserId: string | null = null,
 ): Promise<Order | null> {
   assertOrderScope(scope);
-  await sql.query(
-    `with changed as (
-       update public.orders set
-         status='confirmed',confirmed_at=coalesce(confirmed_at,now()),updated_at=now()
-       where tenant_id=$1 and store_id=$2 and id=$3 and status='pending'
-       returning id
-     ), tracked as (
-       select oi.*
-       from public.order_items oi
-       join changed c on c.id=oi.order_id
-       join public.products p
-         on p.tenant_id=oi.tenant_id and p.store_id=oi.store_id and p.id=oi.product_id
-       where p.track_inventory=true
-     ), movements as (
-       insert into public.stock_movements (
-         tenant_id,store_id,product_id,variant_id,delta,reason,
-         movement_type,reference_type,reference_id
+  const rows = await sql.query(
+    `with candidate_order as (
+       select id,status from public.orders
+       where tenant_id=$1 and store_id=$2 and id=$3::uuid
+       for update
+     ), candidate_pending as (
+       select id from candidate_order where status='pending'
+     )
+     ${stockSql.prepareConsume}
+     , changed as (
+       update public.orders o
+       set status='confirmed',confirmed_at=coalesce(confirmed_at,now()),updated_at=now()
+       from candidate_pending cp,stock_availability sa
+       where o.tenant_id=$1 and o.store_id=$2 and o.id=cp.id and sa.allowed
+       returning o.id
+     )
+     ${stockSql.applyConsume}
+     , audit_status as (
+       insert into public.audit_logs (
+         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
        )
-       select tenant_id,store_id,product_id,variant_id,-qty,
-         'Confirmação de pedido','sale','order',order_id
-       from tracked
-       on conflict do nothing
-       returning tenant_id,store_id,product_id,variant_id,delta
-     )${APPLY_STOCK_SQL}`,
-    [scope.tenantId, scope.storeId, id],
+       select $4::uuid,$1::uuid,$2::uuid,'order.status_changed','order',id::text,
+         jsonb_build_object('from','pending','to','confirmed')
+       from changed
+       returning id
+     ), audit_stock as (
+       insert into public.audit_logs (
+         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+       )
+       select $4::uuid,$1::uuid,$2::uuid,'order.stock_consumed','order',c.id::text,
+         jsonb_build_object(
+           'movement_count',(select count(*) from stock_movements_applied)
+         )
+       from changed c
+       where exists(select 1 from stock_movements_applied)
+       returning id
+     )
+     select c.status as previous_status,
+       coalesce((select allowed from stock_availability),true) as stock_allowed,
+       exists(select 1 from changed) as changed
+     from candidate_order c`,
+    [scope.tenantId, scope.storeId, id, actorUserId],
   );
-  return getOrderById(sql, scope, id);
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  const previous = previousStatus(row);
+  if (previous === "confirmed") return loadedOrder(sql, scope, id);
+  if (previous !== "pending") throw new Error("Transição de status inválida");
+  if (row["stock_allowed"] !== true) throw new Error("Estoque insuficiente");
+  if (!changed(row)) throw new Error("Não foi possível confirmar o pedido");
+  return loadedOrder(sql, scope, id);
 }
 
 export async function cancelOrder(
   sql: OrderSqlExecutor,
   scope: OrderScope,
   id: string,
+  actorUserId: string | null = null,
 ): Promise<Order | null> {
   assertOrderScope(scope);
-  await sql.query(
-    `with locked as (
+  const rows = await sql.query(
+    `with candidate_order as (
        select id,status from public.orders
-       where tenant_id=$1 and store_id=$2 and id=$3 for update
-     ), changed as (
+       where tenant_id=$1 and store_id=$2 and id=$3::uuid
+       for update
+     ), candidate_cancel as (
+       select id,status as previous_status
+       from candidate_order
+       where status in ('pending','confirmed','preparing','ready')
+     )
+     ${stockSql.prepareRestore}
+     , changed as (
        update public.orders o
-       set status='cancelled',cancelled_at=coalesce(cancelled_at,now()),updated_at=now()
-       from locked l
-       where o.id=l.id and l.status in ('pending','confirmed','preparing','ready')
-       returning o.id,l.status as previous_status
-     ), tracked as (
-       select oi.*
-       from public.order_items oi
-       join changed c on c.id=oi.order_id
-       join public.products p
-         on p.tenant_id=oi.tenant_id and p.store_id=oi.store_id and p.id=oi.product_id
-       where p.track_inventory=true and c.previous_status <> 'pending'
-     ), movements as (
-       insert into public.stock_movements (
-         tenant_id,store_id,product_id,variant_id,delta,reason,
-         movement_type,reference_type,reference_id
+       set status='cancelled',
+         cancelled_at=coalesce(cancelled_at,now()),
+         updated_at=now()
+       from candidate_cancel cc
+       where o.tenant_id=$1 and o.store_id=$2 and o.id=cc.id
+       returning o.id,cc.previous_status
+     )
+     ${stockSql.applyRestore}
+     , audit_cancel as (
+       insert into public.audit_logs (
+         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
        )
-       select tenant_id,store_id,product_id,variant_id,qty,
-         'Cancelamento de pedido','cancellation','order',order_id
-       from tracked
-       on conflict do nothing
-       returning tenant_id,store_id,product_id,variant_id,delta
-     )${APPLY_STOCK_SQL}`,
-    [scope.tenantId, scope.storeId, id],
+       select $4::uuid,$1::uuid,$2::uuid,'order.cancelled','order',id::text,
+         jsonb_build_object('from',previous_status,'to','cancelled')
+       from changed
+       returning id
+     ), audit_stock as (
+       insert into public.audit_logs (
+         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+       )
+       select $4::uuid,$1::uuid,$2::uuid,'order.stock_restored','order',c.id::text,
+         jsonb_build_object(
+           'movement_count',(select count(*) from stock_restore_movements)
+         )
+       from changed c
+       where exists(select 1 from stock_restore_movements)
+       returning id
+     )
+     select c.status as previous_status,
+       exists(select 1 from changed) as changed
+     from candidate_order c`,
+    [scope.tenantId, scope.storeId, id, actorUserId],
   );
-  return getOrderById(sql, scope, id);
+  if (rows.length === 0) return null;
+  validateCancellationResult(rows[0]);
+  return loadedOrder(sql, scope, id);
+}
+
+function validateCancellationResult(row: Record<string, unknown>): void {
+  const previous = previousStatus(row);
+  if (previous === "cancelled") return;
+  if (!["pending", "confirmed", "preparing", "ready"].includes(previous)) {
+    throw new Error("Transição de status inválida");
+  }
+  if (!changed(row)) throw new Error("Não foi possível cancelar o pedido");
+}
+
+function expectedPrevious(
+  status: Extract<OrderStatus, "preparing" | "ready" | "completed">,
+): OrderStatus {
+  if (status === "preparing") return "confirmed";
+  if (status === "ready") return "preparing";
+  return "ready";
 }
 
 export async function advanceOrder(
@@ -105,20 +164,45 @@ export async function advanceOrder(
   scope: OrderScope,
   id: string,
   status: Extract<OrderStatus, "preparing" | "ready" | "completed">,
+  actorUserId: string | null = null,
 ): Promise<Order | null> {
   assertOrderScope(scope);
-  await sql.query(
-    `update public.orders set
-       status=$4,
-       completed_at=case when $4='completed' then coalesce(completed_at,now()) else completed_at end,
-       updated_at=now()
-     where tenant_id=$1 and store_id=$2 and id=$3
-       and (
-         ($4='preparing' and status='confirmed')
-         or ($4='ready' and status='preparing')
-         or ($4='completed' and status='ready')
-       )`,
-    [scope.tenantId, scope.storeId, id, status],
+  const expected = expectedPrevious(status);
+  const rows = await sql.query(
+    `with candidate_order as (
+       select id,status from public.orders
+       where tenant_id=$1 and store_id=$2 and id=$3::uuid
+       for update
+     ), changed as (
+       update public.orders o
+       set status=$4,
+         completed_at=case
+           when $4='completed' then coalesce(completed_at,now())
+           else completed_at
+         end,
+         updated_at=now()
+       from candidate_order c
+       where o.tenant_id=$1 and o.store_id=$2 and o.id=c.id and c.status=$5
+       returning o.id
+     ), audit_status as (
+       insert into public.audit_logs (
+         actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+       )
+       select $6::uuid,$1::uuid,$2::uuid,'order.status_changed','order',id::text,
+         jsonb_build_object('from',$5::text,'to',$4::text)
+       from changed
+       returning id
+     )
+     select c.status as previous_status,
+       exists(select 1 from changed) as changed
+     from candidate_order c`,
+    [scope.tenantId, scope.storeId, id, status, expected, actorUserId],
   );
-  return getOrderById(sql, scope, id);
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  const previous = previousStatus(row);
+  if (previous === status) return loadedOrder(sql, scope, id);
+  if (previous !== expected) throw new Error("Transição de status inválida");
+  if (!changed(row)) throw new Error("Não foi possível atualizar o pedido");
+  return loadedOrder(sql, scope, id);
 }

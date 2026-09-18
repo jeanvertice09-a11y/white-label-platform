@@ -7,6 +7,9 @@ export type {
   Order,
   OrderCartItemInput,
   CreateOrderFromCartInput,
+  OrderListQuery,
+  OrderPage,
+  OrderTimelineEntry,
 } from "./types.ts";
 export type { OrderRepository, OrderSqlExecutor } from "./repository.ts";
 export { calculateOrderTotals, formatOrderNumber } from "./totals.ts";

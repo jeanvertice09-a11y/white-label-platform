@@ -16,3 +16,9 @@ export type {
   InventoryRepository,
 } from "./repository.ts";
 export { createInventoryRepository } from "./postgres.ts";
+export {
+  orderStockSqlFragments,
+} from "./order-stock.ts";
+export type {
+  OrderStockSqlFragments,
+} from "./order-stock.ts";
