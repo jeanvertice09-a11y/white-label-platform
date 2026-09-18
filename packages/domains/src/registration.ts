@@ -14,8 +14,8 @@ export function normalizeDomainRegistrationInput(input: string): string {
 
   const httpMatch = /^(https?):\/\/([^/?#]+)(.*)$/i.exec(raw);
   if (httpMatch) {
-    const authority = httpMatch[2] ?? "";
-    const suffix = httpMatch[3] ?? "";
+    const authority = httpMatch[2];
+    const suffix = httpMatch[3];
     if (authority.includes("@")) return invalidInput("credenciais não são permitidas");
     if (authority.includes(":")) return invalidInput("porta não é permitida");
     if (suffix !== "" && suffix !== "/") return invalidInput("path, query ou fragment não são permitidos");

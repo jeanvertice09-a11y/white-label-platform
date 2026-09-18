@@ -48,8 +48,8 @@ export async function verifyControlDomain(
      from public.domains where tenant_id=$1::uuid and id=$2::uuid limit 1`,
     [tenantId, domainId],
   );
+  if (rows.length === 0) throw new Error("Domínio não encontrado nesta White Label.");
   const row = rows[0];
-  if (!row) throw new Error("Domínio não encontrado nesta White Label.");
   const hostname = stringValue(row, "hostname");
   const status = stringValue(row, "status");
   const token = stringValue(row, "verification_token");
@@ -83,6 +83,6 @@ export async function verifyControlDomain(
      ) select id::text,verified_at::text from target`,
     [tenantId, domainId, hostname, token, actorUserId, provider.name],
   );
-  if (!activated[0]) throw new Error("Domínio mudou durante a verificação; tente novamente.");
+  if (activated.length === 0) throw new Error("Domínio mudou durante a verificação; tente novamente.");
   return { verified: true, status: "active" as const, reason: result.reason };
 }

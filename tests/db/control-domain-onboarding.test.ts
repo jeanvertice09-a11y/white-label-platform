@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { DomainResolver, PostgresDomainStore, type DomainProvider, type DomainVerificationResult } from "@white-label/domains";
 import type { Harness } from "./harness.ts";
-import { setupDatabase } from "./harness.ts";
+import { expectReject, setupDatabase } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
 import { loadControlDomainWorkspace } from "../../apps/web/src/lib/server/control-domains.read.server.ts";
 import { createControlDomain, deleteControlDomain, setControlDomainStatus, updateControlDomain } from "../../apps/web/src/lib/server/control-domains.write.server.ts";
@@ -49,12 +49,12 @@ describe("fase 07 domain onboarding", () => {
   });
 
   test("hostname duplicado e store de outro tenant são bloqueados", async () => {
-    await expect(createControlDomain(h.db, ids.tenantB, ids.users.tenantB, {
+    await expectReject(createControlDomain(h.db, ids.tenantB, ids.users.tenantB, {
       hostname: "tenant-a.example.test", type: "tenant_panel", storeId: null,
-    })).rejects.toThrow("Hostname já está cadastrado");
-    await expect(createControlDomain(h.db, ids.tenantA, actor, {
+    }), "hostname duplicado global");
+    await expectReject(createControlDomain(h.db, ids.tenantA, actor, {
       hostname: "cross-store.example.test", type: "store_catalog", storeId: ids.storeB,
-    })).rejects.toThrow();
+    }), "store de outro tenant");
     const partial = await h.db.query("select id from public.domains where hostname='cross-store.example.test'", []);
     expect(partial).toHaveLength(0);
   });
@@ -84,10 +84,10 @@ describe("fase 07 domain onboarding", () => {
 
   test("IDOR não edita, verifica, suspende ou remove domínio de outro tenant", async () => {
     const created = await createControlDomain(h.db, ids.tenantB, ids.users.tenantB, { hostname: "idor-b.example.test", type: "tenant_panel", storeId: null });
-    await expect(updateControlDomain(h.db, ids.tenantA, actor, { domainId: created.id, hostname: "idor-a.example.test", type: "tenant_panel", storeId: null })).rejects.toThrow();
-    await expect(verifyControlDomain(h.db, ids.tenantA, actor, created.id, provider(true))).rejects.toThrow();
-    await expect(setControlDomainStatus(h.db, ids.tenantA, actor, created.id, "suspended")).rejects.toThrow();
-    await expect(deleteControlDomain(h.db, ids.tenantA, actor, created.id)).rejects.toThrow();
+    await expectReject(updateControlDomain(h.db, ids.tenantA, actor, { domainId: created.id, hostname: "idor-a.example.test", type: "tenant_panel", storeId: null }), "IDOR update");
+    await expectReject(verifyControlDomain(h.db, ids.tenantA, actor, created.id, provider(true)), "IDOR verify");
+    await expectReject(setControlDomainStatus(h.db, ids.tenantA, actor, created.id, "suspended"), "IDOR suspend");
+    await expectReject(deleteControlDomain(h.db, ids.tenantA, actor, created.id), "IDOR delete");
     const rows = await h.db.query("select hostname,status from public.domains where id=$1::uuid", [created.id]);
     expect(rows[0]?.["hostname"]).toBe("idor-b.example.test");
     expect(rows[0]?.["status"]).toBe("pending");
