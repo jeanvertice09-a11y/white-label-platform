@@ -25,6 +25,7 @@ function deps(memberships: MembershipRow[]): RouteDeps {
       },
     },
     resolveTenantForHost: async () => {
+      await Promise.resolve();
       throw new Error("app.kataluu.com.br não deve consultar domínio dinâmico");
     },
   };

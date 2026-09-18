@@ -15,8 +15,7 @@ function assertResults(results: Array<{ error: { message: string } | null }>): v
 }
 
 function settingsJson(value: unknown): string {
-  const serialized = JSON.stringify(value === undefined ? {} : value, null, 2);
-  return serialized === undefined ? "{}" : serialized;
+  return JSON.stringify(value ?? {}, null, 2);
 }
 
 function memberCounts(rows: Row[]): Map<string, number> {
@@ -124,10 +123,10 @@ export async function loadTenantControlData(
   ]);
   assertResults(results);
   const tenantRows = asRows(results[0].data);
-  const tenant = tenantRows[0];
+  const tenant = tenantRows.at(0);
   if (!tenant) throw new Error("White Label não encontrada");
-  const branding = asRows(results[1].data)[0];
-  const settings = asRows(results[2].data)[0];
+  const branding = asRows(results[1].data).at(0);
+  const settings = asRows(results[2].data).at(0);
   const stores = asRows(results[3].data);
   const members = asRows(results[4].data);
   const domains = asRows(results[5].data);
