@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { createInventoryRepository } from "../../packages/inventory/src/index.ts";
 import { createOrderRepository } from "../../packages/orders/src/index.ts";
 import type { CreateOrderFromCartInput } from "../../packages/orders/src/index.ts";
-import { setupDatabase } from "./harness.ts";
+import { expectReject, setupDatabase } from "./harness.ts";
 import type { Harness } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
 
@@ -91,14 +91,20 @@ describe("fase 08 orders + inventory", () => {
 
   test("produto inexistente e variante inválida são rejeitados", async () => {
     const repo = createOrderRepository(h.db);
-    await expect(repo.createFromCart(
-      scope,
-      input("p8-missing-product", "ffffffff-0000-4000-8000-ffffffffffff", null),
-    )).rejects.toThrow();
-    await expect(repo.createFromCart(
-      scope,
-      input("p8-wrong-variant", VAR_PRODUCT, OTHER_VARIANT),
-    )).rejects.toThrow();
+    await expectReject(
+      repo.createFromCart(
+        scope,
+        input("p8-missing-product", "ffffffff-0000-4000-8000-ffffffffffff", null),
+      ),
+      "produto inexistente",
+    );
+    await expectReject(
+      repo.createFromCart(
+        scope,
+        input("p8-wrong-variant", VAR_PRODUCT, OTHER_VARIANT),
+      ),
+      "variante de outro produto",
+    );
   });
 
   test("UUID de pedido não atravessa store/tenant", async () => {
@@ -185,7 +191,10 @@ describe("fase 08 orders + inventory", () => {
       scope,
       input("p8-insufficient", EMPTY, null),
     );
-    await expect(orders.confirm(scope, order.id)).rejects.toThrow("Estoque insuficiente");
+    await expectReject(
+      orders.confirm(scope, order.id),
+      "estoque insuficiente",
+    );
     const loaded = await orders.getById(scope, order.id);
     expect(loaded?.status).toBe("pending");
     const stock = await h.db.query(
@@ -224,17 +233,19 @@ describe("fase 08 orders + inventory", () => {
       scope,
       input("p8-status", SIMPLE, null),
     );
-    await expect(
+    await expectReject(
       orders.advance(scope, order.id, "preparing"),
-    ).rejects.toThrow("Transição de status inválida");
+      "salto de status inválido",
+    );
     await orders.confirm(scope, order.id);
     await orders.advance(scope, order.id, "preparing");
     await orders.advance(scope, order.id, "preparing");
     await orders.advance(scope, order.id, "ready");
     const completed = await orders.advance(scope, order.id, "completed");
     expect(completed?.status).toBe("completed");
-    await expect(orders.cancel(scope, order.id)).rejects.toThrow(
-      "Transição de status inválida",
+    await expectReject(
+      orders.cancel(scope, order.id),
+      "cancelamento após conclusão",
     );
   });
 

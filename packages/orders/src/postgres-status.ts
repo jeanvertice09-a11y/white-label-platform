@@ -75,7 +75,7 @@ export async function confirmOrder(
     [scope.tenantId, scope.storeId, id, actorUserId],
   );
   if (rows.length === 0) return null;
-  const row = rows[0]!;
+  const row = rows[0];
   const previous = previousStatus(row);
   if (previous === "confirmed") return loadedOrder(sql, scope, id);
   if (previous !== "pending") throw new Error("Transição de status inválida");
@@ -138,14 +138,17 @@ export async function cancelOrder(
     [scope.tenantId, scope.storeId, id, actorUserId],
   );
   if (rows.length === 0) return null;
-  const row = rows[0]!;
+  validateCancellationResult(rows[0]);
+  return loadedOrder(sql, scope, id);
+}
+
+function validateCancellationResult(row: Record<string, unknown>): void {
   const previous = previousStatus(row);
-  if (previous === "cancelled") return loadedOrder(sql, scope, id);
+  if (previous === "cancelled") return;
   if (!["pending", "confirmed", "preparing", "ready"].includes(previous)) {
     throw new Error("Transição de status inválida");
   }
   if (!changed(row)) throw new Error("Não foi possível cancelar o pedido");
-  return loadedOrder(sql, scope, id);
 }
 
 function expectedPrevious(
@@ -196,7 +199,7 @@ export async function advanceOrder(
     [scope.tenantId, scope.storeId, id, status, expected, actorUserId],
   );
   if (rows.length === 0) return null;
-  const row = rows[0]!;
+  const row = rows[0];
   const previous = previousStatus(row);
   if (previous === status) return loadedOrder(sql, scope, id);
   if (previous !== expected) throw new Error("Transição de status inválida");

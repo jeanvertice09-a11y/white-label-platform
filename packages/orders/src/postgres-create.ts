@@ -159,7 +159,7 @@ export async function createOrderFromCart(
   if (rows.length === 0) {
     throw new Error("Carrinho, cliente ou cupom inválido");
   }
-  const order = await getOrderById(sql, scope, String(rows[0]!["id"]));
+  const order = await getOrderById(sql, scope, String(rows[0]["id"]));
   if (!order) throw new Error("Pedido não encontrado após criação");
   return order;
 }

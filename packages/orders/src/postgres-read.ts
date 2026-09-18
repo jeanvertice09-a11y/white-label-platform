@@ -43,7 +43,9 @@ function mapTimeline(row: Record<string, unknown>): OrderTimelineEntry {
   return {
     id: String(row["id"]),
     action: String(row["action"]),
-    actorUserId: row["actor_user_id"] ? String(row["actor_user_id"]) : null,
+    actorUserId: typeof row["actor_user_id"] === "string"
+      ? row["actor_user_id"]
+      : null,
     metadata: metadata && typeof metadata === "object"
       ? metadata as Record<string, unknown>
       : {},
