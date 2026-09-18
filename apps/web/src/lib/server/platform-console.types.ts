@@ -30,7 +30,7 @@ export interface MasterConsoleData {
 export interface TenantControlDashboardData {
   tenant: {
     id: string; name: string; slug: string; status: string; createdAt: string;
-    logoUrl: string | null; primaryColor: string | null; settings: unknown;
+    logoUrl: string | null; primaryColor: string | null; settings: string;
   };
   stores: Array<{ id: string; name: string; slug: string; status: string; createdAt: string; memberCount: number }>;
   domains: Array<{ id: string; hostname: string; type: string; status: string; storeId: string | null; verifiedAt: string | null }>;

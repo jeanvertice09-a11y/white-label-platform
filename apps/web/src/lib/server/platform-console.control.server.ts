@@ -23,6 +23,10 @@ async function queryControlRows(sql: SqlExecutor, tenantId: string) {
   ]);
 }
 
+function settingsJson(value: unknown): string {
+  return JSON.stringify(value ?? {}) ?? "{}";
+}
+
 export async function loadTenantControlData(
   sql: SqlExecutor,
   tenantId: string,
@@ -31,7 +35,7 @@ export async function loadTenantControlData(
   const tenant = tenantRows.at(0);
   if (tenant === undefined) throw new Error("White Label não encontrada");
   return {
-    tenant: {id:stringValue(tenant,"id"),name:stringValue(tenant,"name"),slug:stringValue(tenant,"slug"),status:stringValue(tenant,"status"),createdAt:stringValue(tenant,"created_at"),logoUrl:nullableString(tenant,"logo_url"),primaryColor:nullableString(tenant,"primary_color"),settings:tenant["settings"] ?? {}},
+    tenant: {id:stringValue(tenant,"id"),name:stringValue(tenant,"name"),slug:stringValue(tenant,"slug"),status:stringValue(tenant,"status"),createdAt:stringValue(tenant,"created_at"),logoUrl:nullableString(tenant,"logo_url"),primaryColor:nullableString(tenant,"primary_color"),settings:settingsJson(tenant["settings"])},
     stores: stores.map((r)=>({id:stringValue(r,"id"),name:stringValue(r,"name"),slug:stringValue(r,"slug"),status:stringValue(r,"status"),createdAt:stringValue(r,"created_at"),memberCount:numberValue(r,"member_count")})),
     domains: domains.map((r)=>({id:stringValue(r,"id"),hostname:stringValue(r,"hostname"),type:stringValue(r,"type"),status:stringValue(r,"status"),storeId:nullableString(r,"store_id"),verifiedAt:nullableString(r,"verified_at")})),
     subscriptions: subscriptions.map((r)=>({id:stringValue(r,"id"),level:stringValue(r,"level"),status:stringValue(r,"status"),planName:nullableString(r,"plan_name"),priceCents:numberValue(r,"price_cents"),createdAt:stringValue(r,"created_at")})),
