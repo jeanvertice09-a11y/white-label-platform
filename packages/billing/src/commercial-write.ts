@@ -95,24 +95,30 @@ export async function replaceTenantPlanEntitlements(
   const rows = await sql.query(
     `with owned_plan as (
        select id from public.tenant_plans where tenant_id=$1 and id=$2
-     ), deleted as (
-       delete from public.tenant_plan_entitlements
-       where tenant_id=$1 and tenant_plan_id in (select id from owned_plan)
-       returning entitlement_key
      ), payload as (
        select * from jsonb_to_recordset($3::jsonb)
          as x(key text,kind text,enabled boolean,limit_value bigint)
-     ), inserted as (
+     ), deleted as (
+       delete from public.tenant_plan_entitlements e
+       where e.tenant_id=$1
+         and e.tenant_plan_id in (select id from owned_plan)
+         and not exists (select 1 from payload p where p.key=e.entitlement_key)
+       returning entitlement_key
+     ), upserted as (
        insert into public.tenant_plan_entitlements (
          tenant_id,tenant_plan_id,entitlement_key,enabled,limit_value
        )
        select $1,$2,p.key,p.enabled,p.limit_value
        from payload p cross join owned_plan
+       on conflict (tenant_plan_id,entitlement_key) do update set
+         enabled=excluded.enabled,
+         limit_value=excluded.limit_value,
+         updated_at=now()
        returning entitlement_key
      )
      select
        (select count(*) from owned_plan)::integer as owned_count,
-       (select count(*) from inserted)::integer as inserted_count`,
+       (select count(*) from upserted)::integer as upserted_count`,
     [
       tenantId,
       planId,
