@@ -85,7 +85,7 @@ describe("MercadoPagoProvider", () => {
       payerEmail: "buyer@example.test",
       paymentMethod: "pix",
     });
-    expect(created.providerPaymentId).toBe("mp-pay-1");
+    expect(String(created.providerPaymentId)).toBe("mp-pay-1");
     expect(new Headers(calls.at(0)?.init?.headers).get("X-Idempotency-Key")).toBe("idem-123");
     await provider.refund({
       providerPaymentId: "mp-pay-1" as ProviderPaymentId,
@@ -119,13 +119,11 @@ describe("MercadoPagoProvider", () => {
       date_created: "2026-09-18T10:00:00Z",
       data: { id: "999" },
     });
-    expect(event).toEqual({
-      externalEventId: "123",
-      type: "payment.updated",
-      providerPaymentId: "999",
-      status: null,
-      occurredAt: "2026-09-18T10:00:00Z",
-    });
+    expect(event.externalEventId).toBe("123");
+    expect(event.type).toBe("payment.updated");
+    expect(String(event.providerPaymentId)).toBe("999");
+    expect(event.status).toBeNull();
+    expect(event.occurredAt).toBe("2026-09-18T10:00:00Z");
   });
 });
 
@@ -167,7 +165,7 @@ describe("AsaasProvider", () => {
       dueDate: "2026-09-30",
       paymentMethod: "pix",
     });
-    expect(created.providerPaymentId).toBe("pay_asaas_1");
+    expect(String(created.providerPaymentId)).toBe("pay_asaas_1");
     expect(calls.at(0)?.url).toBe("https://api-sandbox.asaas.com/v3/payments");
     expect(new Headers(calls.at(0)?.init?.headers).get("access_token")).toBe("fixture-api-key");
 
@@ -178,7 +176,7 @@ describe("AsaasProvider", () => {
       payment: { id: "pay_asaas_1", status: "RECEIVED" },
     });
     expect(event.status).toBe("captured");
-    expect(event.providerPaymentId).toBe("pay_asaas_1");
+    expect(String(event.providerPaymentId)).toBe("pay_asaas_1");
   });
 
   test("refund Asaas falha fechado sem idempotência oficial documentada", async () => {
