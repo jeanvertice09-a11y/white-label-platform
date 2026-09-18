@@ -6,7 +6,10 @@ import {
   createCouponRepository,
 } from "@white-label/marketing";
 import { createMerchantOperationsContext } from "./operations-context.server.ts";
-import { assertCampaignsEntitlement } from "./marketing-entitlements.server.ts";
+import {
+  assertCampaignsEntitlement,
+  assertCouponsEntitlement,
+} from "./marketing-entitlements.server.ts";
 
 const cents = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const couponSchema = z.object({
@@ -44,8 +47,10 @@ const updateCampaignSchema = z.object({
 
 async function couponRepository() {
   const current = await createMerchantOperationsContext(getRequestHost());
+  await assertCouponsEntitlement(current.sql, current.scope);
   return {
     scope: current.scope,
+    userId: current.userId,
     repo: createCouponRepository(current.sql),
   };
 }
@@ -70,14 +75,19 @@ export const createMerchantCoupon = createServerFn({ method: "POST" })
   .validator(couponSchema)
   .handler(async ({ data }) => {
     const current = await couponRepository();
-    return current.repo.create(current.scope, data);
+    return current.repo.create(current.scope, data, current.userId);
   });
 
 export const updateMerchantCoupon = createServerFn({ method: "POST" })
   .validator(updateCouponSchema)
   .handler(async ({ data }) => {
     const current = await couponRepository();
-    return current.repo.update(current.scope, data.id, data.input);
+    return current.repo.update(
+      current.scope,
+      data.id,
+      data.input,
+      current.userId,
+    );
   });
 
 export const listMerchantCampaigns = createServerFn({ method: "GET" })
