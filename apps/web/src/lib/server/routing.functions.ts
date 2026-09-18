@@ -4,6 +4,7 @@ import { DomainResolver } from "@white-label/domains";
 import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
 
 export type RootTarget = "/master" | "/control" | "/admin" | "/catalog" | null;
+export type LoginTarget = "/master" | "/control" | "/admin" | "/";
 
 function normalizeHost(rawHost: string | null): string {
   return (rawHost ?? "").toLowerCase().split(":")[0]?.replace(/\.$/, "") ?? "";
@@ -33,11 +34,15 @@ async function resolveTarget(rawHost: string | null): Promise<RootTarget> {
   }
 }
 
+function loginTarget(target: RootTarget): LoginTarget {
+  if (target === "/master" || target === "/control" || target === "/admin") return target;
+  return "/";
+}
+
 export const getRootTarget = createServerFn({ method: "GET" }).handler(async () => {
   return resolveTarget(getRequestHost());
 });
 
 export const getLoginTarget = createServerFn({ method: "GET" }).handler(async () => {
-  const target = await resolveTarget(getRequestHost());
-  return target === "/catalog" || target === null ? "/master" : target;
+  return loginTarget(await resolveTarget(getRequestHost()));
 });
