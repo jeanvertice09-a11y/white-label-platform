@@ -1,22 +1,25 @@
+import { useRef, useState } from "react";
 import type { CartState } from "@white-label/catalog";
 import {
-  buildWhatsappCheckoutUrl,
   cartTotalCents,
   removeCartItem,
   setCartItemQuantity,
 } from "@white-label/catalog";
+import { createWhatsappOrder } from "../../lib/server/storefront-checkout.functions.ts";
 import { storefrontMoney } from "./format.ts";
 
 export function CartPanel(props: Readonly<{
   cart: CartState;
-  phone: string | null;
-  intro: string;
+  whatsappEnabled: boolean;
   onChange: (cart: CartState) => void;
   onClose: () => void;
 }>): React.JSX.Element {
-  const checkoutUrl = props.phone && props.cart.items.length
-    ? buildWhatsappCheckoutUrl(props.phone, props.cart, props.intro)
-    : null;
+  const idempotencyKey = useRef<string | null>(null);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
   function changeQuantity(productId: string, variantId: string | null, next: number): void {
     if (next < 1) {
@@ -24,6 +27,32 @@ export function CartPanel(props: Readonly<{
       return;
     }
     props.onChange(setCartItemQuantity(props.cart, productId, variantId, next));
+  }
+
+  async function checkout(): Promise<void> {
+    if (!props.whatsappEnabled || props.cart.items.length === 0) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      idempotencyKey.current ??= crypto.randomUUID();
+      const result = await createWhatsappOrder({ data: {
+        idempotencyKey: idempotencyKey.current,
+        customerName: customerName.trim() || null,
+        customerPhone: customerPhone.trim() || null,
+        couponCode: couponCode.trim() || null,
+        items: props.cart.items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+        })),
+      } });
+      setMessage(`Pedido ${result.displayNumber} registrado. Total ${storefrontMoney(result.totalCents)}.`);
+      window.location.assign(result.whatsappUrl);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível registrar o pedido.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -46,8 +75,17 @@ export function CartPanel(props: Readonly<{
         </div>
         {props.cart.items.length ? (
           <div className="sf__checkout">
-            <div className="sf__total"><span>Total</span><span>{storefrontMoney(cartTotalCents(props.cart))}</span></div>
-            {checkoutUrl ? <a className="sf__primary" href={checkoutUrl} target="_blank" rel="noreferrer">Finalizar pelo WhatsApp</a> : <div className="sf__meta">WhatsApp ainda não configurado para esta loja.</div>}
+            <label className="sf__field"><span>Nome</span><input value={customerName} onChange={(event) => { setCustomerName(event.target.value); }} placeholder="Seu nome" /></label>
+            <label className="sf__field"><span>Telefone</span><input value={customerPhone} onChange={(event) => { setCustomerPhone(event.target.value); }} placeholder="(62) 99999-9999" inputMode="tel" /></label>
+            <label className="sf__field"><span>Cupom</span><input value={couponCode} onChange={(event) => { setCouponCode(event.target.value.toUpperCase()); }} placeholder="PROMO10" /></label>
+            <div className="sf__total"><span>Subtotal do carrinho</span><span>{storefrontMoney(cartTotalCents(props.cart))}</span></div>
+            <div className="sf__meta">Preço, cupom e total são recalculados no servidor antes do pedido ser criado.</div>
+            {message ? <div className="sf__meta">{message}</div> : null}
+            {props.whatsappEnabled ? (
+              <button className="sf__primary" disabled={busy} type="button" onClick={() => { void checkout(); }}>
+                {busy ? "Registrando pedido…" : "Registrar e abrir WhatsApp"}
+              </button>
+            ) : <div className="sf__meta">Checkout por WhatsApp não está disponível nesta loja.</div>}
           </div>
         ) : null}
       </section>

@@ -59,3 +59,8 @@ export const storefrontTheme = `
   .sf__modal { padding:16px; border-radius:16px; }
 }
 `;
+
+.sf__field { display:grid; gap:6px; font-size:13px; }
+.sf__field span { font-weight:650; color:#475467; }
+.sf__field input { width:100%; box-sizing:border-box; border:1px solid #d8dde5; border-radius:10px; padding:10px 11px; font:inherit; }
+.sf__primary:disabled { opacity:.6; cursor:not-allowed; }

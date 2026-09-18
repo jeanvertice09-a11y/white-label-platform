@@ -1,42 +1,49 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
-import { getMerchantCatalogOverview } from "../lib/server/catalog.functions.ts";
+import { formatMoney } from "../features/store-admin/format.ts";
+import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
 
 export const Route = createFileRoute("/admin/")({
-  loader: () => getMerchantCatalogOverview(),
+  loader: () => getMerchantOperationsDashboard(),
   component: AdminDashboard,
 });
 
-function AdminDashboard() {
+function Stat(props: Readonly<{ label: string; value: string | number }>): React.JSX.Element {
+  return (
+    <div className="k-card">
+      <div className="k-stat__label">{props.label}</div>
+      <div className="k-stat__value">{props.value}</div>
+    </div>
+  );
+}
+
+function AdminDashboard(): React.JSX.Element {
   const data = Route.useLoaderData();
+  const metrics = data.metrics;
   return (
     <div className="k-page">
       <PageHead
         title={data.store.name}
-        description="Visão geral do catálogo e da configuração pública da sua loja."
+        description="Indicadores reais da operação da loja."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
       <div className="k-grid">
-        <div className="k-card">
-          <div className="k-stat__label">Produtos</div>
-          <div className="k-stat__value">{data.products.total}</div>
-        </div>
-        <div className="k-card">
-          <div className="k-stat__label">Categorias</div>
-          <div className="k-stat__value">{data.categories.length}</div>
-        </div>
-        <div className="k-card">
-          <div className="k-stat__label">Banners</div>
-          <div className="k-stat__value">{data.banners.length}</div>
-        </div>
+        <Stat label="Pedidos hoje" value={metrics.ordersToday} />
+        <Stat label="Pedidos pendentes" value={metrics.pendingOrders} />
+        <Stat label="Faturamento — 30 dias" value={formatMoney(metrics.revenuePeriodCents)} />
+        <Stat label="Ticket médio — 30 dias" value={formatMoney(metrics.averageTicketCents)} />
+        <Stat label="Produtos ativos" value={metrics.activeProducts} />
+        <Stat label="Estoque baixo" value={metrics.lowStockProducts} />
+        <Stat label="Clientes" value={metrics.customers} />
+        <Stat label="Layout do catálogo" value={data.layout === "modern" ? "Modern" : "Classic"} />
       </div>
       <div className="k-card">
-        <h2>Catálogo</h2>
+        <h2>Definição de faturamento</h2>
         <p className="k-muted">
-          Layout atual: <strong>{data.settings.layout === "modern" ? "Modern" : "Classic"}</strong>.
-          Configure aparência, WhatsApp e visibilidade em Minha loja.
+          Últimos 30 dias: soma dos pedidos concluídos cujo pagamento não está
+          falho, estornado ou cancelado. Ticket médio = faturamento dividido pelos
+          pedidos válidos do mesmo período.
         </p>
-        <Link className="k-button" to="/admin/store">Configurar minha loja</Link>
       </div>
     </div>
   );
