@@ -51,10 +51,11 @@ export async function assignControlMerchantPlan(
      select id::text,status from result`,
     [tenantId, storeId, planId, useTrial, actorUserId],
   );
-  if (!rows[0]) throw new Error("Loja/plano inválido, plano fora do tenant ou trial indisponível.");
+  const row = rows.at(0);
+  if (!row) throw new Error("Loja/plano inválido, plano fora do tenant ou trial indisponível.");
   return {
-    subscriptionId: text(rows[0], "id"),
-    status: text(rows[0], "status") as ControlSubscriptionStatus,
+    subscriptionId: text(row, "id"),
+    status: text(row, "status") as ControlSubscriptionStatus,
   };
 }
 
@@ -80,7 +81,7 @@ export async function setControlSubscriptionStatus(
      where tenant_id=$1::uuid and store_id=$2::uuid and id=$3::uuid`,
     [tenantId, storeId, subscriptionId],
   );
-  const currentStatus = nullableText(current[0] ?? {}, "status");
+  const currentStatus = nullableText(current.at(0) ?? {}, "status");
   if (!currentStatus) throw new Error("Assinatura não encontrada nesta loja/White Label.");
   if (currentStatus === nextStatus) return { status: nextStatus };
   if (!(TRANSITIONS[currentStatus] ?? []).includes(nextStatus)) {
@@ -94,12 +95,13 @@ export async function setControlSubscriptionStatus(
      ), audit as (
        insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
        select $5::uuid,$1::uuid,$2::uuid,'control.store.subscription_status_changed',
-         'store_subscription',id::text,jsonb_build_object('from',$6,'to',status)
+         'store_subscription',id::text,jsonb_build_object('from',$6::text,'to',status)
        from changed returning id
      )
      select status from changed`,
     [tenantId, storeId, subscriptionId, nextStatus, actorUserId, currentStatus],
   );
-  if (!rows[0]) throw new Error("Assinatura não encontrada nesta loja/White Label.");
-  return { status: text(rows[0], "status") as ControlSubscriptionStatus };
+  const row = rows.at(0);
+  if (!row) throw new Error("Assinatura não encontrada nesta loja/White Label.");
+  return { status: text(row, "status") as ControlSubscriptionStatus };
 }
