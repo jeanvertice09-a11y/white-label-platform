@@ -78,13 +78,26 @@ export async function reconcilePaymentStatus(
   provider: PaymentProvider,
   providerPaymentId: ProviderPaymentId,
 ): Promise<{ status: PaymentStatus; changed: boolean }> {
+  const target = await findPaymentTarget(sql, gatewayAccountId, providerPaymentId);
+  if (!target || target.id !== paymentId) {
+    throw new Error("Pagamento não pertence ao gateway/provider payment informado.");
+  }
   const status = await provider.fetchStatus(providerPaymentId);
   const changed = await applyPaymentStatus(
     sql,
-    paymentId,
+    target.id,
     gatewayAccountId,
     status,
     null,
+  );
+  await sql.query(
+    `insert into public.audit_logs(
+       actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
+     ) values (
+       null,$1::uuid,$2::uuid,'payment.reconciled','payment',$3,
+       jsonb_build_object('changed',$4::boolean,'status',$5::text)
+     )`,
+    [target.tenantId, target.storeId, target.id, changed, status],
   );
   return { status, changed };
 }
