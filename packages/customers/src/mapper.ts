@@ -1,6 +1,7 @@
 import type {
   Customer,
   CustomerDetail,
+  CustomerListItem,
   CustomerOrderSummary,
 } from "./types.ts";
 
@@ -25,6 +26,12 @@ function timestamp(row: Record<string, unknown>, key: string): string {
   throw new Error("Data inválida: " + key);
 }
 
+function integer(row: Record<string, unknown>, key: string): number {
+  const value = Number(row[key] ?? 0);
+  if (!Number.isSafeInteger(value)) throw new Error("Inteiro inválido: " + key);
+  return value;
+}
+
 export function mapCustomer(row: Record<string, unknown>): Customer {
   return {
     tenantId: requiredText(row, "tenant_id"),
@@ -41,12 +48,28 @@ export function mapCustomer(row: Record<string, unknown>): Customer {
   };
 }
 
-export function mapCustomerOrder(row: Record<string, unknown>): CustomerOrderSummary {
+export function mapCustomerListItem(
+  row: Record<string, unknown>,
+): CustomerListItem {
+  return {
+    ...mapCustomer(row),
+    totalOrders: integer(row, "total_orders"),
+    totalSpentCents: integer(row, "total_spent_cents"),
+    lastOrderAt: nullableText(row, "last_order_at"),
+  };
+}
+
+export function mapCustomerOrder(
+  row: Record<string, unknown>,
+): CustomerOrderSummary {
   return {
     id: requiredText(row, "id"),
-    orderNumber: Number(row["order_number"]),
-    totalCents: Number(row["total_cents"]),
+    orderNumber: integer(row, "order_number"),
+    totalCents: integer(row, "total_cents"),
     status: requiredText(row, "status"),
+    paymentStatus: requiredText(row, "payment_status"),
+    itemCount: integer(row, "item_count"),
+    itemSummary: nullableText(row, "item_summary"),
     createdAt: timestamp(row, "created_at"),
   };
 }
@@ -58,8 +81,10 @@ export function withCustomerStats(
 ): CustomerDetail {
   return {
     ...customer,
-    orderCount: Number(row["order_count"] ?? 0),
-    totalSpentCents: Number(row["total_spent_cents"] ?? 0),
+    totalOrders: integer(row, "total_orders"),
+    orderCount: integer(row, "order_count"),
+    totalSpentCents: integer(row, "total_spent_cents"),
+    lastOrderAt: nullableText(row, "last_order_at"),
     lastPurchaseAt: nullableText(row, "last_purchase_at"),
     orders,
   };

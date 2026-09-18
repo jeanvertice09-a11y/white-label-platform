@@ -5,17 +5,28 @@ import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { listMerchantCustomers } from "../lib/server/operations-customers.functions.ts";
 
 export const Route = createFileRoute("/admin/customers/")({
-  loader: () => listMerchantCustomers({ data: { search: "" } }),
+  loader: () => listMerchantCustomers({
+    data: { page: 1, pageSize: 20 },
+  }),
+  pendingComponent: () => <div className="k-empty">Carregando clientes…</div>,
+  errorComponent: ({ error }) => (
+    <div className="k-empty">
+      {error instanceof Error ? error.message : "Não foi possível carregar clientes."}
+    </div>
+  ),
   component: CustomersPage,
 });
 
 function CustomersPage(): React.JSX.Element {
-  const customers = Route.useLoaderData();
+  const page = Route.useLoaderData();
   return (
     <div className="k-page">
-      <PageHead title="Clientes" description="CRM básico com busca, contato e histórico de compras." />
+      <PageHead
+        title="Clientes"
+        description="CRM real da loja com histórico e métricas derivadas dos pedidos."
+      />
       <CustomerCreateForm />
-      <CustomersList customers={customers} />
+      <CustomersList initialPage={page} />
     </div>
   );
 }

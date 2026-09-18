@@ -3,6 +3,7 @@ import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createCustomerRepository } from "@white-label/customers";
 import { createMerchantOperationsContext } from "./operations-context.server.ts";
+import { assertCustomersEntitlement } from "./customers-entitlements.server.ts";
 
 const nullableShort = z.string().trim().max(254).nullable();
 const customerSchema = z.object({
@@ -14,22 +15,28 @@ const customerSchema = z.object({
   notes: z.string().trim().max(2000).nullable(),
 });
 const idSchema = z.object({ id: z.string().uuid() });
-const searchSchema = z.object({ search: z.string().trim().max(120).default("") });
+const listSchema = z.object({
+  page: z.number().int().min(1).max(10_000),
+  pageSize: z.number().int().min(1).max(100),
+  search: z.string().trim().max(160).optional(),
+});
 const updateSchema = z.object({ id: z.string().uuid(), input: customerSchema });
 
 async function repository() {
   const current = await createMerchantOperationsContext(getRequestHost());
+  await assertCustomersEntitlement(current.sql, current.scope);
   return {
     scope: current.scope,
+    userId: current.userId,
     repo: createCustomerRepository(current.sql),
   };
 }
 
 export const listMerchantCustomers = createServerFn({ method: "GET" })
-  .validator((data: { search?: string } | undefined) => searchSchema.parse(data ?? {}))
+  .validator(listSchema)
   .handler(async ({ data }) => {
     const current = await repository();
-    return current.repo.list(current.scope, data.search, 100);
+    return current.repo.listPage(current.scope, data);
   });
 
 export const getMerchantCustomer = createServerFn({ method: "GET" })
@@ -43,12 +50,17 @@ export const createMerchantCustomer = createServerFn({ method: "POST" })
   .validator(customerSchema)
   .handler(async ({ data }) => {
     const current = await repository();
-    return current.repo.create(current.scope, data);
+    return current.repo.create(current.scope, data, current.userId);
   });
 
 export const updateMerchantCustomer = createServerFn({ method: "POST" })
   .validator(updateSchema)
   .handler(async ({ data }) => {
     const current = await repository();
-    return current.repo.update(current.scope, data.id, data.input);
+    return current.repo.update(
+      current.scope,
+      data.id,
+      data.input,
+      current.userId,
+    );
   });

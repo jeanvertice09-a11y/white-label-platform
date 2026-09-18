@@ -69,6 +69,9 @@ const CREATE_ORDER_SQL = `with raw_input as (
   select v.*,ce.id as coupon_id,ce.code as coupon_code,
     coalesce(ce.discount_cents,0)::bigint as discount_cents
   from valid v left join coupon_eval ce on true
+), existing as (
+  select id from public.orders
+  where tenant_id=$1 and store_id=$2 and idempotency_key=$3
 ), customer_match as (
   select c.id,c.name,c.phone
   from public.customers c
@@ -78,22 +81,39 @@ const CREATE_ORDER_SQL = `with raw_input as (
       or ($6::uuid is null and $8::text is not null and c.phone=$8)
     )
   limit 1
-), existing as (
-  select id from public.orders
-  where tenant_id=$1 and store_id=$2 and idempotency_key=$3
+), customer_inserted as (
+  insert into public.customers (tenant_id,store_id,name,phone)
+  select $1,$2,$7,$8
+  from priced p
+  where $6::uuid is null
+    and $7::text is not null and btrim($7::text)<>''
+    and $8::text is not null
+    and p.input_count > 0
+    and p.input_count = p.resolved_count
+    and ($9::text is null or p.coupon_id is not null)
+    and not exists (select 1 from existing)
+    and not exists (select 1 from customer_match)
+  on conflict (tenant_id,store_id,phone) where phone is not null
+  do update set phone=excluded.phone
+  returning id,name,phone
+), customer_resolved as (
+  select id,name,phone from customer_match
+  union all
+  select id,name,phone from customer_inserted
+  limit 1
 ), inserted as (
   insert into public.orders (
     tenant_id,store_id,origin,status,payment_status,customer_id,customer_name,
     customer_phone,coupon_id,coupon_code_snapshot,notes,subtotal_cents,
     discount_cents,shipping_cents,total_cents,idempotency_key
   )
-  select $1,$2,$5,'pending','pending',cm.id,coalesce($7,cm.name),coalesce($8,cm.phone),
+  select $1,$2,$5,'pending','pending',cr.id,coalesce($7,cr.name),coalesce($8,cr.phone),
     p.coupon_id,p.coupon_code,$10,p.subtotal,p.discount_cents,$11,
     p.subtotal-p.discount_cents+$11,$3
-  from priced p left join customer_match cm on true
+  from priced p left join customer_resolved cr on true
   where p.input_count > 0
     and p.input_count = p.resolved_count
-    and ($6::uuid is null or cm.id is not null)
+    and ($6::uuid is null or cr.id is not null)
     and ($9::text is null or p.coupon_id is not null)
     and not exists (select 1 from existing)
   on conflict do nothing

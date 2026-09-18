@@ -1,4 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import type { CustomerDetail } from "@white-label/customers";
+import { formatOrderNumber } from "@white-label/orders";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { CustomerEditForm } from "../features/store-admin/customer-edit-form.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
@@ -13,41 +15,94 @@ export const Route = createFileRoute("/admin/customers/$id")({
   component: CustomerDetailPage,
 });
 
+function CustomerMetrics({
+  customer,
+}: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
+  return (
+    <div className="k-grid">
+      <div className="k-card">
+        <div className="k-stat__label">Pedidos</div>
+        <div className="k-stat__value">{customer.totalOrders}</div>
+      </div>
+      <div className="k-card">
+        <div className="k-stat__label">Total gasto</div>
+        <div className="k-stat__value">{formatMoney(customer.totalSpentCents)}</div>
+      </div>
+      <div className="k-card">
+        <div className="k-stat__label">Último pedido</div>
+        <div className="k-stat__value">
+          {customer.lastOrderAt
+            ? new Date(customer.lastOrderAt).toLocaleDateString("pt-BR")
+            : "—"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomerContact({
+  customer,
+}: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
+  return (
+    <div className="k-card">
+      <h2>Identificação e contato</h2>
+      <p>
+        {customer.phone ?? "Telefone não informado"} ·{" "}
+        {customer.email ?? "E-mail não informado"}
+      </p>
+      {customer.document
+        ? <p className="k-muted">Documento: {customer.document}</p>
+        : null}
+      <p className="k-muted">
+        Cadastrado em {new Date(customer.createdAt).toLocaleString("pt-BR")}
+      </p>
+      {customer.notes ? <p className="k-muted">{customer.notes}</p> : null}
+    </div>
+  );
+}
+
+function CustomerOrders({
+  customer,
+}: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
+  if (!customer.orders.length) {
+    return <div className="k-card"><h2>Histórico de pedidos</h2>
+      <div className="k-empty">Nenhum pedido relacionado.</div></div>;
+  }
+  return (
+    <div className="k-card k-table-wrap">
+      <h2>Histórico de pedidos</h2>
+      <table className="k-table">
+        <thead><tr>
+          <th>Pedido</th><th>Status</th><th>Pagamento</th>
+          <th>Itens</th><th>Total</th><th>Data</th><th />
+        </tr></thead>
+        <tbody>{customer.orders.map((order) => (
+          <tr key={order.id}>
+            <td><strong>{formatOrderNumber(order.orderNumber)}</strong></td>
+            <td>{order.status}</td>
+            <td>{order.paymentStatus}</td>
+            <td>{order.itemSummary ?? String(order.itemCount) + " item(ns)"}</td>
+            <td>{formatMoney(order.totalCents)}</td>
+            <td>{new Date(order.createdAt).toLocaleString("pt-BR")}</td>
+            <td><Link className="k-button" to="/admin/orders/$id"
+              params={{ id: order.id }}>Abrir pedido</Link></td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  );
+}
+
 function CustomerDetailPage(): React.JSX.Element {
   const customer = Route.useLoaderData();
   return (
     <div className="k-page">
-      <PageHead title={customer.name} description="Resumo, dados e histórico de compras deste cliente." />
-      <div className="k-grid">
-        <div className="k-card"><div className="k-stat__label">Pedidos concluídos</div><div className="k-stat__value">{customer.orderCount}</div></div>
-        <div className="k-card"><div className="k-stat__label">Total gasto</div><div className="k-stat__value">{formatMoney(customer.totalSpentCents)}</div></div>
-        <div className="k-card"><div className="k-stat__label">Última compra</div><div className="k-stat__value">{customer.lastPurchaseAt ? new Date(customer.lastPurchaseAt).toLocaleDateString("pt-BR") : "—"}</div></div>
-      </div>
+      <PageHead title={customer.name}
+        description="Dados reais, histórico de pedidos e métricas deste cliente." />
+      <CustomerMetrics customer={customer} />
       <CustomerEditForm customer={customer} />
-      <div className="k-card">
-        <h2>Contato</h2>
-        <p>{customer.phone ?? "Telefone não informado"} · {customer.email ?? "E-mail não informado"}</p>
-        {customer.document ? <p className="k-muted">Documento: {customer.document}</p> : null}
-        {customer.notes ? <p className="k-muted">{customer.notes}</p> : null}
-      </div>
-      <div className="k-card k-table-wrap">
-        <h2>Histórico</h2>
-        {customer.orders.length ? (
-          <table className="k-table">
-            <thead><tr><th>Pedido</th><th>Status</th><th>Total</th><th>Data</th></tr></thead>
-            <tbody>
-              {customer.orders.map((order) => (
-                <tr key={order.id}>
-                  <td>#{String(order.orderNumber).padStart(8, "0")}</td>
-                  <td>{order.status}</td>
-                  <td>{formatMoney(order.totalCents)}</td>
-                  <td>{new Date(order.createdAt).toLocaleString("pt-BR")}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : <div className="k-empty">Nenhum pedido relacionado.</div>}
-      </div>
+      <CustomerContact customer={customer} />
+      <CustomerOrders customer={customer} />
     </div>
   );
 }
