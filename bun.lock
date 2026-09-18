@@ -79,6 +79,14 @@
       "name": "@white-label/domains",
       "version": "0.1.0",
     },
+    "packages/inventory": {
+      "name": "@white-label/inventory",
+      "version": "0.1.0",
+    },
+    "packages/orders": {
+      "name": "@white-label/orders",
+      "version": "0.1.0",
+    },
     "packages/payments": {
       "name": "@white-label/payments",
       "version": "0.1.0",
@@ -443,6 +451,10 @@
     "@white-label/database": ["@white-label/database@workspace:packages/database"],
 
     "@white-label/domains": ["@white-label/domains@workspace:packages/domains"],
+
+    "@white-label/inventory": ["@white-label/inventory@workspace:packages/inventory"],
+
+    "@white-label/orders": ["@white-label/orders@workspace:packages/orders"],
 
     "@white-label/payments": ["@white-label/payments@workspace:packages/payments"],
 
