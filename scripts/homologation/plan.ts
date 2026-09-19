@@ -3,6 +3,7 @@ import { DEMO_COUNTS, DEMO_STORES, DEMO_TENANTS } from "./fixtures/data.ts";
 import type {
   DemoStore,
   HmlTemplateCode,
+  HomologationMediaMode,
   HomologationRuntimeConfig,
   ResolvedAsset,
   StoreKey,
@@ -42,6 +43,10 @@ export interface HomologationPlan {
   productionBlockers: readonly string[];
 }
 
+export interface RuntimeValidationOptions {
+  mediaMode?: HomologationMediaMode;
+}
+
 export function expectedAssets(): AssetExpectation[] {
   return DEMO_STORES.flatMap((store) => [
     {
@@ -79,8 +84,8 @@ export function homologationPlan(): HomologationPlan {
       "preço, billing interval e trial dos quatro tenant_plans precisam estar explícitos no config privado",
       "6 usuários Auth precisam existir e seus UUIDs/emails devem corresponder ao config privado",
       "12 hostnames controlados precisam estar verificados antes de serem gravados como active",
-      "76 assets únicos precisam existir no media origin com size e SHA-256 do manifesto",
-      "2 URLs HTTPS reais de logo das White Labels precisam estar publicadas",
+      "76 assets únicos precisam existir no media origin com size e SHA-256 do manifesto para readiness completa de mídia",
+      "2 URLs HTTPS reais de logo das White Labels precisam estar publicadas para readiness completa de mídia",
     ],
   };
 }
@@ -171,11 +176,11 @@ function validateAssets(config: HomologationRuntimeConfig): void {
   }
 }
 
-function validateOwners(config: HomologationRuntimeConfig): void {
+function validateOwners(config: HomologationRuntimeConfig, mediaMode: HomologationMediaMode): void {
   for (const tenant of DEMO_TENANTS) {
     assertUuid(`tenant owner ${tenant.key}`, config.tenantOwners[tenant.key]);
     assertEmail(`tenant owner email ${tenant.key}`, config.tenantOwnerEmails[tenant.key]);
-    assertHttps(`tenant logo ${tenant.key}`, config.tenantLogoUrls[tenant.key]);
+    if (mediaMode === "required") assertHttps(`tenant logo ${tenant.key}`, config.tenantLogoUrls[tenant.key]);
   }
   for (const store of DEMO_STORES) {
     assertUuid(`store owner ${store.key}`, config.storeOwners[store.key]);
@@ -183,18 +188,24 @@ function validateOwners(config: HomologationRuntimeConfig): void {
   }
 }
 
-export function validateRuntimeConfig(config: HomologationRuntimeConfig): void {
+export function validateRuntimeConfig(
+  config: HomologationRuntimeConfig,
+  options: RuntimeValidationOptions = {},
+): void {
+  const mediaMode = options.mediaMode ?? "required";
   if (!config.platformPlanSlug.trim()) throw new Error("platformPlanSlug obrigatório");
   for (const tenant of DEMO_TENANTS) {
     const amount = config.platformBillingAmountCents[tenant.key];
     if (!Number.isSafeInteger(amount) || Number(amount) < 0) throw new Error(`platformBillingAmountCents.${tenant.key} obrigatório`);
   }
   validateStorePlans(config);
-  validateOwners(config);
+  validateOwners(config, mediaMode);
   validateDomains(config);
-  assertHttps("mediaOrigin", config.mediaOrigin);
-  if (config.mediaOrigin.replace(/\/$/, "") !== HML_MEDIA_ORIGIN) throw new Error(`mediaOrigin deve ser ${HML_MEDIA_ORIGIN}`);
-  validateAssets(config);
+  if (mediaMode === "required") {
+    assertHttps("mediaOrigin", config.mediaOrigin);
+    if (config.mediaOrigin.replace(/\/$/, "") !== HML_MEDIA_ORIGIN) throw new Error(`mediaOrigin deve ser ${HML_MEDIA_ORIGIN}`);
+    validateAssets(config);
+  }
   const anchor = Date.parse(config.anchorIso ?? "2026-09-19T12:00:00.000Z");
   if (!Number.isFinite(anchor)) throw new Error("anchorIso inválido");
 }
