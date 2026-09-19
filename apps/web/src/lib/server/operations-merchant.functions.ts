@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { PostgresMerchantOperationsRepository } from "../../../../../packages/merchant-ops/src/index.ts";
+import {
+  assertMerchantOperationsEntitlements,
+  loadMerchantOperationsAccess,
+} from "./merchant-operations-entitlements.server.ts";
+import type { MerchantOperationsFeature } from "./merchant-operations-entitlements.server.ts";
 import { createMerchantOperationsContext } from "./operations-context.server.ts";
 
 const uuid = z.string().uuid();
@@ -12,15 +17,22 @@ const page = z.object({
   search: z.string().trim().max(120).optional(),
 });
 
-async function context() {
+async function context(features: readonly MerchantOperationsFeature[] = []) {
   const current = await createMerchantOperationsContext(getRequestHost());
+  await assertMerchantOperationsEntitlements(current.sql, current.scope, features);
   return { ...current, repo: new PostgresMerchantOperationsRepository(current.sql) };
 }
+
+export const getMerchantOperationsAccess = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const current = await createMerchantOperationsContext(getRequestHost());
+    return loadMerchantOperationsAccess(current.sql, current.scope);
+  });
 
 export const listMerchantSuppliers = createServerFn({ method: "GET" })
   .validator(page)
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["suppliers"]);
     return current.repo.listSuppliers(current.scope, data);
   });
 
@@ -37,21 +49,21 @@ export const createMerchantSupplier = createServerFn({ method: "POST" })
     notes: z.string().trim().max(2000).nullable().optional(),
   }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["suppliers"]);
     return current.repo.createSupplier(current.scope, data);
   });
 
 export const setMerchantSupplierStatus = createServerFn({ method: "POST" })
   .validator(z.object({ supplierId: uuid, status: z.enum(["active", "inactive"]) }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["suppliers"]);
     return current.repo.updateSupplierStatus(current.scope, data.supplierId, data.status);
   });
 
 export const listMerchantPurchases = createServerFn({ method: "GET" })
   .validator(page)
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["purchases"]);
     return current.repo.listPurchases(current.scope, data);
   });
 
@@ -70,27 +82,29 @@ export const createMerchantPurchase = createServerFn({ method: "POST" })
     })).min(1).max(100),
   }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const features: MerchantOperationsFeature[] = ["purchases", "inventory"];
+    if (data.supplierId) features.push("suppliers");
+    const current = await context(features);
     return current.repo.createPurchase(current.scope, data, current.userId);
   });
 
 export const receiveMerchantPurchase = createServerFn({ method: "POST" })
   .validator(z.object({ purchaseId: uuid }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["purchases", "inventory"]);
     return current.repo.receivePurchase(current.scope, data.purchaseId, current.userId);
   });
 
 export const cancelMerchantPurchase = createServerFn({ method: "POST" })
   .validator(z.object({ purchaseId: uuid }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["purchases"]);
     return current.repo.cancelPurchase(current.scope, data.purchaseId, current.userId);
   });
 
 export const listMerchantFinancialCategories = createServerFn({ method: "GET" })
   .handler(async () => {
-    const current = await context();
+    const current = await context(["finance"]);
     return current.repo.listFinancialCategories(current.scope);
   });
 
@@ -100,7 +114,7 @@ export const createMerchantFinancialCategory = createServerFn({ method: "POST" }
     direction: z.enum(["income", "expense", "both"]),
   }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["finance"]);
     return current.repo.createFinancialCategory(current.scope, data);
   });
 
@@ -112,7 +126,7 @@ export const listMerchantFinance = createServerFn({ method: "GET" })
     to: date.optional(),
   }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["finance"]);
     return current.repo.listFinance(current.scope, data);
   });
 
@@ -131,28 +145,33 @@ export const createMerchantFinancialEntry = createServerFn({ method: "POST" })
     notes: z.string().trim().max(4000).nullable().optional(),
   }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const features: MerchantOperationsFeature[] = ["finance"];
+    if (data.supplierId) features.push("suppliers");
+    if (data.purchaseId) features.push("purchases");
+    if (data.customerId) features.push("customers");
+    if (data.orderId) features.push("orders");
+    const current = await context(features);
     return current.repo.createFinancialEntry(current.scope, data, current.userId);
   });
 
 export const settleMerchantFinancialEntry = createServerFn({ method: "POST" })
   .validator(z.object({ entryId: uuid }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["finance"]);
     return current.repo.settleFinancialEntry(current.scope, data.entryId, new Date().toISOString());
   });
 
 export const cancelMerchantFinancialEntry = createServerFn({ method: "POST" })
   .validator(z.object({ entryId: uuid }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["finance"]);
     return current.repo.cancelFinancialEntry(current.scope, data.entryId);
   });
 
 export const summarizeMerchantFinance = createServerFn({ method: "GET" })
   .validator(z.object({ from: date, to: date }))
   .handler(async ({ data }) => {
-    const current = await context();
+    const current = await context(["finance"]);
     return current.repo.summarizeFinance(current.scope, data.from, data.to);
   });
 

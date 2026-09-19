@@ -17,6 +17,7 @@ type MerchantPurchasesManagerProps = Readonly<{
   initial: Page<Purchase>;
   suppliers: Supplier[];
   inventory: InventoryPage;
+  inventoryEnabled: boolean;
 }>;
 const PAGE_SIZE = 25;
 
@@ -72,7 +73,7 @@ function PurchaseForm(props: Readonly<{
 
 function PurchaseListSection(props: Readonly<{
   data: Page<Purchase>;
-  error: string; success: string; loading: boolean;
+  error: string; success: string; loading: boolean; canReceive: boolean;
   onChangeStatus: (purchase: Purchase, action: "receive" | "cancel") => void;
 }>): React.JSX.Element {
   return (
@@ -80,7 +81,7 @@ function PurchaseListSection(props: Readonly<{
       <div className="k-section-head"><div><h2>Compras</h2><p>Rascunhos, recebimentos e cancelamentos com histórico de itens.</p></div></div>
       {props.error ? <div className="k-inline-state k-inline-state--error"><strong>Erro</strong><span>{props.error}</span></div> : null}
       {props.success ? <div className="k-inline-state"><strong>Concluído</strong><span>{props.success}</span></div> : null}
-      {!props.data.items.length ? <div className="k-empty"><strong>Nenhuma compra</strong><span>Crie uma compra acima para começar.</span></div> : <div className="k-table-wrap k-table-wrap--flush"><table className="k-table"><thead><tr><th>Data</th><th>Fornecedor / itens</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody>{props.data.items.map((purchase) => <tr key={purchase.id}><td>{formatDate(purchase.purchasedAt)}</td><td><strong>{purchase.supplierName ?? "Sem fornecedor"}</strong><div className="k-row__meta">{purchase.items.length} item(ns) · {purchase.items.map((item) => item.variantName ?? item.productName).join(", ")}</div></td><td><span className={purchase.status === "received" ? "k-badge k-badge--on" : "k-badge"}>{purchase.status === "draft" ? "Rascunho" : purchase.status === "received" ? "Recebida" : "Cancelada"}</span></td><td>{formatCurrency(purchase.totalCents)}</td><td>{purchase.status === "draft" ? <div className="k-row"><button className="k-button k-button--primary" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "receive"); }}>Receber</button><button className="k-button" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "cancel"); }}>Cancelar</button></div> : "—"}</td></tr>)}</tbody></table></div>}
+      {!props.data.items.length ? <div className="k-empty"><strong>Nenhuma compra</strong><span>{props.canReceive ? "Crie uma compra acima para começar." : "Nenhuma compra registrada."}</span></div> : <div className="k-table-wrap k-table-wrap--flush"><table className="k-table"><thead><tr><th>Data</th><th>Fornecedor / itens</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody>{props.data.items.map((purchase) => <tr key={purchase.id}><td>{formatDate(purchase.purchasedAt)}</td><td><strong>{purchase.supplierName ?? "Sem fornecedor"}</strong><div className="k-row__meta">{purchase.items.length} item(ns) · {purchase.items.map((item) => item.variantName ?? item.productName).join(", ")}</div></td><td><span className={purchase.status === "received" ? "k-badge k-badge--on" : "k-badge"}>{purchase.status === "draft" ? "Rascunho" : purchase.status === "received" ? "Recebida" : "Cancelada"}</span></td><td>{formatCurrency(purchase.totalCents)}</td><td>{purchase.status === "draft" ? <div className="k-row">{props.canReceive ? <button className="k-button k-button--primary" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "receive"); }}>Receber</button> : null}<button className="k-button" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "cancel"); }}>Cancelar</button></div> : "—"}</td></tr>)}</tbody></table></div>}
     </section>
   );
 }
@@ -117,6 +118,7 @@ function usePurchaseManagerState(props: MerchantPurchasesManagerProps) {
     items, setItems, supplierId, setSupplierId, purchasedAt, setPurchasedAt,
     discount, setDiscount, surcharge, setSurcharge, notes, setNotes,
     loading, setLoading, error, setError, success, setSuccess, options, total, setInventory,
+    inventoryEnabled: props.inventoryEnabled,
   };
 }
 
@@ -127,6 +129,7 @@ async function refreshPurchases(state: PurchaseManagerState, page = 1): Promise<
 }
 
 async function searchInventory(state: PurchaseManagerState): Promise<void> {
+  if (!state.inventoryEnabled) return;
   state.setLoading(true); state.setError("");
   try {
     state.setInventory(await listMerchantInventory({ data: { page: 1, pageSize: 100, search: state.inventorySearch.trim() || undefined } }));
@@ -193,7 +196,11 @@ async function changePurchaseStatus(purchase: Purchase, action: "receive" | "can
       await cancelMerchantPurchase({ data: { purchaseId: purchase.id } });
       state.setSuccess("Compra cancelada.");
     }
-    await Promise.all([refreshPurchases(state, state.data.page), searchInventory(state)]);
+    if (state.inventoryEnabled) {
+      await Promise.all([refreshPurchases(state, state.data.page), searchInventory(state)]);
+    } else {
+      await refreshPurchases(state, state.data.page);
+    }
   } catch (cause) {
     state.setError(messageFrom(cause, "Não foi possível alterar a compra."));
   } finally {
@@ -204,7 +211,7 @@ async function changePurchaseStatus(purchase: Purchase, action: "receive" | "can
 export function MerchantPurchasesManager(props: MerchantPurchasesManagerProps): React.JSX.Element {
   const state = usePurchaseManagerState(props);
   return <div className="k-stack">
-    <PurchaseForm
+    {props.inventoryEnabled ? <PurchaseForm
       suppliers={props.suppliers}
       purchasedAt={state.purchasedAt} setPurchasedAt={state.setPurchasedAt}
       supplierId={state.supplierId} setSupplierId={state.setSupplierId}
@@ -219,9 +226,10 @@ export function MerchantPurchasesManager(props: MerchantPurchasesManagerProps): 
       notes={state.notes} setNotes={state.setNotes}
       total={state.total}
       onSubmit={(event) => { void submitPurchase(event, state); }}
-    />
+    /> : <div className="k-inline-state"><strong>Entrada de estoque indisponível</strong><span>O recurso Estoque não está habilitado para este plano. O histórico de compras continua disponível.</span></div>}
     <PurchaseListSection
       data={state.data} error={state.error} success={state.success} loading={state.loading}
+      canReceive={props.inventoryEnabled}
       onChangeStatus={(purchase, action) => { void changePurchaseStatus(purchase, action, state); }}
     />
   </div>;

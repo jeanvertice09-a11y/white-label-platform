@@ -15,8 +15,23 @@ import { MerchantSuppliersManager } from "./merchant-suppliers-manager.tsx";
 import { MerchantTasksManager } from "./merchant-tasks-manager.tsx";
 
 type Tab = "suppliers" | "purchases" | "finance" | "tasks";
+interface OperationsAccess {
+  suppliers: boolean;
+  purchases: boolean;
+  finance: boolean;
+  inventory: boolean;
+  tasks: boolean;
+}
+
+function initialTab(access: OperationsAccess): Tab {
+  if (access.purchases) return "purchases";
+  if (access.suppliers) return "suppliers";
+  if (access.finance) return "finance";
+  return "tasks";
+}
 
 export function MerchantOperationsPage(props: Readonly<{
+  access: OperationsAccess;
   suppliers: Page<Supplier>;
   supplierOptions: Supplier[];
   purchases: Page<Purchase>;
@@ -26,17 +41,17 @@ export function MerchantOperationsPage(props: Readonly<{
   categories: FinancialCategory[];
   tasks: MerchantTask[];
 }>): React.JSX.Element {
-  const [tab, setTab] = useState<Tab>("purchases");
+  const [tab, setTab] = useState<Tab>(() => initialTab(props.access));
   return <div className="k-workspace">
     <nav className="k-toolbar" aria-label="Áreas operacionais">
-      <button className={tab === "purchases" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("purchases"); }}>Compras</button>
-      <button className={tab === "suppliers" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("suppliers"); }}>Fornecedores</button>
-      <button className={tab === "finance" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("finance"); }}>Financeiro</button>
-      <button className={tab === "tasks" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("tasks"); }}>Tarefas</button>
+      {props.access.purchases ? <button className={tab === "purchases" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("purchases"); }}>Compras</button> : null}
+      {props.access.suppliers ? <button className={tab === "suppliers" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("suppliers"); }}>Fornecedores</button> : null}
+      {props.access.finance ? <button className={tab === "finance" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("finance"); }}>Financeiro</button> : null}
+      {props.access.tasks ? <button className={tab === "tasks" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("tasks"); }}>Tarefas</button> : null}
     </nav>
-    {tab === "purchases" ? <MerchantPurchasesManager initial={props.purchases} suppliers={props.supplierOptions} inventory={props.inventory} /> : null}
-    {tab === "suppliers" ? <MerchantSuppliersManager initial={props.suppliers} /> : null}
-    {tab === "finance" ? <MerchantFinanceManager initial={props.finance} initialSummary={props.financeSummary} categories={props.categories} /> : null}
-    {tab === "tasks" ? <MerchantTasksManager initial={props.tasks} /> : null}
+    {props.access.purchases && tab === "purchases" ? <MerchantPurchasesManager initial={props.purchases} suppliers={props.supplierOptions} inventory={props.inventory} inventoryEnabled={props.access.inventory} /> : null}
+    {props.access.suppliers && tab === "suppliers" ? <MerchantSuppliersManager initial={props.suppliers} /> : null}
+    {props.access.finance && tab === "finance" ? <MerchantFinanceManager initial={props.finance} initialSummary={props.financeSummary} categories={props.categories} /> : null}
+    {props.access.tasks && tab === "tasks" ? <MerchantTasksManager initial={props.tasks} /> : null}
   </div>;
 }

@@ -5,6 +5,7 @@ import { MerchantOperationsPage } from "../features/store-admin/merchant-operati
 import { monthRange } from "../features/store-admin/merchant-operations-utils.ts";
 import { listMerchantInventory } from "../lib/server/operations-inventory.functions.ts";
 import {
+  getMerchantOperationsAccess,
   listMerchantFinance,
   listMerchantFinancialCategories,
   listMerchantPurchases,
@@ -22,7 +23,16 @@ import type {
   Supplier,
 } from "../../../../packages/merchant-ops/src/types.ts";
 
+interface OperationsAccess {
+  suppliers: boolean;
+  purchases: boolean;
+  finance: boolean;
+  inventory: boolean;
+  tasks: boolean;
+}
+
 interface OperationsLoaderData {
+  access: OperationsAccess;
   suppliers: Page<Supplier>;
   supplierOptions: Supplier[];
   purchases: Page<Purchase>;
@@ -33,20 +43,44 @@ interface OperationsLoaderData {
   tasks: MerchantTask[];
 }
 
+function emptyPage<T>(pageSize: number): Page<T> {
+  return { items: [], page: 1, pageSize, total: 0 };
+}
+
+function emptyInventory(): InventoryPage {
+  return { items: [], page: 1, pageSize: 100, total: 0 };
+}
+
+function emptyFinanceSummary(): FinanceSummary {
+  return {
+    openReceivableCents: 0,
+    overdueReceivableCents: 0,
+    openPayableCents: 0,
+    overduePayableCents: 0,
+    receivedCents: 0,
+    paidCents: 0,
+    cashFlowCents: 0,
+    competenceReceivableCents: 0,
+    competencePayableCents: 0,
+    managerialResultCents: 0,
+  };
+}
+
 export const Route = createFileRoute("/admin/operations")({
   loader: async (): Promise<OperationsLoaderData> => {
+    const access = await getMerchantOperationsAccess();
     const range = monthRange();
     const [suppliers, supplierOptions, purchases, inventory, finance, financeSummary, categories, tasks] = await Promise.all([
-      listMerchantSuppliers({ data: { page: 1, pageSize: 25 } }),
-      listMerchantSuppliers({ data: { page: 1, pageSize: 100 } }),
-      listMerchantPurchases({ data: { page: 1, pageSize: 25 } }),
-      listMerchantInventory({ data: { page: 1, pageSize: 100 } }),
-      listMerchantFinance({ data: { page: 1, pageSize: 25, from: range.from, to: range.to } }),
-      summarizeMerchantFinance({ data: range }),
-      listMerchantFinancialCategories(),
-      listMerchantTasks(),
+      access.suppliers ? listMerchantSuppliers({ data: { page: 1, pageSize: 25 } }) : Promise.resolve(emptyPage<Supplier>(25)),
+      access.suppliers && access.purchases ? listMerchantSuppliers({ data: { page: 1, pageSize: 100 } }) : Promise.resolve(emptyPage<Supplier>(100)),
+      access.purchases ? listMerchantPurchases({ data: { page: 1, pageSize: 25 } }) : Promise.resolve(emptyPage<Purchase>(25)),
+      access.purchases && access.inventory ? listMerchantInventory({ data: { page: 1, pageSize: 100 } }) : Promise.resolve(emptyInventory()),
+      access.finance ? listMerchantFinance({ data: { page: 1, pageSize: 25, from: range.from, to: range.to } }) : Promise.resolve(emptyPage<FinancialEntry>(25)),
+      access.finance ? summarizeMerchantFinance({ data: range }) : Promise.resolve(emptyFinanceSummary()),
+      access.finance ? listMerchantFinancialCategories() : Promise.resolve([]),
+      access.tasks ? listMerchantTasks() : Promise.resolve([]),
     ]);
-    return { suppliers, supplierOptions: supplierOptions.items, purchases, inventory, finance, financeSummary, categories, tasks };
+    return { access, suppliers, supplierOptions: supplierOptions.items, purchases, inventory, finance, financeSummary, categories, tasks };
   },
   pendingComponent: OperationsPending,
   errorComponent: OperationsError,
@@ -67,6 +101,7 @@ function OperationsRoutePage(): React.JSX.Element {
   return <div className="k-page">
     <PageHead title="Operações" description="Fornecedores, compras, financeiro interno e tarefas da loja em um único espaço operacional." />
     <MerchantOperationsPage
+      access={data.access}
       suppliers={data.suppliers}
       supplierOptions={data.supplierOptions}
       purchases={data.purchases}
