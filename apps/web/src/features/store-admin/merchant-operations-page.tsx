@@ -18,6 +18,7 @@ type Tab = "suppliers" | "purchases" | "finance" | "tasks";
 
 export function MerchantOperationsPage(props: Readonly<{
   suppliers: Page<Supplier>;
+  supplierOptions: Supplier[];
   purchases: Page<Purchase>;
   inventory: InventoryPage;
   finance: Page<FinancialEntry>;
@@ -33,7 +34,7 @@ export function MerchantOperationsPage(props: Readonly<{
       <button className={tab === "finance" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("finance"); }}>Financeiro</button>
       <button className={tab === "tasks" ? "k-button k-button--primary" : "k-button"} type="button" onClick={() => { setTab("tasks"); }}>Tarefas</button>
     </nav>
-    {tab === "purchases" ? <MerchantPurchasesManager initial={props.purchases} suppliers={props.suppliers.items} inventory={props.inventory} /> : null}
+    {tab === "purchases" ? <MerchantPurchasesManager initial={props.purchases} suppliers={props.supplierOptions} inventory={props.inventory} /> : null}
     {tab === "suppliers" ? <MerchantSuppliersManager initial={props.suppliers} /> : null}
     {tab === "finance" ? <MerchantFinanceManager initial={props.finance} initialSummary={props.financeSummary} categories={props.categories} /> : null}
     {tab === "tasks" ? <MerchantTasksManager initial={props.tasks} /> : null}
