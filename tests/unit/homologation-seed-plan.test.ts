@@ -67,7 +67,7 @@ describe("homologation seed plan", () => {
     const config = structuredClone(homologationTestConfig());
     const first = expectedAssets().at(0);
     if (!first) throw new Error("asset de teste ausente");
-    delete config.resolvedAssets[first.key];
+    Reflect.deleteProperty(config.resolvedAssets, first.key);
     expect(() => { validateRuntimeConfig(config); }).toThrow("asset ausente no manifesto resolvido");
   });
 
@@ -84,7 +84,6 @@ describe("homologation seed plan", () => {
     const badMime = structuredClone(homologationTestConfig());
     const mimeAsset = badMime.resolvedAssets[first.key];
     if (!mimeAsset) throw new Error("asset de teste ausente");
-    mimeAsset.mimeType = "image/webp";
     Object.assign(mimeAsset, { mimeType: "application/octet-stream" });
     expect(() => { validateRuntimeConfig(badMime); }).toThrow("MIME inválido");
 
