@@ -2,8 +2,9 @@ import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { DashboardIcon, type DashboardIconName } from "../../components/dashboard/DashboardIcon.tsx";
-import { signOut } from "../../lib/supabase-client.ts";
 import type { TenantControlDashboardData } from "../../lib/server/platform-console.types.ts";
+import type { TenantBillingWorkspace } from "../../lib/server/tenant-billing.types.ts";
+import { signOut } from "../../lib/supabase-client.ts";
 
 type ControlData = TenantControlDashboardData;
 type NavigationItem = Readonly<{ href: string; label: string; icon: DashboardIconName }>;
@@ -16,10 +17,13 @@ const navigation: readonly NavigationItem[] = [
   { href: "#branding", label: "Branding", icon: "palette" },
   { href: "#domain-management", label: "Domínios", icon: "domains" },
   { href: "#gateway-management", label: "Gateways", icon: "integrations" },
+  { href: "#access", label: "Acessos", icon: "support" },
+  { href: "#audit", label: "Auditoria", icon: "audit" },
 ];
 
 function money(cents: number): string { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100); }
-function date(value: string): string { return value ? new Date(value).toLocaleDateString("pt-BR") : "—"; }
+function date(value: string | null): string { return value ? new Date(value).toLocaleDateString("pt-BR") : "—"; }
+function dateTime(value: string): string { return value ? new Date(value).toLocaleString("pt-BR") : "—"; }
 
 function ControlSidebarAccount({ data }: Readonly<{ data: ControlData }>): React.JSX.Element {
   const navigate = useNavigate();
@@ -56,7 +60,7 @@ function SummaryItem(props: Readonly<{ label: string; value: ReactNode; detail: 
 }
 
 function OperationAttention(props: Readonly<{ pastDue: number; pendingPayments: number; suspendedStores: number; pendingDomains: number }>): React.JSX.Element {
-  const rows = [["Assinaturas em atraso", "Status past_due", props.pastDue], ["Pagamentos pendentes", "Aguardando confirmação", props.pendingPayments], ["Lojas suspensas", "Fora do status ativo", props.suspendedStores], ["Domínios pendentes", "Ainda não ativos", props.pendingDomains]] as const;
+  const rows = [["Assinaturas em atraso", "Status past_due", props.pastDue], ["Pagamentos pendentes", "tenant_billing aguardando confirmação", props.pendingPayments], ["Lojas suspensas", "Fora do status ativo", props.suspendedStores], ["Domínios pendentes", "Ainda não ativos", props.pendingDomains]] as const;
   return <section className="control-editorial-section control-operations-panel">
     <div className="control-editorial-section__header"><div><h2>Situação da operação</h2><p>Itens que merecem acompanhamento agora.</p></div></div>
     <div className="console-fact-list">{rows.map(([label, detail, value]) => <div className="console-fact-row" key={label}><div><strong>{label}</strong><small>{detail}</small></div><b>{value}</b></div>)}</div>
@@ -70,30 +74,18 @@ function RecentStores({ data }: Readonly<{ data: ControlData }>): React.JSX.Elem
   </section>;
 }
 
-function RecentPayments({ data }: Readonly<{ data: ControlData }>): React.JSX.Element {
-  return <section className="control-editorial-section control-finance-snapshot">
-    <div className="control-editorial-section__header"><div><h2>Pagamentos recentes</h2><p>Movimentações registradas para esta White Label.</p></div><a href="#tenant-billing">Ver faturamento</a></div>
-    {data.payments.length ? <div className="control-table-wrap"><table className="control-table"><thead><tr><th>Data</th><th>Nível</th><th>Status</th><th>Valor</th></tr></thead><tbody>{data.payments.slice(0, 6).map((item) => <tr key={item.id}><td>{date(item.createdAt)}</td><td>{item.level}</td><td><span className="control-badge">{item.status}</span></td><td className="console-money">{money(item.amountCents)}</td></tr>)}</tbody></table></div> : <div className="control-empty"><strong>Sem pagamentos registrados</strong><p>As movimentações financeiras aparecerão aqui quando existirem.</p></div>}
-  </section>;
-}
-
-function Overview({ data }: Readonly<{ data: ControlData }>) {
+function Overview({ data, billing }: Readonly<{ data: ControlData; billing: TenantBillingWorkspace }>) {
   const activeStores = data.stores.filter((item) => item.status === "active").length;
-  const activeSubscriptions = data.subscriptions.filter((item) => item.status === "active").length;
-  const trialSubscriptions = data.subscriptions.filter((item) => item.status === "trialing").length;
-  const paidPayments = data.payments.filter((item) => item.status === "paid");
-  const paid = paidPayments.reduce((sum, item) => sum + item.amountCents, 0);
   const pendingDomains = data.domains.filter((item) => item.status !== "active").length;
   return <section className="control-section control-overview" id="overview">
-    <div className="control-page-header"><div><span className="console-page-kicker">{data.tenant.name}</span><h1>Operação</h1><p>Lojas, assinaturas, receita e infraestrutura da White Label em uma leitura única.</p></div><div className="control-page-context"><span className="console-status">{data.tenant.status}</span><small>{data.tenant.slug}</small></div></div>
-    <section className="control-overview-band" aria-label="Resumo operacional"><div className="control-overview-primary"><span>Receita recebida</span><strong>{money(paid)}</strong><small>{String(paidPayments.length)} pagamentos confirmados</small></div><div className="control-overview-stats"><SummaryItem label="Lojas" value={data.stores.length} detail={`${String(activeStores)} ativas`} /><SummaryItem label="Assinaturas" value={data.subscriptions.length} detail={`${String(activeSubscriptions)} ativas · ${String(trialSubscriptions)} trials`} /><SummaryItem label="Domínios" value={data.domains.length} detail={`${String(data.domains.length - pendingDomains)} ativos`} /></div></section>
-    <div className="control-dashboard-columns"><OperationAttention pastDue={data.subscriptions.filter((item) => item.status === "past_due").length} pendingPayments={data.payments.filter((item) => item.status === "pending").length} suspendedStores={data.stores.filter((item) => item.status === "suspended").length} pendingDomains={pendingDomains} /><RecentStores data={data} /></div>
-    <RecentPayments data={data} />
+    <div className="control-page-header"><div><span className="console-page-kicker">{data.tenant.name}</span><h1>Operação</h1><p>Lojas, assinaturas, receita e infraestrutura da White Label em uma leitura única.</p></div><div className="control-page-context"><span className="console-status">{data.tenant.status}</span><small>{data.tenant.trialEndsAt ? `Trial até ${date(data.tenant.trialEndsAt)}` : data.tenant.slug}</small></div></div>
+    <section className="control-overview-band" aria-label="Resumo operacional"><div className="control-overview-primary"><span>Receita capturada</span><strong>{money(billing.metrics.revenueCapturedCents)}</strong><small>{String(billing.metrics.paymentsCaptured)} pagamentos tenant_billing capturados</small></div><div className="control-overview-stats"><SummaryItem label="Lojas" value={data.stores.length} detail={`${String(activeStores)} ativas`} /><SummaryItem label="Assinaturas" value={billing.total} detail={`${String(billing.metrics.subscriptionsActive)} ativas · ${String(billing.metrics.subscriptionsTrialing)} trials`} /><SummaryItem label="Domínios" value={data.domains.length} detail={`${String(data.domains.length - pendingDomains)} ativos`} /></div></section>
+    <div className="control-dashboard-columns"><OperationAttention pastDue={billing.metrics.subscriptionsPastDue} pendingPayments={billing.metrics.paymentsPending} suspendedStores={data.stores.filter((item) => item.status === "suspended").length} pendingDomains={pendingDomains} /><RecentStores data={data} /></div>
   </section>;
 }
 
 function BrandingSnapshot({ data }: Readonly<{ data: ControlData }>) {
-  const hasSettings = data.tenant.settings.trim().length > 0;
+  const hasSettings = data.tenant.settings.trim() !== "{}";
   return <section className="control-section control-branding-section" id="branding">
     <div className="control-section__head"><div><span className="control-kicker">Identidade</span><h2>Branding da White Label</h2><p>Referência visual atualmente persistida para esta plataforma.</p></div></div>
     <div className="control-branding-layout">
@@ -103,7 +95,20 @@ function BrandingSnapshot({ data }: Readonly<{ data: ControlData }>) {
   </section>;
 }
 
-export function ControlDashboard({ data, children }: Readonly<{ data: ControlData; children: ReactNode }>) {
+function AccessAndAudit({ data }: Readonly<{ data: ControlData }>): React.JSX.Element {
+  return <div className="control-dashboard-columns">
+    <section className="control-editorial-section" id="access">
+      <div className="control-editorial-section__header"><div><h2>Membros da White Label</h2><p>Acessos do tenant. Esta visão não expõe credenciais.</p></div></div>
+      {data.members.length ? <div className="console-compact-list">{data.members.map((member) => <div className="console-compact-row" key={`${member.userId}:${member.role}`}><div><strong>{member.role}</strong><small>{member.userId}</small></div><span>{date(member.createdAt)}</span></div>)}</div> : <div className="control-empty"><strong>Nenhum membro encontrado</strong><p>Não há memberships persistidas para este tenant.</p></div>}
+    </section>
+    <section className="control-editorial-section" id="audit">
+      <div className="control-editorial-section__header"><div><h2>Atividade recente</h2><p>Eventos de auditoria somente leitura do tenant.</p></div></div>
+      {data.audits.length ? <div className="console-compact-list">{data.audits.slice(0, 10).map((item) => <div className="console-compact-row" key={item.id}><div><strong>{item.action}</strong><small>{item.resourceType}{item.resourceId ? ` · ${item.resourceId}` : ""}</small></div><span>{dateTime(item.createdAt)}</span></div>)}</div> : <div className="control-empty"><strong>Sem atividade registrada</strong><p>Eventos auditáveis aparecerão aqui quando existirem.</p></div>}
+    </section>
+  </div>;
+}
+
+export function ControlDashboard({ data, billing, children }: Readonly<{ data: ControlData; billing: TenantBillingWorkspace; children: ReactNode }>) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("#overview");
   return <div className="control-shell console-shell">
@@ -111,7 +116,7 @@ export function ControlDashboard({ data, children }: Readonly<{ data: ControlDat
     <ControlSidebar data={data} open={mobileOpen} activeHref={activeHref} onClose={() => { setMobileOpen(false); }} onNavigate={setActiveHref} />
     <main className="control-main console-shell__content">
       <div className="control-mobile-bar"><button type="button" className="control-mobile-bar__menu" onClick={() => { setMobileOpen(true); }} aria-label="Abrir menu"><DashboardIcon name="menu" /></button><div><strong>{data.tenant.name}</strong><span>Controle da White Label</span></div></div>
-      <div className="control-content console-container" id="control-content" tabIndex={-1}><Overview data={data} />{children}<BrandingSnapshot data={data} /></div>
+      <div className="control-content console-container" id="control-content" tabIndex={-1}><Overview data={data} billing={billing} />{children}<BrandingSnapshot data={data} /><AccessAndAudit data={data} /></div>
     </main>
   </div>;
 }

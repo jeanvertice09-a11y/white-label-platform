@@ -49,7 +49,7 @@ export interface MasterConsoleData {
 export interface TenantControlDashboardData {
   tenant: {
     id: string; name: string; slug: string; status: string; createdAt: string;
-    logoUrl: string | null; primaryColor: string | null; settings: string;
+    trialEndsAt: string | null; logoUrl: string | null; primaryColor: string | null; settings: string;
   };
   stores: Array<{
     id: string; name: string; slug: string; status: string; createdAt: string; memberCount: number;
@@ -58,16 +58,17 @@ export interface TenantControlDashboardData {
     id: string; hostname: string; type: string; status: string;
     storeId: string | null; verifiedAt: string | null;
   }>;
-  subscriptions: Array<{
-    id: string; level: string; status: string; planName: string | null;
-    priceCents: number; createdAt: string;
+  plans: Array<{
+    id: string; slug: string; name: string; priceCents: number; billingInterval: string;
+    active: boolean; trialEnabled: boolean; trialDays: number;
   }>;
-  payments: Array<{
-    id: string; level: string; amountCents: number; status: string; createdAt: string;
-  }>;
-  plans: Array<{ id: string; slug: string; name: string; priceCents: number }>;
   gateways: Array<{
     id: string; provider: string; label: string; level: string;
     storeId: string | null; createdAt: string;
+  }>;
+  members: Array<{ userId: string; role: string; createdAt: string }>;
+  audits: Array<{
+    id: string; action: string; resourceType: string; resourceId: string | null;
+    actorUserId: string | null; createdAt: string;
   }>;
 }

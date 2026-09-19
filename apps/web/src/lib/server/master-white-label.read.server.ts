@@ -19,6 +19,7 @@ import {
 } from "./platform-billing.read.server.ts";
 
 type Row = Record<string, unknown>;
+type DetailRows = [Row[], Row[], Row[], Row[], Row[], Row[], Row[]];
 
 export interface WhiteLabelListInput {
   search: string;
@@ -49,7 +50,7 @@ function mapListItem(row: Row): MasterWhiteLabelListResult["items"][number] {
   };
 }
 
-async function detailRows(sql: AdminSql, tenantId: string): Promise<[Row[], Row[], Row[], Row[], Row[]]> {
+async function detailRows(sql: AdminSql, tenantId: string): Promise<DetailRows> {
   return Promise.all([
     sql.query(`select t.id::text,t.name,t.slug,t.status,t.created_at::text,t.updated_at::text,
       t.trial_ends_at::text,b.logo_url,b.primary_color,coalesce(s.settings,'{}'::jsonb) as settings
@@ -66,6 +67,18 @@ async function detailRows(sql: AdminSql, tenantId: string): Promise<[Row[], Row[
     sql.query(`select pt.id::text,pt.code,pt.name,pt.active,count(pte.entitlement_key)::integer as entitlement_count
       from public.plan_templates pt left join public.plan_template_entitlements pte on pte.template_id=pt.id
       group by pt.id,pt.code,pt.name,pt.active,pt.sort_order order by pt.sort_order,pt.code`, []),
+    sql.query(`select st.id::text,st.name,st.slug,st.status,st.created_at::text,
+      owner.user_id::text owner_user_id,owner.email owner_email,
+      (select count(*) from public.store_members sm where sm.tenant_id=st.tenant_id and sm.store_id=st.id)::integer member_count
+      from public.stores st
+      left join lateral (
+        select sm.user_id,u.email from public.store_members sm left join auth.users u on u.id=sm.user_id
+        where sm.tenant_id=st.tenant_id and sm.store_id=st.id and sm.role='store_owner'
+        order by sm.created_at asc limit 1
+      ) owner on true
+      where st.tenant_id=$1::uuid order by st.created_at desc`, [tenantId]),
+    sql.query(`select id::text,action,resource_type,resource_id::text,actor_user_id::text,created_at::text
+      from public.audit_logs where tenant_id=$1::uuid order by created_at desc limit 50`, [tenantId]),
   ]);
 }
 
@@ -82,7 +95,7 @@ export async function getWhiteLabelDetail(
 }
 
 function buildDetail(
-  rows: [Row[], Row[], Row[], Row[], Row[]],
+  rows: DetailRows,
   tenant: Row,
   platformBilling: MasterWhiteLabelDetail["platformBilling"],
   platformPlans: MasterWhiteLabelDetail["platformPlans"],
@@ -98,6 +111,8 @@ function buildDetail(
     platformBilling,
     platformPlans,
     planTemplates: rows[4].map(mapTemplate),
+    stores: rows[5].map(mapStore),
+    audits: rows[6].map(mapAudit),
   };
 }
 
@@ -114,11 +129,25 @@ function mapTenant(row: Row): MasterWhiteLabelDetail["tenant"] {
 function mapMember(row: Row): MasterWhiteLabelDetail["members"][number] {
   return { userId: text(row, "user_id"), email: nullableText(row, "email"), role: text(row, "role"), createdAt: text(row, "created_at") };
 }
+function mapStore(row: Row): MasterWhiteLabelDetail["stores"][number] {
+  return {
+    id: text(row, "id"), name: text(row, "name"), slug: text(row, "slug"), status: text(row, "status"),
+    createdAt: text(row, "created_at"), ownerUserId: nullableText(row, "owner_user_id"),
+    ownerEmail: nullableText(row, "owner_email"), memberCount: numberValue(row, "member_count"),
+  };
+}
 function mapDomain(row: Row): MasterWhiteLabelDetail["domains"][number] {
   return {
     id: text(row, "id"), hostname: text(row, "hostname"), type: text(row, "type") as DomainType,
     status: text(row, "status") as DomainStatus, storeId: nullableText(row, "store_id"),
     verifiedAt: nullableText(row, "verified_at"), createdAt: text(row, "created_at"),
+  };
+}
+function mapAudit(row: Row): MasterWhiteLabelDetail["audits"][number] {
+  return {
+    id: text(row, "id"), action: text(row, "action"), resourceType: text(row, "resource_type"),
+    resourceId: nullableText(row, "resource_id"), actorUserId: nullableText(row, "actor_user_id"),
+    createdAt: text(row, "created_at"),
   };
 }
 function mapCommercialPlan(row: Row): MasterWhiteLabelDetail["commercialPlans"][number] {

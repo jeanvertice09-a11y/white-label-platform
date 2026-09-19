@@ -23,9 +23,17 @@ export interface MasterWhiteLabelDetail {
     trialEndsAt: string | null; logoUrl: string | null; primaryColor: string | null; settings: JsonObject;
   };
   members: Array<{ userId: string; email: string | null; role: string; createdAt: string }>;
+  stores: Array<{
+    id: string; name: string; slug: string; status: string; createdAt: string;
+    ownerUserId: string | null; ownerEmail: string | null; memberCount: number;
+  }>;
   domains: Array<{
     id: string; hostname: string; type: DomainType; status: DomainStatus;
     storeId: string | null; verifiedAt: string | null; createdAt: string;
+  }>;
+  audits: Array<{
+    id: string; action: string; resourceType: string; resourceId: string | null;
+    actorUserId: string | null; createdAt: string;
   }>;
   commercialPlans: Array<{
     id: string; slug: string; name: string; templateName: string; active: boolean;
