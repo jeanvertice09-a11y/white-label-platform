@@ -57,7 +57,7 @@ async function unresolvedState(sql: SqlExecutor, host: string): Promise<PublicSi
      where hostname=$1 order by created_at desc limit 1`,
     [host],
   );
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) return { kind: "state", state: "unknown" };
   return {
     kind: "state",

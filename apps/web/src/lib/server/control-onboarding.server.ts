@@ -79,7 +79,7 @@ export async function loadControlOnboarding(
      from public.tenants t where t.id=$1::uuid limit 1`,
     [tenantId],
   );
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) throw new Error("White Label não encontrada.");
   const items = buildItems(row);
   const requiredItems = items.filter((item) => item.required);
