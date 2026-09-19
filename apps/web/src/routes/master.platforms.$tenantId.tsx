@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MasterPageHeader, MasterPanel } from "../components/master/ui.tsx";
+import { MasterMetricCard, MasterPageHeader, MasterPanel } from "../components/master/ui.tsx";
 import { MasterPlatformBillingPanel } from "../features/master/master-platform-billing-panel.tsx";
 import { MasterWhiteLabelDetailForm } from "../features/master/master-white-label-detail-form.tsx";
 import { MasterWhiteLabelDomainManager } from "../features/master/master-white-label-domain-manager.tsx";
@@ -10,9 +10,7 @@ import type { MasterWhiteLabelDetail } from "../lib/server/master-white-label.ty
 export const Route = createFileRoute("/master/platforms/$tenantId")({
   loader: async (context) => {
     const params = context.params as Record<string, string>;
-    const detail = await getMasterWhiteLabel({
-      data: { tenantId: params["tenantId"] ?? "" },
-    });
+    const detail = await getMasterWhiteLabel({ data: { tenantId: params["tenantId"] ?? "" } });
     if (!detail) throw new Error("White Label não encontrada.");
     return detail;
   },
@@ -23,51 +21,62 @@ function MasterWhiteLabelDetailPage(): React.JSX.Element {
   const loaderData: unknown = Route.useLoaderData();
   const detail = loaderData as MasterWhiteLabelDetail;
   return (
-    <div className="master-stack">
+    <div className="master-stack console-page">
       <MasterPageHeader
         title={detail.tenant.name}
-        description={`White Label ${detail.tenant.slug} · ${detail.tenant.status}`}
-        action={<a className="k-button" href="/master/platforms">Voltar</a>}
+        description={`${detail.tenant.slug} · gestão da White Label e suas configurações comerciais.`}
+        action={<a className="k-button" href="/master/platforms">Voltar para White Labels</a>}
       />
-      <MasterWhiteLabelDetailForm detail={detail} />
-      <MasterPlatformBillingPanel detail={detail} />
-      <MasterWhiteLabelDomainManager detail={detail} />
-      <MasterPanel title="Membros">
-        <div className="master-table-wrap">
-          <table className="master-table">
-            <thead><tr><th>Usuário</th><th>Role</th></tr></thead>
-            <tbody>
-              {detail.members.map((member) => (
-                <tr key={member.userId}>
-                  <td>{member.email ?? member.userId}</td>
-                  <td>{member.role}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </MasterPanel>
-      <MasterPanel title="Planos comerciais da White Label">
-        <div className="master-table-wrap">
-          <table className="master-table">
-            <thead>
-              <tr><th>Template Kataluu</th><th>Status</th><th>Entitlements configurados</th></tr>
-            </thead>
-            <tbody>
-              {detail.planTemplates.map((template) => (
+
+      <div className="master-metrics master-summary-surface" aria-label="Resumo da White Label">
+        <MasterMetricCard icon="platforms" label="Status" value={detail.tenant.status} detail="Situação da plataforma" />
+        <MasterMetricCard icon="support" label="Membros" value={String(detail.members.length)} detail="Acessos vinculados" />
+        <MasterMetricCard icon="domains" label="Domínios" value={String(detail.domains.length)} detail={`${String(detail.domains.filter((item) => item.status === "active").length)} ativos`} />
+        <MasterMetricCard icon="subscriptions" label="Planos comerciais" value={String(detail.commercialPlans.length)} detail="Ofertas para lojistas" />
+      </div>
+
+      <section className="console-detail-section" aria-labelledby="wl-config-title">
+        <div className="console-section-heading"><span>Configuração</span><h2 id="wl-config-title">Identidade e operação</h2><p>Dados gerais, responsável e status operacional da White Label.</p></div>
+        <MasterWhiteLabelDetailForm detail={detail} />
+      </section>
+
+      <section className="console-detail-section" aria-labelledby="wl-billing-title">
+        <div className="console-section-heading"><span>Comercial</span><h2 id="wl-billing-title">Billing Kataluu → White Label</h2><p>Plano, período, trial e pagamentos da plataforma.</p></div>
+        <MasterPlatformBillingPanel detail={detail} />
+      </section>
+
+      <section className="console-detail-section" aria-labelledby="wl-domains-title">
+        <div className="console-section-heading"><span>Domínios</span><h2 id="wl-domains-title">Endereços e verificação</h2><p>Domínios vinculados e estado da configuração DNS.</p></div>
+        <MasterWhiteLabelDomainManager detail={detail} />
+      </section>
+
+      <div className="master-grid master-grid--two">
+        <MasterPanel title="Membros">
+          <div className="master-table-wrap">
+            <table className="master-table">
+              <thead><tr><th>Usuário</th><th>Role</th></tr></thead>
+              <tbody>{detail.members.map((member) => (
+                <tr key={member.userId}><td>{member.email ?? member.userId}</td><td><span className="console-status">{member.role}</span></td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </MasterPanel>
+        <MasterPanel title="Templates comerciais">
+          <div className="master-table-wrap">
+            <table className="master-table">
+              <thead><tr><th>Template Kataluu</th><th>Status</th><th>Entitlements</th></tr></thead>
+              <tbody>{detail.planTemplates.map((template) => (
                 <tr key={template.id}>
-                  <td>{template.name}<small>{template.code}</small></td>
-                  <td>{template.active ? "Ativo" : "Inativo"}</td>
+                  <td><strong>{template.name}</strong><small>{template.code}</small></td>
+                  <td><span className="console-status">{template.active ? "Ativo" : "Inativo"}</span></td>
                   <td>{template.entitlementCount}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {detail.commercialPlans.length
-          ? <p>Planos desta White Label: {detail.commercialPlans.map((plan) => plan.name).join(", ")}</p>
-          : <p>Nenhum plano comercial de lojista configurado.</p>}
-      </MasterPanel>
+              ))}</tbody>
+            </table>
+          </div>
+          <p className="console-panel-note">{detail.commercialPlans.length ? `Planos configurados: ${detail.commercialPlans.map((plan) => plan.name).join(", ")}` : "Nenhum plano comercial de lojista configurado."}</p>
+        </MasterPanel>
+      </div>
     </div>
   );
 }
