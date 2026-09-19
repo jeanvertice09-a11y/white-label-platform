@@ -12,7 +12,73 @@ import {
 import { formatCurrency, formatDate, messageFrom, parseMoneyToCents, today } from "./merchant-operations-utils.ts";
 
 type DraftItem = { key: string; productId: string; variantId: string | null; label: string; quantity: number; unitCost: string };
+type InventoryOption = InventoryPage["items"][number];
 const PAGE_SIZE = 25;
+
+function PurchaseItemsTable({ items, setItems }: Readonly<{ items: DraftItem[]; setItems: (items: DraftItem[]) => void }>): React.JSX.Element | null {
+  if (!items.length) return null;
+  return <div className="k-table-wrap"><table className="k-table"><thead><tr><th>Item</th><th>Quantidade</th><th>Custo unitário</th><th>Subtotal</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.key}><td><strong>{item.label}</strong></td><td><input aria-label="Quantidade" type="number" min={1} max={1000000} value={item.quantity} onChange={(e) => { const quantity = Math.max(1, Number(e.target.value) || 1); setItems(items.map((current) => current.key === item.key ? { ...current, quantity } : current)); }} /></td><td><input aria-label="Custo unitário" inputMode="decimal" value={item.unitCost} onChange={(e) => { setItems(items.map((current) => current.key === item.key ? { ...current, unitCost: e.target.value } : current)); }} /></td><td>{formatCurrency(item.quantity * parseMoneyToCents(item.unitCost))}</td><td><button className="k-button" type="button" onClick={() => { setItems(items.filter((current) => current.key !== item.key)); }}>Remover</button></td></tr>)}</tbody></table></div>;
+}
+
+function PurchaseForm(props: Readonly<{
+  suppliers: Supplier[];
+  purchasedAt: string; setPurchasedAt: (value: string) => void;
+  supplierId: string; setSupplierId: (value: string) => void;
+  inventorySearch: string; setInventorySearch: (value: string) => void;
+  onSearchInventory: () => void; loading: boolean;
+  options: InventoryOption[];
+  selectedKey: string; setSelectedKey: (value: string) => void;
+  onAddItem: () => void;
+  items: DraftItem[]; setItems: (items: DraftItem[]) => void;
+  discount: string; setDiscount: (value: string) => void;
+  surcharge: string; setSurcharge: (value: string) => void;
+  notes: string; setNotes: (value: string) => void;
+  total: number;
+  onSubmit: (event: SyntheticEvent<HTMLFormElement>) => void;
+}>): React.JSX.Element {
+  return (
+    <section className="k-card">
+      <h2>Nova compra de estoque</h2>
+      <p className="k-muted">O total é recalculado no servidor e a entrada no estoque só ocorre ao receber a compra.</p>
+      <form className="k-form" onSubmit={props.onSubmit}>
+        <div className="k-form__grid">
+          <label className="k-field"><span>Fornecedor</span><select value={props.supplierId} onChange={(e) => { props.setSupplierId(e.target.value); }}><option value="">Sem fornecedor</option>{props.suppliers.filter((item) => item.status === "active").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label className="k-field"><span>Data da compra</span><input type="date" required value={props.purchasedAt} onChange={(e) => { props.setPurchasedAt(e.target.value); }} /></label>
+        </div>
+        <div className="k-toolbar">
+          <label className="k-toolbar__search"><span className="k-visually-hidden">Buscar produto</span><input value={props.inventorySearch} onChange={(e) => { props.setInventorySearch(e.target.value); }} placeholder="Buscar produto, variante ou SKU…" /></label>
+          <button className="k-button" type="button" onClick={props.onSearchInventory} disabled={props.loading}>Buscar produto</button>
+        </div>
+        <div className="k-form__grid">
+          <label className="k-field k-field--full"><span>Produto / variante</span><select value={props.selectedKey} onChange={(e) => { props.setSelectedKey(e.target.value); }}><option value="">Selecione…</option>{props.options.map((item) => { const key = `${item.productId}:${item.variantId ?? ""}`; return <option key={key} value={key}>{item.productName}{item.variantName ? ` · ${item.variantName}` : ""}{item.sku ? ` · ${item.sku}` : ""} · saldo {item.currentQuantity}</option>; })}</select></label>
+        </div>
+        <div className="k-actions"><button className="k-button" type="button" disabled={!props.selectedKey || props.loading} onClick={props.onAddItem}>Adicionar item</button></div>
+        <PurchaseItemsTable items={props.items} setItems={props.setItems} />
+        <div className="k-form__grid">
+          <label className="k-field"><span>Desconto</span><input inputMode="decimal" value={props.discount} onChange={(e) => { props.setDiscount(e.target.value); }} /></label>
+          <label className="k-field"><span>Acréscimo</span><input inputMode="decimal" value={props.surcharge} onChange={(e) => { props.setSurcharge(e.target.value); }} /></label>
+          <label className="k-field k-field--full"><span>Observação</span><textarea maxLength={4000} value={props.notes} onChange={(e) => { props.setNotes(e.target.value); }} /></label>
+        </div>
+        <div className="k-row"><strong>Total previsto: {formatCurrency(Math.max(0, props.total))}</strong><button className="k-button k-button--primary" type="submit" disabled={props.loading || !props.items.length}>Salvar compra</button></div>
+      </form>
+    </section>
+  );
+}
+
+function PurchaseListSection(props: Readonly<{
+  data: Page<Purchase>;
+  error: string; success: string; loading: boolean;
+  onChangeStatus: (purchase: Purchase, action: "receive" | "cancel") => void;
+}>): React.JSX.Element {
+  return (
+    <section className="k-workspace-section">
+      <div className="k-section-head"><div><h2>Compras</h2><p>Rascunhos, recebimentos e cancelamentos com histórico de itens.</p></div></div>
+      {props.error ? <div className="k-inline-state k-inline-state--error"><strong>Erro</strong><span>{props.error}</span></div> : null}
+      {props.success ? <div className="k-inline-state"><strong>Concluído</strong><span>{props.success}</span></div> : null}
+      {!props.data.items.length ? <div className="k-empty"><strong>Nenhuma compra</strong><span>Crie uma compra acima para começar.</span></div> : <div className="k-table-wrap k-table-wrap--flush"><table className="k-table"><thead><tr><th>Data</th><th>Fornecedor / itens</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody>{props.data.items.map((purchase) => <tr key={purchase.id}><td>{formatDate(purchase.purchasedAt)}</td><td><strong>{purchase.supplierName ?? "Sem fornecedor"}</strong><div className="k-row__meta">{purchase.items.length} item(ns) · {purchase.items.map((item) => item.variantName ?? item.productName).join(", ")}</div></td><td><span className={purchase.status === "received" ? "k-badge k-badge--on" : "k-badge"}>{purchase.status === "draft" ? "Rascunho" : purchase.status === "received" ? "Recebida" : "Cancelada"}</span></td><td>{formatCurrency(purchase.totalCents)}</td><td>{purchase.status === "draft" ? <div className="k-row"><button className="k-button k-button--primary" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "receive"); }}>Receber</button><button className="k-button" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "cancel"); }}>Cancelar</button></div> : "—"}</td></tr>)}</tbody></table></div>}
+    </section>
+  );
+}
 
 export function MerchantPurchasesManager(props: Readonly<{
   initial: Page<Purchase>;
@@ -102,37 +168,25 @@ export function MerchantPurchasesManager(props: Readonly<{
   }
 
   return <div className="k-stack">
-    <section className="k-card">
-      <h2>Nova compra de estoque</h2>
-      <p className="k-muted">O total é recalculado no servidor e a entrada no estoque só ocorre ao receber a compra.</p>
-      <form className="k-form" onSubmit={(event) => { void submit(event); }}>
-        <div className="k-form__grid">
-          <label className="k-field"><span>Fornecedor</span><select value={supplierId} onChange={(e) => { setSupplierId(e.target.value); }}><option value="">Sem fornecedor</option>{props.suppliers.filter((item) => item.status === "active").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label className="k-field"><span>Data da compra</span><input type="date" required value={purchasedAt} onChange={(e) => { setPurchasedAt(e.target.value); }} /></label>
-        </div>
-        <div className="k-toolbar">
-          <label className="k-toolbar__search"><span className="k-visually-hidden">Buscar produto</span><input value={inventorySearch} onChange={(e) => { setInventorySearch(e.target.value); }} placeholder="Buscar produto, variante ou SKU…" /></label>
-          <button className="k-button" type="button" onClick={() => { void searchInventory(); }} disabled={loading}>Buscar produto</button>
-        </div>
-        <div className="k-form__grid">
-          <label className="k-field k-field--full"><span>Produto / variante</span><select value={selectedKey} onChange={(e) => { setSelectedKey(e.target.value); }}><option value="">Selecione…</option>{options.map((item) => { const key = `${item.productId}:${item.variantId ?? ""}`; return <option key={key} value={key}>{item.productName}{item.variantName ? ` · ${item.variantName}` : ""}{item.sku ? ` · ${item.sku}` : ""} · saldo {item.currentQuantity}</option>; })}</select></label>
-        </div>
-        <div className="k-actions"><button className="k-button" type="button" disabled={!selectedKey || loading} onClick={addItem}>Adicionar item</button></div>
-        {items.length ? <div className="k-table-wrap"><table className="k-table"><thead><tr><th>Item</th><th>Quantidade</th><th>Custo unitário</th><th>Subtotal</th><th></th></tr></thead><tbody>{items.map((item) => <tr key={item.key}><td><strong>{item.label}</strong></td><td><input aria-label="Quantidade" type="number" min={1} max={1000000} value={item.quantity} onChange={(e) => { const quantity = Math.max(1, Number(e.target.value) || 1); setItems(items.map((current) => current.key === item.key ? { ...current, quantity } : current)); }} /></td><td><input aria-label="Custo unitário" inputMode="decimal" value={item.unitCost} onChange={(e) => { setItems(items.map((current) => current.key === item.key ? { ...current, unitCost: e.target.value } : current)); }} /></td><td>{formatCurrency(item.quantity * parseMoneyToCents(item.unitCost))}</td><td><button className="k-button" type="button" onClick={() => { setItems(items.filter((current) => current.key !== item.key)); }}>Remover</button></td></tr>)}</tbody></table></div> : null}
-        <div className="k-form__grid">
-          <label className="k-field"><span>Desconto</span><input inputMode="decimal" value={discount} onChange={(e) => { setDiscount(e.target.value); }} /></label>
-          <label className="k-field"><span>Acréscimo</span><input inputMode="decimal" value={surcharge} onChange={(e) => { setSurcharge(e.target.value); }} /></label>
-          <label className="k-field k-field--full"><span>Observação</span><textarea maxLength={4000} value={notes} onChange={(e) => { setNotes(e.target.value); }} /></label>
-        </div>
-        <div className="k-row"><strong>Total previsto: {formatCurrency(Math.max(0, total))}</strong><button className="k-button k-button--primary" type="submit" disabled={loading || !items.length}>Salvar compra</button></div>
-      </form>
-    </section>
-
-    <section className="k-workspace-section">
-      <div className="k-section-head"><div><h2>Compras</h2><p>Rascunhos, recebimentos e cancelamentos com histórico de itens.</p></div></div>
-      {error ? <div className="k-inline-state k-inline-state--error"><strong>Erro</strong><span>{error}</span></div> : null}
-      {success ? <div className="k-inline-state"><strong>Concluído</strong><span>{success}</span></div> : null}
-      {!data.items.length ? <div className="k-empty"><strong>Nenhuma compra</strong><span>Crie uma compra acima para começar.</span></div> : <div className="k-table-wrap k-table-wrap--flush"><table className="k-table"><thead><tr><th>Data</th><th>Fornecedor / itens</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody>{data.items.map((purchase) => <tr key={purchase.id}><td>{formatDate(purchase.purchasedAt)}</td><td><strong>{purchase.supplierName ?? "Sem fornecedor"}</strong><div className="k-row__meta">{purchase.items.length} item(ns) · {purchase.items.map((item) => item.variantName ?? item.productName).join(", ")}</div></td><td><span className={purchase.status === "received" ? "k-badge k-badge--on" : "k-badge"}>{purchase.status === "draft" ? "Rascunho" : purchase.status === "received" ? "Recebida" : "Cancelada"}</span></td><td>{formatCurrency(purchase.totalCents)}</td><td>{purchase.status === "draft" ? <div className="k-row"><button className="k-button k-button--primary" type="button" disabled={loading} onClick={() => { void changeStatus(purchase, "receive"); }}>Receber</button><button className="k-button" type="button" disabled={loading} onClick={() => { void changeStatus(purchase, "cancel"); }}>Cancelar</button></div> : "—"}</td></tr>)}</tbody></table></div>}
-    </section>
+    <PurchaseForm
+      suppliers={props.suppliers}
+      purchasedAt={purchasedAt} setPurchasedAt={setPurchasedAt}
+      supplierId={supplierId} setSupplierId={setSupplierId}
+      inventorySearch={inventorySearch} setInventorySearch={setInventorySearch}
+      onSearchInventory={() => { void searchInventory(); }} loading={loading}
+      options={options}
+      selectedKey={selectedKey} setSelectedKey={setSelectedKey}
+      onAddItem={addItem}
+      items={items} setItems={setItems}
+      discount={discount} setDiscount={setDiscount}
+      surcharge={surcharge} setSurcharge={setSurcharge}
+      notes={notes} setNotes={setNotes}
+      total={total}
+      onSubmit={(event) => { void submit(event); }}
+    />
+    <PurchaseListSection
+      data={data} error={error} success={success} loading={loading}
+      onChangeStatus={(purchase, action) => { void changeStatus(purchase, action); }}
+    />
   </div>;
 }
