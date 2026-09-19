@@ -3,8 +3,14 @@ import type { MasterAuditFilters, MasterAuditResult, MasterAuditRow } from "./ma
 
 type Row = Record<string, unknown>;
 
-function text(row: Row, key: string): string { return typeof row[key] === "string" ? row[key] as string : ""; }
-function nullableText(row: Row, key: string): string | null { return typeof row[key] === "string" ? row[key] as string : null; }
+function text(row: Row, key: string): string {
+  const value = row[key];
+  return typeof value === "string" ? value : "";
+}
+function nullableText(row: Row, key: string): string | null {
+  const value = row[key];
+  return typeof value === "string" ? value : null;
+}
 function numberValue(row: Row, key: string): number {
   const value = Number(row[key] ?? 0);
   return Number.isFinite(value) ? value : 0;
