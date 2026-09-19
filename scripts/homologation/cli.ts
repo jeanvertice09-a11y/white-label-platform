@@ -81,7 +81,7 @@ async function withDb<T>(fn: (db: DbClient) => Promise<T>): Promise<T> {
 }
 
 async function productionPreflight(config: HomologationRuntimeConfig): Promise<Record<string, unknown>> {
-  const database = await withDb((db) => runHomologationPreflight(db, config));
+  const database = await withDb((db) => runHomologationPreflight(db, config, { mediaMode: "required" }));
   const media = await verifyPublishedAssets(config);
   return { database, media };
 }
@@ -91,7 +91,7 @@ async function run(command: string | undefined): Promise<void> {
   if (command === "assets") { write(buildAssetManifestTemplate()); return; }
   if (command === "preflight") {
     const config = await readConfig("deferred");
-    const database = await withDb((db) => runHomologationPreflight(db, config));
+    const database = await withDb((db) => runHomologationPreflight(db, config, { mediaMode: "deferred" }));
     write({ database, media: { mode: "deferred", ready: false, pending: true } });
     return;
   }
