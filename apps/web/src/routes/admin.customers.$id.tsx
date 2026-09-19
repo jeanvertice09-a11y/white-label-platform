@@ -15,81 +15,70 @@ export const Route = createFileRoute("/admin/customers/$id")({
   component: CustomerDetailPage,
 });
 
-function CustomerMetrics({
-  customer,
-}: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
-  return (
-    <div className="k-grid">
-      <div className="k-card">
-        <div className="k-stat__label">Pedidos</div>
-        <div className="k-stat__value">{customer.totalOrders}</div>
-      </div>
-      <div className="k-card">
-        <div className="k-stat__label">Total gasto</div>
-        <div className="k-stat__value">{formatMoney(customer.totalSpentCents)}</div>
-      </div>
-      <div className="k-card">
-        <div className="k-stat__label">Último pedido</div>
-        <div className="k-stat__value">
-          {customer.lastOrderAt
-            ? new Date(customer.lastOrderAt).toLocaleDateString("pt-BR")
-            : "—"}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CustomerContact({
-  customer,
-}: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
-  return (
-    <div className="k-card">
-      <h2>Identificação e contato</h2>
-      <p>
-        {customer.phone ?? "Telefone não informado"} ·{" "}
-        {customer.email ?? "E-mail não informado"}
-      </p>
-      {customer.document
-        ? <p className="k-muted">Documento: {customer.document}</p>
-        : null}
-      <p className="k-muted">
-        Cadastrado em {new Date(customer.createdAt).toLocaleString("pt-BR")}
-      </p>
-      {customer.notes ? <p className="k-muted">{customer.notes}</p> : null}
-    </div>
-  );
-}
-
 function CustomerOrders({
   customer,
 }: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
-  if (!customer.orders.length) {
-    return <div className="k-card"><h2>Histórico de pedidos</h2>
-      <div className="k-empty">Nenhum pedido relacionado.</div></div>;
-  }
   return (
-    <div className="k-card k-table-wrap">
-      <h2>Histórico de pedidos</h2>
-      <table className="k-table">
-        <thead><tr>
-          <th>Pedido</th><th>Status</th><th>Pagamento</th>
-          <th>Itens</th><th>Total</th><th>Data</th><th />
-        </tr></thead>
-        <tbody>{customer.orders.map((order) => (
-          <tr key={order.id}>
-            <td><strong>{formatOrderNumber(order.orderNumber)}</strong></td>
-            <td>{order.status}</td>
-            <td>{order.paymentStatus}</td>
-            <td>{order.itemSummary ?? String(order.itemCount) + " item(ns)"}</td>
-            <td>{formatMoney(order.totalCents)}</td>
-            <td>{new Date(order.createdAt).toLocaleString("pt-BR")}</td>
-            <td><Link className="k-button" to="/admin/orders/$id"
-              params={{ id: order.id }}>Abrir pedido</Link></td>
-          </tr>
-        ))}</tbody>
-      </table>
-    </div>
+    <section className="k-document-section">
+      <header className="k-document-section__head">
+        <div>
+          <span className="k-section-kicker">Histórico</span>
+          <h2>Pedidos</h2>
+        </div>
+        <span>{customer.orders.length} registro(s)</span>
+      </header>
+      {!customer.orders.length ? (
+        <div className="k-inline-state">Nenhum pedido relacionado.</div>
+      ) : (
+        <div className="k-table-wrap k-table-wrap--flush">
+          <table className="k-table">
+            <thead>
+              <tr><th>Pedido</th><th>Status</th><th>Pagamento</th><th>Itens</th><th className="k-align-right">Total</th><th>Data</th><th aria-label="Ações" /></tr>
+            </thead>
+            <tbody>
+              {customer.orders.map((order) => (
+                <tr key={order.id}>
+                  <td><strong>{formatOrderNumber(order.orderNumber)}</strong></td>
+                  <td><span className={`k-status-pill k-status-pill--${order.status}`}>{order.status}</span></td>
+                  <td>{order.paymentStatus}</td>
+                  <td>{order.itemSummary ?? `${String(order.itemCount)} item(ns)`}</td>
+                  <td className="k-align-right k-money">{formatMoney(order.totalCents)}</td>
+                  <td>{new Date(order.createdAt).toLocaleString("pt-BR")}</td>
+                  <td><Link className="k-text-action" to="/admin/orders/$id" params={{ id: order.id }}>Abrir</Link></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CustomerSidebar({
+  customer,
+}: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
+  return (
+    <aside className="k-document-aside">
+      <section>
+        <span className="k-section-kicker">Resumo</span>
+        <dl className="k-profile-stats">
+          <div><dt>Pedidos</dt><dd>{customer.totalOrders}</dd></div>
+          <div><dt>Total gasto</dt><dd>{formatMoney(customer.totalSpentCents)}</dd></div>
+          <div><dt>Último pedido</dt><dd>{customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString("pt-BR") : "—"}</dd></div>
+        </dl>
+      </section>
+      <section>
+        <span className="k-section-kicker">Contato</span>
+        <h2>Identificação</h2>
+        <dl className="k-detail-list">
+          <div><dt>Telefone</dt><dd>{customer.phone ?? "Não informado"}</dd></div>
+          <div><dt>E-mail</dt><dd>{customer.email ?? "Não informado"}</dd></div>
+          <div><dt>Documento</dt><dd>{customer.document ?? "Não informado"}</dd></div>
+          <div><dt>Cadastro</dt><dd>{new Date(customer.createdAt).toLocaleDateString("pt-BR")}</dd></div>
+        </dl>
+      </section>
+    </aside>
   );
 }
 
@@ -97,12 +86,17 @@ function CustomerDetailPage(): React.JSX.Element {
   const customer = Route.useLoaderData();
   return (
     <div className="k-page">
-      <PageHead title={customer.name}
-        description="Dados reais, histórico de pedidos e métricas deste cliente." />
-      <CustomerMetrics customer={customer} />
-      <CustomerEditForm customer={customer} />
-      <CustomerContact customer={customer} />
-      <CustomerOrders customer={customer} />
+      <PageHead
+        title={customer.name}
+        description="Cadastro, relacionamento e histórico de pedidos em uma única ficha."
+      />
+      <div className="k-document-layout">
+        <main className="k-document-main">
+          <CustomerEditForm customer={customer} />
+          <CustomerOrders customer={customer} />
+        </main>
+        <CustomerSidebar customer={customer} />
+      </div>
     </div>
   );
 }

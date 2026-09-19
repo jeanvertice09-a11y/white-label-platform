@@ -23,18 +23,27 @@ function EditProductPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return (
     <div className="k-page">
-      <PageHead title={data.product.name} description="Edite o produto e suas variantes." />
+      <PageHead
+        title={data.product.name}
+        description="Edite conteúdo, preço, publicação e organização do produto."
+        action={<Link className="k-button" to="/admin/inventory">Gerenciar estoque</Link>}
+      />
       <ProductForm product={data.product} categories={data.categories} />
       <VariantEditor productId={data.product.id} variants={data.product.variants} />
-      <div className="k-actions"><Link className="k-button" to="/admin/inventory">Gerenciar estoque</Link></div>
-      <div className="k-card">
-        <h2>Imagens do produto</h2>
-        <p className="k-muted">
-          {data.product.images.length
-            ? `${String(data.product.images.length)} imagem(ns) já associada(s) e disponível(is) no catálogo.`
-            : "Nenhuma imagem associada. O upload/storage administrativo completo permanece fora desta fase."}
-        </p>
-      </div>
+      <section className="k-workspace-section">
+        <header className="k-section-head">
+          <div>
+            <span className="k-section-kicker">Mídia</span>
+            <h2>Imagens do produto</h2>
+            <p>
+              {data.product.images.length
+                ? `${String(data.product.images.length)} imagem(ns) associada(s) e disponível(is) no catálogo.`
+                : "Nenhuma imagem associada. O upload/storage administrativo completo permanece fora desta fase."}
+            </p>
+          </div>
+          <span className="k-section-count">{data.product.images.length} imagem(ns)</span>
+        </header>
+      </section>
     </div>
   );
 }

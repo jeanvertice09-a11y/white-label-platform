@@ -40,18 +40,19 @@ export function InventoryAdjustment(props: Readonly<{
   }
 
   return (
-    <form className="k-form" onSubmit={(event) => { void submit(event); }}>
-      <div className="k-row">
+    <details className="k-inline-editor">
+      <summary>Movimentar</summary>
+      <form className="k-inline-editor__body" onSubmit={(event) => { void submit(event); }}>
         <select aria-label="Operação de estoque" name="kind" defaultValue="entry" disabled={busy}>
           <option value="entry">Entrada</option>
           <option value="exit">Saída</option>
-          <option value="set">Ajustar saldo para</option>
+          <option value="set">Definir saldo</option>
         </select>
-        <input aria-label="Quantidade" name="quantity" type="number" min={0} max={1_000_000} step={1} required placeholder="Quantidade" disabled={busy} style={{ maxWidth: 130 }} />
+        <input aria-label="Quantidade" name="quantity" type="number" min={0} max={1_000_000} step={1} required placeholder="Quantidade" disabled={busy} />
         <input aria-label="Motivo da movimentação" name="reason" required maxLength={240} placeholder="Motivo" disabled={busy} />
-        <button className="k-button" disabled={busy} type="submit">{busy ? "Salvando…" : "Aplicar"}</button>
-      </div>
-      {message ? <div className="k-status">{message}</div> : null}
-    </form>
+        <button className="k-button k-button--primary" disabled={busy} type="submit">{busy ? "Salvando…" : "Aplicar"}</button>
+        {message ? <span className="k-inline-editor__message" role="status">{message}</span> : null}
+      </form>
+    </details>
   );
 }

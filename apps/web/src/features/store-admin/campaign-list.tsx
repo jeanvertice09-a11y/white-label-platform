@@ -9,7 +9,7 @@ import {
   statusLabel,
 } from "./campaign-ui.tsx";
 
-interface CampaignCardProps {
+interface CampaignRowProps {
   campaign: Campaign;
   detail: CampaignDetail | null;
   busy: boolean;
@@ -28,26 +28,20 @@ function DraftEditor({
   busy,
   save,
   runAction,
-}: Readonly<Omit<CampaignCardProps, "detail">>): React.JSX.Element {
+}: Readonly<Omit<CampaignRowProps, "detail">>): React.JSX.Element {
   if (campaign.status !== "draft") return <></>;
   return (
     <form
-      className="k-form"
-      onSubmit={(event) => {
-        void save(event, campaign.id);
-      }}
+      className="k-record-editor__form"
+      onSubmit={(event) => { void save(event, campaign.id); }}
     >
       <CampaignFields campaign={campaign} />
-      <div className="k-actions">
-        <button className="k-button" disabled={busy} type="submit">
-          Salvar
-        </button>
+      <div className="k-record-editor__footer">
+        <button className="k-button" disabled={busy} type="submit">Salvar</button>
         <button
           className="k-button k-button--primary"
           disabled={busy}
-          onClick={() => {
-            void runAction(campaign.id, "prepare");
-          }}
+          onClick={() => { void runAction(campaign.id, "prepare"); }}
           type="button"
         >
           Preparar destinatários
@@ -61,60 +55,37 @@ function CampaignActions({
   campaign,
   busy,
   runAction,
-}: Readonly<Pick<CampaignCardProps, "campaign" | "busy" | "runAction">>) {
+}: Readonly<Pick<CampaignRowProps, "campaign" | "busy" | "runAction">>) {
   if (campaign.status === "cancelled") return <></>;
   return (
-    <div className="k-actions">
-      <button
-        className="k-button"
-        disabled={busy}
-        onClick={() => {
-          void runAction(campaign.id, "detail");
-        }}
-        type="button"
-      >
-        Ver detalhes
-      </button>
-      <button
-        className="k-button"
-        disabled={busy}
-        onClick={() => {
-          void runAction(campaign.id, "cancel");
-        }}
-        type="button"
-      >
-        Cancelar
-      </button>
+    <div className="k-record-actions">
+      <button className="k-text-action" disabled={busy} onClick={() => { void runAction(campaign.id, "detail"); }} type="button">Detalhes</button>
+      <button className="k-text-action k-danger" disabled={busy} onClick={() => { void runAction(campaign.id, "cancel"); }} type="button">Cancelar</button>
     </div>
   );
 }
 
-function CampaignCard(props: Readonly<CampaignCardProps>): React.JSX.Element {
+function CampaignRow(props: Readonly<CampaignRowProps>): React.JSX.Element {
   const { campaign, detail, busy, save, runAction } = props;
   return (
-    <details className="k-card">
+    <details className="k-record-editor">
       <summary>
-        <strong>{campaign.name}</strong> · {statusLabel(campaign.status)}
-        {" · "}
-        {campaign.recipientCount} destinatários
+        <span className="k-record-editor__identity">
+          <strong>{campaign.name}</strong>
+          <small>
+            {campaign.recipientCount} destinatários
+            {campaign.scheduledAt ? ` · ${new Date(campaign.scheduledAt).toLocaleString()}` : ""}
+          </small>
+        </span>
+        <span className={`k-status-pill k-status-pill--${campaign.status}`}>
+          {statusLabel(campaign.status)}
+        </span>
       </summary>
-      {campaign.scheduledAt ? (
-        <p>Agendada para {new Date(campaign.scheduledAt).toLocaleString()}</p>
-      ) : null}
-      <DraftEditor
-        campaign={campaign}
-        busy={busy}
-        save={save}
-        runAction={runAction}
-      />
-      <CampaignActions
-        campaign={campaign}
-        busy={busy}
-        runAction={runAction}
-      />
-      {detail?.id === campaign.id ? (
-        <CampaignDetailView detail={detail} />
-      ) : null}
+      <div className="k-record-editor__content">
+        <DraftEditor campaign={campaign} busy={busy} save={save} runAction={runAction} />
+        <CampaignActions campaign={campaign} busy={busy} runAction={runAction} />
+        {detail?.id === campaign.id ? <CampaignDetailView detail={detail} /> : null}
+      </div>
     </details>
   );
 }
@@ -129,16 +100,21 @@ export function CampaignList({
   page: CampaignPage;
   detail: CampaignDetail | null;
   busy: boolean;
-  save: CampaignCardProps["save"];
-  runAction: CampaignCardProps["runAction"];
+  save: CampaignRowProps["save"];
+  runAction: CampaignRowProps["runAction"];
 }>): React.JSX.Element {
   if (page.items.length === 0) {
-    return <div className="k-card">Nenhuma campanha encontrada.</div>;
+    return (
+      <div className="k-inline-state">
+        <strong>Nenhuma campanha encontrada</strong>
+        <span>Crie uma campanha ou ajuste sua busca.</span>
+      </div>
+    );
   }
   return (
-    <>
+    <div className="k-record-list">
       {page.items.map((campaign) => (
-        <CampaignCard
+        <CampaignRow
           key={campaign.id}
           campaign={campaign}
           detail={detail}
@@ -147,6 +123,6 @@ export function CampaignList({
           runAction={runAction}
         />
       ))}
-    </>
+    </div>
   );
 }

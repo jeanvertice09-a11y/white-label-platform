@@ -31,50 +31,80 @@ function eventLabel(action: string): string {
   return action;
 }
 
-function Timeline({ items }: Readonly<{ items: OrderTimelineEntry[] }>): React.JSX.Element {
-  if (items.length === 0) return <div className="k-empty">Sem eventos de auditoria para este pedido.</div>;
+function Timeline({ items }: Readonly<{
+  items: OrderTimelineEntry[];
+}>): React.JSX.Element {
   return (
-    <div className="k-card">
-      <h2>Histórico</h2>
-      <div className="k-stack">
-        {items.map((event) => (
-          <div className="k-row" key={event.id}>
-            <div><strong>{eventLabel(event.action)}</strong><div className="k-row__meta">{new Date(event.createdAt).toLocaleString("pt-BR")}</div></div>
-          </div>
-        ))}
+    <section className="k-document-section">
+      <header className="k-document-section__head"><h2>Histórico</h2></header>
+      {items.length === 0 ? (
+        <div className="k-inline-state">Sem eventos de auditoria para este pedido.</div>
+      ) : (
+        <ol className="k-timeline-list">
+          {items.map((event) => (
+            <li key={event.id}>
+              <span className="k-timeline-list__dot" aria-hidden="true" />
+              <div>
+                <strong>{eventLabel(event.action)}</strong>
+                <span>{new Date(event.createdAt).toLocaleString("pt-BR")}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function OrderItems({ order }: Readonly<{ order: Order }>): React.JSX.Element {
+  return (
+    <section className="k-document-section">
+      <header className="k-document-section__head">
+        <h2>Itens do pedido</h2>
+        <span>{order.items.length} item(ns)</span>
+      </header>
+      <div className="k-table-wrap k-table-wrap--flush">
+        <table className="k-table">
+          <thead>
+            <tr><th>Produto / variante</th><th>SKU</th><th className="k-align-right">Qtd.</th><th className="k-align-right">Unitário</th><th className="k-align-right">Subtotal</th></tr>
+          </thead>
+          <tbody>
+            {order.items.map((item) => (
+              <tr key={item.id}>
+                <td><strong>{item.productName}</strong>{item.variantName ? <div className="k-row__meta">{item.variantName}</div> : null}</td>
+                <td>{item.skuSnapshot ?? "—"}</td>
+                <td className="k-align-right">{item.quantity}</td>
+                <td className="k-align-right">{formatMoney(item.unitCents)}</td>
+                <td className="k-align-right k-money">{formatMoney(item.totalCents)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </section>
   );
 }
 
-function Summary({ order }: Readonly<{ order: Order }>): React.JSX.Element {
-  const values = [
-    ["Subtotal", order.subtotalCents], ["Desconto", order.discountCents],
-    ["Frete", order.shippingCents], ["Total", order.totalCents],
-  ] as const;
-  return <div className="k-grid">{values.map(([label, cents]) => <div className="k-card" key={label}><div className="k-stat__label">{label}</div><div className="k-stat__value">{formatMoney(cents)}</div></div>)}</div>;
-}
-
-function Customer({ order }: Readonly<{ order: Order }>): React.JSX.Element {
+function OrderSidebar({ order }: Readonly<{ order: Order }>): React.JSX.Element {
   return (
-    <div className="k-card">
-      <h2>Cliente</h2>
-      <p>{order.customerName ?? "Nome não informado"} · {order.customerPhone ?? "Telefone não informado"}</p>
-      {order.couponCodeSnapshot ? <p className="k-muted">Cupom: {order.couponCodeSnapshot}</p> : null}
-      {order.notes ? <p className="k-muted">Observação: {order.notes}</p> : null}
-    </div>
-  );
-}
-
-function Items({ order }: Readonly<{ order: Order }>): React.JSX.Element {
-  return (
-    <div className="k-card k-table-wrap">
-      <h2>Itens</h2>
-      <table className="k-table">
-        <thead><tr><th>Produto / variante</th><th>SKU</th><th>Qtd.</th><th>Unitário</th><th>Subtotal</th></tr></thead>
-        <tbody>{order.items.map((item) => <tr key={item.id}><td>{item.productName}{item.variantName ? " — " + item.variantName : ""}</td><td>{item.skuSnapshot ?? "—"}</td><td>{item.quantity}</td><td>{formatMoney(item.unitCents)}</td><td>{formatMoney(item.totalCents)}</td></tr>)}</tbody>
-      </table>
-    </div>
+    <aside className="k-document-aside">
+      <section>
+        <span className="k-section-kicker">Cliente</span>
+        <h2>{order.customerName ?? "Nome não informado"}</h2>
+        <p>{order.customerPhone ?? "Telefone não informado"}</p>
+        {order.notes ? <p className="k-muted">{order.notes}</p> : null}
+      </section>
+      <section>
+        <span className="k-section-kicker">Resumo financeiro</span>
+        <dl className="k-summary-list">
+          <div><dt>Subtotal</dt><dd>{formatMoney(order.subtotalCents)}</dd></div>
+          <div><dt>Desconto</dt><dd>{formatMoney(order.discountCents)}</dd></div>
+          <div><dt>Frete</dt><dd>{formatMoney(order.shippingCents)}</dd></div>
+          <div className="is-total"><dt>Total</dt><dd>{formatMoney(order.totalCents)}</dd></div>
+        </dl>
+        {order.couponCodeSnapshot ? <p className="k-muted">Cupom: {order.couponCodeSnapshot}</p> : null}
+      </section>
+    </aside>
   );
 }
 
@@ -82,11 +112,22 @@ function OrderDetailPage(): React.JSX.Element {
   const { order, timeline } = Route.useLoaderData();
   return (
     <div className="k-page">
-      <PageHead title={"Pedido " + formatOrderNumber(order.orderNumber)} description={"Origem " + order.origin + " · status " + order.status} action={<OrderActions orderId={order.id} status={order.status} />} />
-      <Summary order={order} />
-      <Customer order={order} />
-      <Items order={order} />
-      <Timeline items={timeline} />
+      <PageHead
+        title={`Pedido ${formatOrderNumber(order.orderNumber)}`}
+        description={`${new Date(order.createdAt).toLocaleString("pt-BR")} · ${order.origin}`}
+        action={<OrderActions orderId={order.id} status={order.status} />}
+      />
+      <div className="k-document-meta">
+        <span>Status</span>
+        <strong>{order.status}</strong>
+      </div>
+      <div className="k-document-layout">
+        <main className="k-document-main">
+          <OrderItems order={order} />
+          <Timeline items={timeline} />
+        </main>
+        <OrderSidebar order={order} />
+      </div>
     </div>
   );
 }

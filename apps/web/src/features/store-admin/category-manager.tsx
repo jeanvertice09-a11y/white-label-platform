@@ -52,10 +52,17 @@ function CategoryFields(props: Readonly<{
       <div className="k-field"><label>Nome</label><input value={props.draft.name} onChange={(event) => { props.setField("name", event.target.value); }} required /></div>
       <div className="k-field"><label>Slug</label><input value={props.draft.slug} onChange={(event) => { props.setField("slug", slugify(event.target.value)); }} required /></div>
       <div className="k-field k-field--full"><label>Descrição</label><textarea value={props.draft.description} onChange={(event) => { props.setField("description", event.target.value); }} /></div>
-      <div className="k-field"><label>Categoria principal</label>
+      <div className="k-field">
+        <label>Categoria principal</label>
         <select value={props.draft.parentId} onChange={(event) => { props.setField("parentId", event.target.value); }}>
           <option value="">Nenhuma</option>
-          {props.categories.filter((item) => item.id !== props.category?.id).map((item) => <option key={item.id} value={item.id}>{item.name}{item.active ? "" : " (inativa)"}</option>)}
+          {props.categories
+            .filter((item) => item.id !== props.category?.id)
+            .map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}{item.active ? "" : " (inativa)"}
+              </option>
+            ))}
         </select>
       </div>
       <div className="k-field"><label>Ordem</label><input type="number" min="0" value={props.draft.position} onChange={(event) => { props.setField("position", event.target.value); }} /></div>
@@ -64,13 +71,19 @@ function CategoryFields(props: Readonly<{
   );
 }
 
-function CategoryForm(props: Readonly<{ categories: Category[]; category?: Category }>): React.JSX.Element {
+function CategoryForm(props: Readonly<{
+  categories: Category[];
+  category?: Category;
+}>): React.JSX.Element {
   const router = useRouter();
   const [draft, setDraft] = useState(() => initialDraft(props.category));
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
 
-  function setField<K extends keyof CategoryDraft>(key: K, value: CategoryDraft[K]): void {
+  function setField<K extends keyof CategoryDraft>(
+    key: K,
+    value: CategoryDraft[K],
+  ): void {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
@@ -81,7 +94,9 @@ function CategoryForm(props: Readonly<{ categories: Category[]; category?: Categ
     try {
       const input = toInput(draft);
       if (props.category) {
-        const updated = await updateMerchantCategory({ data: { id: props.category.id, input } });
+        const updated = await updateMerchantCategory({
+          data: { id: props.category.id, input },
+        });
         if (!updated) throw new Error("Categoria não encontrada nesta loja");
       } else {
         await createMerchantCategory({ data: input });
@@ -97,21 +112,68 @@ function CategoryForm(props: Readonly<{ categories: Category[]; category?: Categ
   }
 
   return (
-    <form className="k-card k-form" onSubmit={(event) => { void submit(event); }}>
-      <CategoryFields draft={draft} categories={props.categories} category={props.category} setField={setField} />
-      <div className="k-actions">
+    <form className="k-record-editor__form" onSubmit={(event) => { void submit(event); }}>
+      <CategoryFields
+        draft={draft}
+        categories={props.categories}
+        category={props.category}
+        setField={setField}
+      />
+      <div className="k-record-editor__footer">
         {status ? <span className="k-status">{status}</span> : null}
-        <button className="k-button" type="submit" disabled={saving}>{saving ? "Salvando…" : props.category ? "Atualizar" : "Criar categoria"}</button>
+        <button className="k-button" type="submit" disabled={saving}>
+          {saving ? "Salvando…" : props.category ? "Salvar categoria" : "Criar categoria"}
+        </button>
       </div>
     </form>
   );
 }
 
-export function CategoryManager({ categories }: Readonly<{ categories: Category[] }>): React.JSX.Element {
+export function CategoryManager({
+  categories,
+}: Readonly<{ categories: Category[] }>): React.JSX.Element {
   return (
-    <div className="k-page">
-      <CategoryForm categories={categories} />
-      {categories.length ? <div className="k-stack">{categories.map((category) => <CategoryForm key={category.id} categories={categories} category={category} />)}</div> : <div className="k-empty">Nenhuma categoria cadastrada.</div>}
-    </div>
+    <section className="k-workspace-section">
+      <header className="k-section-head">
+        <div>
+          <span className="k-section-kicker">Organização</span>
+          <h2>Estrutura do catálogo</h2>
+          <p>Crie categorias e organize a navegação pública sem empilhar formulários abertos.</p>
+        </div>
+        <span className="k-section-count">{categories.length} categoria(s)</span>
+      </header>
+      <details className="k-composer">
+        <summary>
+          <span><strong>Nova categoria</strong><small>Nome, hierarquia e ordem.</small></span>
+          <span className="k-composer__action">Adicionar</span>
+        </summary>
+        <div className="k-composer__body">
+          <CategoryForm categories={categories} />
+        </div>
+      </details>
+      {categories.length ? (
+        <div className="k-record-list">
+          {categories.map((category) => (
+            <details className="k-record-editor" key={category.id}>
+              <summary>
+                <span>
+                  <strong>{category.name}</strong>
+                  <small>/{category.slug}{category.parentId ? " · subcategoria" : " · categoria principal"}</small>
+                </span>
+                <span className={category.active ? "k-status-pill k-status-pill--active" : "k-status-pill"}>
+                  {category.active ? "Ativa" : "Inativa"}
+                </span>
+              </summary>
+              <CategoryForm categories={categories} category={category} />
+            </details>
+          ))}
+        </div>
+      ) : (
+        <div className="k-inline-state">
+          <strong>Nenhuma categoria cadastrada</strong>
+          <span>Use “Nova categoria” para começar a organizar o catálogo.</span>
+        </div>
+      )}
+    </section>
   );
 }
