@@ -42,40 +42,43 @@ describe("homologation seed plan", () => {
     expect(new Set(assets.map((asset) => asset.key)).size).toBe(76);
     expect(assets.filter((asset) => asset.kind === "product")).toHaveLength(72);
     expect(assets.filter((asset) => asset.kind === "banner")).toHaveLength(4);
-    for (const asset of assets) expect(asset.key).toMatch(/^tenants\/[0-9a-f-]+\/stores\/[0-9a-f-]+\//);
+    for (const asset of assets) {
+      expect(asset.key).toMatch(/^tenants\/[0-9a-f-]+\/stores\/[0-9a-f-]+\//);
+    }
   });
 
   test("config exige preço e trial explícitos", () => {
     const missingPrice = structuredClone(homologationTestConfig());
     missingPrice.storePlans.lume.priceCents = null;
-    expect(() => validateRuntimeConfig(missingPrice)).toThrow("priceCents obrigatório");
+    expect(() => { validateRuntimeConfig(missingPrice); }).toThrow("priceCents obrigatório");
 
     const missingTrial = structuredClone(homologationTestConfig());
     missingTrial.storePlans.botanica.trialDays = null;
-    expect(() => validateRuntimeConfig(missingTrial)).toThrow("trialDays obrigatório");
+    expect(() => { validateRuntimeConfig(missingTrial); }).toThrow("trialDays obrigatório");
   });
 
   test("config rejeita hostname reservado", () => {
     const config = structuredClone(homologationTestConfig());
     config.domains.aurora.tenantSite = "app.kataluu.com.br";
-    expect(() => validateRuntimeConfig(config)).toThrow();
+    expect(() => { validateRuntimeConfig(config); }).toThrow();
   });
 
   test("config rejeita checksum inválido e conteúdo duplicado", () => {
     const invalid = structuredClone(homologationTestConfig());
-    const [first, second] = expectedAssets();
+    const first = expectedAssets().at(0);
+    const second = expectedAssets().at(1);
     if (!first || !second) throw new Error("assets de teste ausentes");
     const firstAsset = invalid.resolvedAssets[first.key];
     if (!firstAsset) throw new Error("asset de teste ausente");
     firstAsset.sha256 = "abc";
-    expect(() => validateRuntimeConfig(invalid)).toThrow("sha256 inválido");
+    expect(() => { validateRuntimeConfig(invalid); }).toThrow("sha256 inválido");
 
     const duplicate = structuredClone(homologationTestConfig());
     const one = duplicate.resolvedAssets[first.key];
     const two = duplicate.resolvedAssets[second.key];
     if (!one || !two) throw new Error("assets de teste ausentes");
     two.sha256 = one.sha256;
-    expect(() => validateRuntimeConfig(duplicate)).toThrow("asset duplicado por conteúdo");
+    expect(() => { validateRuntimeConfig(duplicate); }).toThrow("asset duplicado por conteúdo");
   });
 
   test("IDs são determinísticos e o plano documenta bloqueios externos", () => {
