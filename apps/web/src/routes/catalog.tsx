@@ -23,8 +23,8 @@ function CatalogState(props: Readonly<{ title: string; detail: string }>): React
   return <main style={{ maxWidth: 720, margin: "60px auto", padding: 24 }}><h1>{props.title}</h1><p>{props.detail}</p></main>;
 }
 
-function CatalogError({ error }: Readonly<{ error: Error }>): React.JSX.Element {
-  const message = error.message.toLowerCase();
+function CatalogError({ error }: Readonly<{ error: unknown }>): React.JSX.Element {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
   if (message.includes("não encontrado") || message.includes("hostname")) {
     return <CatalogState title="Catálogo não encontrado" detail="Este endereço não corresponde a um catálogo público ativo." />;
   }
