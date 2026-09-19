@@ -11,6 +11,7 @@ Massa determinística e removível para validar `/master`, `/control`, `/admin`,
 - Não chama Mercado Pago/Asaas e não cria webhook externo.
 - `apply` continua transacional e executa rollback em erro.
 - Cleanup continua restrito aos IDs determinísticos HML v1.
+- Mídia pode ser explicitamente adiada somente pelo fluxo HML funcional; o fluxo Production completo continua fail-closed para mídia.
 
 ## Massa
 
@@ -19,8 +20,7 @@ Massa determinística e removível para validar `/master`, `/control`, `/admin`,
 - 72 produtos, 92 variantes, 48 clientes, 64 pedidos.
 - 12 fornecedores, 16 compras, 40 lançamentos financeiros, 24 tarefas.
 - 12 cupons, 4 campanhas, 14 invoices e 29 payments internos.
-- 76 objetos de catálogo: 72 imagens de produto + 4 banners.
-- 2 logos de White Label, publicados separadamente por URL HTTPS.
+- Readiness completa de mídia: 76 objetos de catálogo (72 imagens + 4 banners) e 2 logos.
 
 ## Planos por loja
 
@@ -71,9 +71,9 @@ Nenhuma senha deve ser versionada.
 
 ## Domains — 12 hostnames
 
-A arquitetura possui quatro tipos distintos: `tenant_site`, `tenant_panel`, `store_admin`, `store_catalog`. O DomainResolver encaminha respectivamente para `/`, `/control`, `/admin` e `/catalog`, então a homologação realmente usa 12 hostnames distintos.
+A arquitetura possui quatro tipos distintos: `tenant_site`, `tenant_panel`, `store_admin`, `store_catalog`.
 
-Proposta compatível com a policy atual:
+Hostnames HML previstos:
 
 - `aurora-hml.kataluu.com.br`
 - `painel-aurora-hml.kataluu.com.br`
@@ -98,18 +98,28 @@ Copie `scripts/homologation/hml-production.example.json` para `scripts/homologat
 
 O exemplo não contém senha, DB URL, token, secret ou credencial R2.
 
+## Dois níveis de readiness
+
+A homologação separa explicitamente duas verificações:
+
+1. **Funcional** — banco, planos, Auth, domains, memberships, massa, layouts e isolamento. Mídia pode ficar pendente.
+2. **Production completa** — tudo da funcional **mais** manifesto e publicação física de 76 assets + 2 logos.
+
+O modo funcional não cria placeholder e não grava object keys ou URLs de mídia inexistentes. Em `MEDIA DEFERRED`:
+
+- `tenant_branding.logo_url` fica `NULL`;
+- não são inseridas linhas em `media_assets`;
+- não são inseridas linhas em `product_images`;
+- não são inseridas linhas em `store_banners`.
+
+O storefront já trata produtos sem `product_images` com o estado neutro de imagem indisponível e banners vazios simplesmente não são renderizados.
+
 ## Manifesto dos 76 assets
 
-Gere a estrutura completa:
-
-```bash
-bun run homologation:assets > scripts/homologation/hml-assets.json
-```
-
-O arquivo real também está no `.gitignore`. Cada uma das 76 entradas exige:
+Quando a fase de mídia for iniciada, gere/forneça o manifesto real. Cada uma das 76 entradas exige:
 
 - `objectKey` como chave do JSON;
-- `source` reproduzível (`file`, asset gerado especificamente ou fonte licenciada);
+- `source` reproduzível;
 - `mimeType`;
 - `sizeBytes` real;
 - `sha256` de 64 hex;
@@ -117,35 +127,35 @@ O arquivo real também está no `.gitignore`. Cada uma das 76 entradas exige:
 - `kind` (`product` ou `banner`);
 - `productSlug` quando for imagem de produto.
 
-O validator rejeita key ausente/extra, associação divergente, size inválido, checksum inválido e conteúdo duplicado por SHA-256. Isso impede usar a mesma imagem em vários produtos sem perceber.
-
-Os arquivos ainda precisam ser produzidos/adquiridos externamente com origem apropriada. Não baixar imagens comerciais arbitrárias sem licença.
+O validator completo rejeita key ausente/extra, associação divergente, size inválido, checksum inválido e conteúdo duplicado por SHA-256.
 
 ## R2 e mídia pública
 
-O repo possui contrato R2 e keys server-authoritative, mas não possui provider/uploader R2 concreto reutilizável. Por isso este pacote **não inventa uploader** nem novas credenciais/API.
+O repo possui contrato R2 e keys server-authoritative, mas não possui provider/uploader R2 concreto reutilizável. O fluxo funcional não tenta upload nem publicação.
 
-O storefront já usa `https://media.kataluu.com.br/<objectKey>`. O modo Production faz verificação física por esse origin:
+No readiness completo, `https://media.kataluu.com.br/<objectKey>` precisa validar:
 
-- 76/76 URLs precisam responder com sucesso;
-- corpo precisa ter size > 0 e exatamente o `sizeBytes` esperado;
-- MIME precisa corresponder quando informado pelo origin;
-- SHA-256 do corpo precisa ser idêntico ao manifesto;
-- as duas URLs dos logos também precisam responder com conteúdo não vazio.
+- 76/76 URLs com sucesso;
+- corpo não vazio e size esperado;
+- MIME esperado;
+- SHA-256 idêntico ao manifesto;
+- duas URLs dos logos com conteúdo não vazio.
 
-Assim `HOMOLOGATION_ASSETS_READY=true` não é suficiente sozinho: o `apply` executa a verificação física antes de qualquer escrita no banco.
+## Preflight funcional — read-only
 
-## Preflight
-
-Preflight DB/config, read-only:
+Não exige manifesto nem publicação R2:
 
 ```bash
 DATABASE_URL='...' \
 HOMOLOGATION_CONFIG_FILE='/caminho/seguro/hml-production.json' \
-bun run homologation:preflight
+bun run homologation:preflight:functional
 ```
 
-Preflight Production, ainda read-only, incluindo mídia física:
+O retorno informa explicitamente `media.mode=deferred`, `media.ready=false` e `media.pending=true`.
+
+## Preflight Production completo — read-only
+
+Continua exigindo mídia física:
 
 ```bash
 DATABASE_URL='...' \
@@ -153,20 +163,29 @@ HOMOLOGATION_CONFIG_FILE='/caminho/seguro/hml-production.json' \
 bun run homologation:preflight:production
 ```
 
-Ele valida:
-
-- `public.plans` selecionado;
-- quatro templates/entitlements e limits aplicáveis por loja;
-- preço/intervalo/trial explícitos;
-- seis Auth UUIDs/emails e escopo de memberships;
-- slugs/IDs determinísticos de tenants/stores/tenant_plans/gateway;
-- 12 hostnames e colisões no banco;
-- integridade completa do manifesto;
-- no modo Production, 76 objetos + 2 logos fisicamente publicados.
+Ele valida também integridade completa do manifesto, 76 objetos e 2 logos publicados.
 
 Nenhum preflight executa cleanup ou inserts da massa.
 
-## Apply — somente após autorização explícita
+## Apply funcional — MEDIA DEFERRED
+
+Somente após autorização explícita e depois de Auth/domains/plano passarem no preflight funcional:
+
+```bash
+DATABASE_URL='...' \
+HOMOLOGATION_CONFIG_FILE='/caminho/seguro/hml-production.json' \
+HOMOLOGATION_CONFIRM='KATALUU_HML_V1' \
+HOMOLOGATION_AUTH_READY='true' \
+HOMOLOGATION_DOMAINS_VERIFIED='true' \
+HOMOLOGATION_MEDIA_DEFERRED='KATALUU_HML_MEDIA_DEFERRED' \
+bun run homologation:apply:functional
+```
+
+Esse comando não aceita `HOMOLOGATION_ASSETS_READY` como substituto do acknowledgement explícito de mídia adiada. O resultado registra `media=deferred` e `mediaPending=true`.
+
+## Apply completo — mídia obrigatória
+
+O caminho existente permanece estrito:
 
 ```bash
 DATABASE_URL='...' \
@@ -178,7 +197,7 @@ HOMOLOGATION_ASSETS_READY='true' \
 bun run homologation:apply
 ```
 
-Mesmo com os quatro flags, o apply valida config, executa a verificação física dos assets e roda o DB preflight novamente antes da transação de cleanup + criação + reconciliações.
+Ele valida config completo, executa a verificação física dos assets e roda o DB preflight novamente antes da transação.
 
 ## Cleanup
 
