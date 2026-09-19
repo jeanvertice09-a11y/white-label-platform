@@ -1,5 +1,5 @@
 import { DEMO_STORES, DEMO_TENANTS } from "./data.ts";
-import type { DemoCategory, HomologationRuntimeConfig } from "../model.ts";
+import type { DemoCategory, HomologationMediaMode, HomologationRuntimeConfig } from "../model.ts";
 import { DEFAULT_ANCHOR_ISO, objectKey, quoteSql, stableUuid } from "../model.ts";
 
 function json(value: unknown): string {
@@ -90,15 +90,23 @@ function bannerRows(anchor: string): string {
   }).join(",\n");
 }
 
-export function buildCatalogSql(config: HomologationRuntimeConfig): string {
+function mediaSql(config: HomologationRuntimeConfig, anchor: string, mediaMode: HomologationMediaMode): string {
+  if (mediaMode === "deferred") return "";
+  return `
+insert into public.media_assets(id,tenant_id,store_id,object_key,mime,size_bytes,created_at) values ${assetRows(config, anchor)};
+insert into public.product_images(id,tenant_id,store_id,product_id,variant_id,object_key,alt_text,position,created_at) values ${productImageRows(anchor)};
+insert into public.store_banners(id,tenant_id,store_id,title,alt_text,image_object_key,href,active,position,created_at,updated_at) values ${bannerRows(anchor)};`;
+}
+
+export function buildCatalogSql(
+  config: HomologationRuntimeConfig,
+  mediaMode: HomologationMediaMode = "required",
+): string {
   const anchor = config.anchorIso ?? DEFAULT_ANCHOR_ISO;
   return `
 insert into public.categories(id,tenant_id,store_id,slug,name,description,parent_id,active,position,created_at,updated_at) values ${categoryRows(true)};
 insert into public.categories(id,tenant_id,store_id,slug,name,description,parent_id,active,position,created_at,updated_at) values ${categoryRows(false)};
 insert into public.products(id,tenant_id,store_id,category_id,slug,name,price_cents,active,created_at,description,sku,compare_at_price_cents,cost_cents,track_inventory,stock_quantity,position,updated_at) values ${productRows()};
 insert into public.product_variants(id,tenant_id,store_id,product_id,name,sku,attributes,price_cents,compare_at_price_cents,cost_cents,active,stock_quantity,position,created_at,updated_at) values ${variantRows()};
-insert into public.catalog_settings(tenant_id,store_id,layout,primary_color,accent_color,background_color,font_family,show_search,show_categories,show_price,show_stock,labels,whatsapp_phone,whatsapp_message,checkout_mode,seo_title,seo_description,updated_at) values ${settingsRows()};
-insert into public.media_assets(id,tenant_id,store_id,object_key,mime,size_bytes,created_at) values ${assetRows(config, anchor)};
-insert into public.product_images(id,tenant_id,store_id,product_id,variant_id,object_key,alt_text,position,created_at) values ${productImageRows(anchor)};
-insert into public.store_banners(id,tenant_id,store_id,title,alt_text,image_object_key,href,active,position,created_at,updated_at) values ${bannerRows(anchor)};`;
+insert into public.catalog_settings(tenant_id,store_id,layout,primary_color,accent_color,background_color,font_family,show_search,show_categories,show_price,show_stock,labels,whatsapp_phone,whatsapp_message,checkout_mode,seo_title,seo_description,updated_at) values ${settingsRows()};${mediaSql(config, anchor, mediaMode)}`;
 }
