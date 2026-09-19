@@ -11,11 +11,11 @@ export function MasterPageHeader(props: Readonly<{
 }>) {
   return (
     <header className="master-page-header">
-      <div>
+      <div className="master-page-header__copy">
         <h1>{props.title}</h1>
         <p>{props.description}</p>
       </div>
-      {props.action}
+      {props.action ? <div className="master-page-header__actions">{props.action}</div> : null}
     </header>
   );
 }
@@ -28,10 +28,12 @@ export function MasterMetricCard(props: Readonly<{
 }>) {
   return (
     <article className="master-card master-metric">
-      <span>{props.label}</span>
-      <span className="master-metric__icon" aria-hidden="true">
-        <DashboardIcon name={props.icon} />
-      </span>
+      <div className="master-metric__heading">
+        <span className="master-metric__icon" aria-hidden="true">
+          <DashboardIcon name={props.icon} />
+        </span>
+        <span>{props.label}</span>
+      </div>
       <strong>{props.value ?? "—"}</strong>
       <small>{props.detail}</small>
     </article>
@@ -44,8 +46,8 @@ export function MasterPanel(props: Readonly<{
 }>) {
   return (
     <section className="master-card master-panel">
-      <h2>{props.title}</h2>
-      {props.children}
+      <div className="master-panel__header"><h2>{props.title}</h2></div>
+      <div className="master-panel__body">{props.children}</div>
     </section>
   );
 }
@@ -56,9 +58,7 @@ export function MasterEmptyState(props: Readonly<{
 }>) {
   return (
     <div className="master-empty">
-      <span className="master-empty__mark" aria-hidden="true">
-        <DashboardIcon name="check" />
-      </span>
+      <span className="master-empty__rule" aria-hidden="true" />
       <strong>{props.title}</strong>
       <p>{props.description}</p>
     </div>

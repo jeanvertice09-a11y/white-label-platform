@@ -18,7 +18,7 @@ export function MasterHeader({ onMenuClick }: Readonly<MasterHeaderProps>) {
   }
 
   return (
-    <header className="master-header">
+    <header className="master-header console-header">
       <button
         type="button"
         className="master-icon-button master-header__menu"
@@ -27,12 +27,12 @@ export function MasterHeader({ onMenuClick }: Readonly<MasterHeaderProps>) {
       >
         <DashboardIcon name="menu" />
       </button>
-      <div className="master-header__title">
-        <span className="master-header__eyebrow">Super Admin</span>
-        <strong>Controle da plataforma</strong>
+      <div className="master-header__title console-header__context">
+        <span>Plataforma</span>
+        <strong>Super Admin</strong>
       </div>
       <div className="master-header__actions">
-        <div className="master-account">
+        <div className="master-account" aria-label="Conta atual">
           <span className="master-account__avatar" aria-hidden="true">K</span>
           <span>Conta da plataforma</span>
         </div>
@@ -40,7 +40,7 @@ export function MasterHeader({ onMenuClick }: Readonly<MasterHeaderProps>) {
           type="button"
           className="master-icon-button"
           onClick={() => { void handleLogout(); }}
-          aria-label="Sair"
+          aria-label="Sair da conta"
           title="Sair"
         >
           <DashboardIcon name="logout" />

@@ -3,8 +3,9 @@ import { MasterShell } from "../components/master/MasterShell.tsx";
 import { loadMasterContext } from "../lib/client-guard.ts";
 import "../styles/master.css";
 import "../styles/master-data.css";
-import "../styles/dashboard-rich.css";
-import "../styles/dashboard-pages.css";
+import "../styles/console-system.css";
+import "../styles/console-compat.css";
+import "../styles/console-pages.css";
 import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/master")({

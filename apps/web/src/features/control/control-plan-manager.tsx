@@ -55,25 +55,12 @@ function planInput(form: FormData, template: PlanTemplateView): TenantPlanInput 
   };
 }
 
-function entitlementPayload(
-  form: FormData,
-  template: PlanTemplateView,
-): TenantPlanEntitlementInput[] {
+function entitlementPayload(form: FormData, template: PlanTemplateView): TenantPlanEntitlementInput[] {
   return template.entitlements.map((item) => {
     if (item.kind === "feature") {
-      return {
-        key: item.key,
-        kind: item.kind,
-        enabled: form.get(`feature:${item.key}`) === "on",
-        limitValue: null,
-      };
+      return { key: item.key, kind: item.kind, enabled: form.get(`feature:${item.key}`) === "on", limitValue: null };
     }
-    return {
-      key: item.key,
-      kind: item.kind,
-      enabled: null,
-      limitValue: Number(formText(form, `limit:${item.key}`, "0")),
-    };
+    return { key: item.key, kind: item.kind, enabled: null, limitValue: Number(formText(form, `limit:${item.key}`, "0")) };
   });
 }
 
@@ -85,25 +72,20 @@ function PlanEntitlements(props: Readonly<{
 }>): React.JSX.Element {
   const current = new Map(props.plan.entitlements.map((item) => [item.key, item]));
   if (!props.template.entitlements.length) {
-    return <div className="control-empty">A Kataluu ainda não autorizou recursos/limites para este template.</div>;
+    return <div className="control-empty"><strong>Sem recursos configuráveis</strong><p>A Kataluu ainda não autorizou features ou limites para este template.</p></div>;
   }
   return (
     <form className="control-plan-entitlements" onSubmit={(event) => {
       event.preventDefault();
       void props.onSave(entitlementPayload(new FormData(event.currentTarget), props.template));
     }}>
-      <h4>Recursos e limites</h4>
+      <div className="control-plan-subhead"><div><h4>Recursos e limites</h4><p>Somente itens autorizados pela Kataluu podem ser configurados.</p></div></div>
       {props.template.entitlements.map((item) => {
         const saved = current.get(item.key);
         if (item.kind === "feature") {
           return (
             <label className="control-plan-feature" key={item.key}>
-              <input
-                type="checkbox"
-                name={`feature:${item.key}`}
-                defaultChecked={saved?.enabled === true}
-                disabled={item.enabled !== true}
-              />
+              <input type="checkbox" name={`feature:${item.key}`} defaultChecked={saved?.enabled === true} disabled={item.enabled !== true} />
               <span><strong>{item.name}</strong><small>{item.key}</small></span>
               <em>{item.enabled === true ? "Permitido" : "Bloqueado pela Kataluu"}</em>
             </label>
@@ -112,13 +94,7 @@ function PlanEntitlements(props: Readonly<{
         return (
           <label className="control-plan-limit" key={item.key}>
             <span><strong>{item.name}</strong><small>Teto Kataluu: {item.limitValue ?? 0} {item.unit ?? ""}</small></span>
-            <input
-              type="number"
-              min={0}
-              max={item.limitValue ?? 0}
-              name={`limit:${item.key}`}
-              defaultValue={saved?.limitValue ?? 0}
-            />
+            <input type="number" min={0} max={item.limitValue ?? 0} name={`limit:${item.key}`} defaultValue={saved?.limitValue ?? 0} />
           </label>
         );
       })}
@@ -127,10 +103,7 @@ function PlanEntitlements(props: Readonly<{
   );
 }
 
-function TemplateCard(props: Readonly<{
-  template: PlanTemplateView;
-  plan?: TenantCommercialPlan;
-}>): React.JSX.Element {
+function TemplateCard(props: Readonly<{ template: PlanTemplateView; plan?: TenantCommercialPlan }>): React.JSX.Element {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -166,27 +139,55 @@ function TemplateCard(props: Readonly<{
   }
 
   return (
-    <article className="control-card control-plan-card">
-      <div className="control-plan-card__head">
-        <div><span className="control-kicker">Template Kataluu</span><h3>{props.template.name}</h3><p>{props.template.description ?? "Sem descrição."}</p></div>
-        <span className="control-badge">{props.plan ? "Configurado" : "Disponível"}</span>
+    <details className="control-card control-plan-card">
+      <summary className="control-plan-summary">
+        <div>
+          <span className="control-kicker">Template Kataluu</span>
+          <strong>{props.template.name}</strong>
+          <small>{props.template.description ?? "Sem descrição."}</small>
+        </div>
+        <div className="control-plan-summary__meta">
+          {props.plan ? <span>{`R$ ${centsToInput(props.plan.priceCents)} · ${props.plan.billingInterval}`}</span> : <span>Configuração pendente</span>}
+          <span className="control-badge">{props.plan ? (props.plan.active ? "Ativo" : "Inativo") : "Disponível"}</span>
+        </div>
+      </summary>
+
+      <div className="control-plan-card__body">
+        <form className="control-plan-form" onSubmit={(event) => { void savePlan(event); }}>
+          <fieldset className="control-plan-fieldset">
+            <legend>Oferta</legend>
+            <div className="control-plan-form__grid">
+              <label>Nome comercial<input name="name" required defaultValue={props.plan?.name ?? props.template.name} /></label>
+              <label>Slug<input name="slug" required defaultValue={props.plan?.slug ?? slugFromTemplate(props.template)} /></label>
+              <label className="control-plan-form__wide">Descrição<textarea name="description" defaultValue={props.plan?.description ?? ""} /></label>
+            </div>
+          </fieldset>
+
+          <fieldset className="control-plan-fieldset">
+            <legend>Cobrança e ciclo</legend>
+            <div className="control-plan-form__grid">
+              <label>Preço (R$)<input name="price" inputMode="decimal" required defaultValue={centsToInput(props.plan?.priceCents ?? 0)} /></label>
+              <label>Periodicidade<select name="billingInterval" defaultValue={props.plan?.billingInterval ?? "monthly"}><option value="monthly">Mensal</option><option value="quarterly">Trimestral</option><option value="yearly">Anual</option></select></label>
+              <label>Ordem<input name="displayOrder" type="number" min={0} defaultValue={props.plan?.displayOrder ?? props.template.sortOrder} /></label>
+              <label>Dias de trial<input name="trialDays" type="number" min={0} max={365} defaultValue={props.plan?.trialDays ?? 0} /></label>
+            </div>
+          </fieldset>
+
+          <fieldset className="control-plan-fieldset control-plan-fieldset--compact">
+            <legend>Disponibilidade</legend>
+            <div className="control-plan-options">
+              <label className="control-plan-check"><input name="active" type="checkbox" defaultChecked={props.plan?.active ?? true} />Ativo</label>
+              <label className="control-plan-check"><input name="trialEnabled" type="checkbox" defaultChecked={props.plan?.trialEnabled ?? false} />Trial habilitado</label>
+              <label className="control-plan-check"><input name="recommended" type="checkbox" defaultChecked={props.plan?.recommended ?? false} />Recomendado</label>
+            </div>
+          </fieldset>
+
+          <div className="control-plan-actions"><button className="control-plan-button" disabled={busy} type="submit">{props.plan ? "Salvar plano" : "Ativar e salvar"}</button></div>
+        </form>
+        {message ? <div className="control-plan-message" role="status">{message}</div> : null}
+        {props.plan ? <PlanEntitlements template={props.template} plan={props.plan} busy={busy} onSave={saveEntitlements} /> : null}
       </div>
-      <form className="control-plan-form" onSubmit={(event) => { void savePlan(event); }}>
-        <label>Nome comercial<input name="name" required defaultValue={props.plan?.name ?? props.template.name} /></label>
-        <label>Slug<input name="slug" required defaultValue={props.plan?.slug ?? slugFromTemplate(props.template)} /></label>
-        <label className="control-plan-form__wide">Descrição<textarea name="description" defaultValue={props.plan?.description ?? ""} /></label>
-        <label>Preço (R$)<input name="price" inputMode="decimal" required defaultValue={centsToInput(props.plan?.priceCents ?? 0)} /></label>
-        <label>Periodicidade<select name="billingInterval" defaultValue={props.plan?.billingInterval ?? "monthly"}><option value="monthly">Mensal</option><option value="quarterly">Trimestral</option><option value="yearly">Anual</option></select></label>
-        <label>Ordem<input name="displayOrder" type="number" min={0} defaultValue={props.plan?.displayOrder ?? props.template.sortOrder} /></label>
-        <label>Dias de trial<input name="trialDays" type="number" min={0} max={365} defaultValue={props.plan?.trialDays ?? 0} /></label>
-        <label className="control-plan-check"><input name="active" type="checkbox" defaultChecked={props.plan?.active ?? true} />Ativo</label>
-        <label className="control-plan-check"><input name="trialEnabled" type="checkbox" defaultChecked={props.plan?.trialEnabled ?? false} />Trial habilitado</label>
-        <label className="control-plan-check"><input name="recommended" type="checkbox" defaultChecked={props.plan?.recommended ?? false} />Recomendado</label>
-        <button className="control-plan-button" disabled={busy} type="submit">{props.plan ? "Salvar plano" : "Ativar e salvar"}</button>
-      </form>
-      {message ? <div className="control-plan-message">{message}</div> : null}
-      {props.plan ? <PlanEntitlements template={props.template} plan={props.plan} busy={busy} onSave={saveEntitlements} /> : null}
-    </article>
+    </details>
   );
 }
 
@@ -196,7 +197,7 @@ export function ControlPlanManager({ catalog }: Readonly<{ catalog: TenantPlanCa
     <div className="control-plan-list">
       {catalog.templates.length
         ? catalog.templates.map((template) => <TemplateCard key={template.id} template={template} plan={plans.get(template.id)} />)
-        : <div className="control-empty">Nenhum template de plano ativo na Kataluu.</div>}
+        : <div className="control-empty"><strong>Nenhum template disponível</strong><p>A Kataluu ainda não disponibilizou templates de plano ativos para esta White Label.</p></div>}
     </div>
   );
 }
