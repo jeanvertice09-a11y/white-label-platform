@@ -81,7 +81,7 @@ function AuditPanel({ detail }: Readonly<{ detail: MasterWhiteLabelDetail }>): R
 }
 
 function MasterWhiteLabelDetailPage(): React.JSX.Element {
-  const detail = Route.useLoaderData();
+  const detail: MasterWhiteLabelDetail = Route.useLoaderData();
   return <div className="master-stack console-page">
     <MasterPageHeader title={detail.tenant.name} description={`${detail.tenant.slug} · gestão da White Label e suas configurações comerciais.`} action={<a className="k-button" href="/master/platforms">Voltar para White Labels</a>} />
     <WhiteLabelSummary detail={detail} />
