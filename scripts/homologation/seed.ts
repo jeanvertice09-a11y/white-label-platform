@@ -74,7 +74,7 @@ export async function applyHomologationSeed(
   options: ApplyHomologationOptions = {},
 ): Promise<void> {
   const mediaMode = options.mediaMode ?? "required";
-  const preflight = await runHomologationPreflight(sql, config);
+  const preflight = await runHomologationPreflight(sql, config, { mediaMode });
   const body = [
     buildCleanupStatements(),
     buildFoundationSql(config, mediaMode),
