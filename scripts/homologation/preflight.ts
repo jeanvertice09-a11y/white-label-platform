@@ -80,7 +80,7 @@ async function verifyGatewayIdentity(sql: SqlExecutor): Promise<void> {
     `select level,tenant_id::text,store_id::text,public_identifier
      from public.gateway_accounts where id=$1::uuid`, [PLATFORM_GATEWAY_ID],
   );
-  const row = rows[0];
+  const row = rows.at(0);
   if (!row) return;
   if (row["level"] !== "platform_billing" || row["tenant_id"] !== null || row["store_id"] !== null || row["public_identifier"] !== "hml-internal-only") {
     throw new Error(`preflight: ID determinístico do gateway pertence a outro registro: ${PLATFORM_GATEWAY_ID}`);
