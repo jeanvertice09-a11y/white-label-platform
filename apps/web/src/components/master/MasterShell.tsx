@@ -1,6 +1,6 @@
 import { Outlet } from "@tanstack/react-router";
 import { useState } from "react";
-import { MasterHeader } from "./Header.tsx";
+import { DashboardIcon } from "../dashboard/DashboardIcon.tsx";
 import { MasterSidebar } from "./Sidebar.tsx";
 
 export function MasterShell() {
@@ -14,7 +14,20 @@ export function MasterShell() {
         onClose={() => { setMobileOpen(false); }}
       />
       <div className="master-shell__content console-shell__content">
-        <MasterHeader onMenuClick={() => { setMobileOpen(true); }} />
+        <div className="master-mobile-bar">
+          <button
+            type="button"
+            className="master-mobile-bar__menu"
+            onClick={() => { setMobileOpen(true); }}
+            aria-label="Abrir menu"
+          >
+            <DashboardIcon name="menu" />
+          </button>
+          <div>
+            <strong>Kataluu</strong>
+            <span>Administração da plataforma</span>
+          </div>
+        </div>
         <main className="master-main console-main" id="master-content" tabIndex={-1}>
           <div className="master-container console-container">
             <Outlet />

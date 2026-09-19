@@ -13,16 +13,22 @@ export const Route = createFileRoute("/master/")({
   component: MasterDashboard,
 });
 
-function MasterMetricsSection() {
+function MasterOverviewBand() {
   const data = Route.useLoaderData();
   const totalStores = data.tenants.reduce((sum, tenant) => sum + tenant.storeCount, 0);
   return (
-    <div className="master-metrics master-summary-surface" aria-label="Resumo da plataforma">
-      <MasterMetricCard icon="revenue" label="Receita recebida" value={masterMoney(data.metrics.paidCents)} detail="Pagamentos confirmados" />
-      <MasterMetricCard icon="platforms" label="White Labels" value={String(data.metrics.tenants)} detail={`${String(data.metrics.activeTenants)} ativas`} />
-      <MasterMetricCard icon="store" label="Lojas" value={String(totalStores)} detail={`${String(data.metrics.activeStores)} ativas`} />
-      <MasterMetricCard icon="subscriptions" label="Assinaturas" value={String(data.metrics.activeSubscriptions)} detail="Assinaturas ativas" />
-    </div>
+    <section className="master-overview-band" aria-label="Resumo da plataforma">
+      <div className="master-overview-primary">
+        <span>Receita recebida</span>
+        <strong>{masterMoney(data.metrics.paidCents)}</strong>
+        <small>Pagamentos confirmados em platform_billing</small>
+      </div>
+      <div className="master-overview-stats">
+        <MasterMetricCard icon="platforms" label="White Labels" value={String(data.metrics.tenants)} detail={`${String(data.metrics.activeTenants)} ativas`} />
+        <MasterMetricCard icon="store" label="Lojas" value={String(totalStores)} detail={`${String(data.metrics.activeStores)} ativas`} />
+        <MasterMetricCard icon="subscriptions" label="Assinaturas" value={String(data.metrics.activeSubscriptions)} detail="Ativas na plataforma" />
+      </div>
+    </section>
   );
 }
 
@@ -31,22 +37,27 @@ function OperationalSnapshot() {
   const totalStores = data.tenants.reduce((sum, tenant) => sum + tenant.storeCount, 0);
   const rows = [
     ["White Labels ativas", data.metrics.activeTenants, `${String(data.metrics.tenants)} cadastradas`],
-    ["White Labels em trial", data.metrics.trialTenants, "Períodos de teste em andamento"],
-    ["Lojas ativas", data.metrics.activeStores, `${String(totalStores)} lojas cadastradas`],
-    ["Domínios ativos", data.metrics.activeDomains, `${String(data.domains.length)} domínios cadastrados`],
-    ["Assinaturas ativas", data.metrics.activeSubscriptions, "Cobranças e trials conforme dados reais"],
+    ["Em trial", data.metrics.trialTenants, "Períodos de teste em andamento"],
+    ["Lojas ativas", data.metrics.activeStores, `${String(totalStores)} cadastradas`],
+    ["Domínios ativos", data.metrics.activeDomains, `${String(data.domains.length)} cadastrados`],
+    ["Assinaturas ativas", data.metrics.activeSubscriptions, "Billing e trials reais"],
   ] as const;
   return (
-    <MasterPanel title="Base operacional">
-      <div className="console-fact-list">
+    <section className="master-operational-section" aria-labelledby="master-operational-title">
+      <div className="master-section-heading">
+        <h2 id="master-operational-title">Base operacional</h2>
+        <p>Leitura compacta dos volumes que sustentam a operação.</p>
+      </div>
+      <div className="master-operational-grid">
         {rows.map(([label, value, detail]) => (
-          <div className="console-fact-row" key={label}>
-            <div><strong>{label}</strong><small>{detail}</small></div>
-            <b>{value}</b>
+          <div className="master-operational-item" key={label}>
+            <strong>{value}</strong>
+            <span>{label}</span>
+            <small>{detail}</small>
           </div>
         ))}
       </div>
-    </MasterPanel>
+    </section>
   );
 }
 
@@ -54,7 +65,7 @@ function AttentionPanel() {
   const data = Route.useLoaderData();
   const attention = data.tenants.filter((tenant) => tenant.status !== "active").slice(0, 6);
   return (
-    <MasterPanel title="Requer atenção">
+    <MasterPanel title="Operação que precisa de atenção">
       {attention.length ? (
         <div className="master-list master-attention-list">
           {attention.map((tenant) => (
@@ -98,14 +109,15 @@ function MasterDashboard() {
     <div className="master-stack master-dashboard console-page">
       <MasterPageHeader
         title="Visão geral"
-        description="Operação da Kataluu, White Labels e faturamento em uma leitura objetiva."
-        action={<span className="console-context-note">Dados da operação atual</span>}
+        description="Operação da Kataluu, White Labels e faturamento em uma leitura direta."
+        action={<span className="console-context-note">Operação atual</span>}
       />
-      <MasterMetricsSection />
-      <div className="master-dashboard-layout">
-        <div className="master-dashboard-layout__primary"><AttentionPanel /><ActivityPanel /></div>
-        <aside className="master-dashboard-layout__aside"><OperationalSnapshot /></aside>
+      <MasterOverviewBand />
+      <div className="master-dashboard-columns">
+        <AttentionPanel />
+        <ActivityPanel />
       </div>
+      <OperationalSnapshot />
     </div>
   );
 }
