@@ -16,6 +16,8 @@ export interface CatalogServerContext {
   scope: CatalogScope;
   repository: CatalogReadRepository;
   store: StorefrontStore;
+  hostname: string;
+  userId: string | null;
 }
 
 function requireHost(host: string | null): string {
@@ -35,9 +37,9 @@ async function loadStore(
 export async function createPublicCatalogContext(
   rawHost: string | null,
 ): Promise<CatalogServerContext> {
-  const host = requireHost(rawHost);
+  const hostname = requireHost(rawHost);
   const resolver = new DomainResolver(createServiceDomainStore());
-  const resolved = await resolver.resolve(host);
+  const resolved = await resolver.resolve(hostname);
   if (!resolved || resolved.type !== "store_catalog" || !resolved.storeId) {
     throw new Error("Catálogo não encontrado");
   }
@@ -45,18 +47,24 @@ export async function createPublicCatalogContext(
   const repository = createCatalogReadRepository(createAdminSqlExecutor());
   const store = await loadStore(scope, repository);
   assertStorefrontAvailable(store);
-  return { scope, repository, store };
+  return { scope, repository, store, hostname, userId: null };
 }
 
 export async function createMerchantCatalogContext(
   rawHost: string | null,
 ): Promise<CatalogServerContext> {
-  const host = requireHost(rawHost);
+  const hostname = requireHost(rawHost);
   const deps = await createRealDeps();
-  const auth = await loadStoreAdmin({ host }, deps);
+  const auth = await loadStoreAdmin({ host: hostname }, deps);
   if (!auth.storeId) throw new Error("Loja não resolvida");
   const scope = { tenantId: String(auth.tenantId), storeId: String(auth.storeId) };
   const repository = createCatalogReadRepository(createAdminSqlExecutor());
   const store = await loadStore(scope, repository);
-  return { scope, repository, store };
+  return {
+    scope,
+    repository,
+    store,
+    hostname,
+    userId: String(auth.userId),
+  };
 }
