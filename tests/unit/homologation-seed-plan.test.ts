@@ -36,6 +36,35 @@ describe("homologation seed plan", () => {
     expect(DEMO_COUNTS.variants).toBe(92);
   });
 
+  test("mapeia os 72 produtos para categorias semânticas existentes", () => {
+    const expected = {
+      lume: [
+        "midi-e-longos", "blusas-e-camisas", "calcas-e-blazers", "calcas-e-blazers", "midi-e-longos", "midi-e-longos",
+        "blusas-e-camisas", "midi-e-longos", "blusas-e-camisas", "calcas-e-blazers", "blusas-e-camisas", "midi-e-longos",
+        "midi-e-longos", "blusas-e-camisas", "calcas-e-blazers", "calcas-e-blazers", "midi-e-longos", "blusas-e-camisas",
+      ],
+      botanica: [
+        "tratamentos", "tratamentos", "protetores", "tratamentos", "tratamentos", "tratamentos", "tratamentos", "tratamentos",
+        "hidratacao", "hidratacao", "hidratacao", "tratamentos", "tratamentos", "tratamentos", "tratamentos", "tratamentos",
+        "protetores", "hidratacao",
+      ],
+      passo: [
+        "casual", "casual", "casual", "social", "social", "casual", "conforto", "casual", "casual", "social", "social",
+        "social", "conforto", "casual", "social", "social", "casual", "conforto",
+      ],
+      casa: [
+        "vasos-e-objetos", "vasos-e-objetos", "vasos-e-objetos", "servir", "cestos-e-caixas", "vasos-e-objetos", "servir",
+        "vasos-e-objetos", "vasos-e-objetos", "servir", "cestos-e-caixas", "servir", "vasos-e-objetos", "vasos-e-objetos",
+        "servir", "cestos-e-caixas", "vasos-e-objetos", "vasos-e-objetos",
+      ],
+    } as const;
+
+    for (const store of DEMO_STORES) {
+      const categorySlugByKey = new Map(store.categories.map((category) => [category.key, category.slug]));
+      expect(store.products.map((product) => categorySlugByKey.get(product.categoryKey))).toEqual([...expected[store.key]]);
+    }
+  });
+
   test("manifesto exige exatamente 76 objetos store-scoped e associados", () => {
     const assets = expectedAssets();
     expect(assets).toHaveLength(76);

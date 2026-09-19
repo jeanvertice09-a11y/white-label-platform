@@ -18,6 +18,7 @@ interface StoreBlueprint {
   variantLabel: string;
   categoryPairs: readonly (readonly [string, string])[];
   productNames: readonly string[];
+  productCategoryIndexes: readonly number[];
 }
 
 export const DEMO_TENANTS: readonly DemoTenant[] = [
@@ -53,6 +54,7 @@ const BLUEPRINTS: readonly StoreBlueprint[] = [
       "Saia Jeans Midi Clara", "Blusa Manga Bufante", "Calça Cenoura Grafite", "Colete Alfaiataria Bege",
       "Vestido Curto Texturizado", "Camisa Cropped Natural",
     ],
+    productCategoryIndexes: [0, 2, 1, 1, 0, 0, 2, 0, 2, 1, 2, 0, 0, 2, 1, 1, 0, 2],
   },
   {
     key: "botanica", tenantKey: "aurora", name: "Botânica Lab HML", slug: "hml-botanica-lab",
@@ -67,6 +69,7 @@ const BLUEPRINTS: readonly StoreBlueprint[] = [
       "Tônico Facial Equilibrante", "Creme para Área dos Olhos", "Sabonete Facial Espuma", "Bruma Facial Hidratante",
       "Protetor Solar Corporal FPS 50", "Manteiga Corporal Karité",
     ],
+    productCategoryIndexes: [0, 0, 1, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 1, 2],
   },
   {
     key: "passo", tenantKey: "nexo", name: "Passo Norte HML", slug: "hml-passo-norte",
@@ -81,6 +84,7 @@ const BLUEPRINTS: readonly StoreBlueprint[] = [
       "Sandália Slide Essential", "Tênis Retro Court", "Bota Desert Areia", "Sapato Loafer Conhaque",
       "Tênis Trek Light", "Chinelo Slide Norte",
     ],
+    productCategoryIndexes: [0, 0, 0, 1, 1, 0, 2, 0, 0, 1, 1, 1, 2, 0, 1, 1, 0, 2],
   },
   {
     key: "casa", tenantKey: "nexo", name: "Casa Nativa HML", slug: "hml-casa-nativa",
@@ -95,6 +99,7 @@ const BLUEPRINTS: readonly StoreBlueprint[] = [
       "Porta-Retrato Carvalho", "Difusor Ambiente Cedro", "Bowl Cerâmica Artesanal", "Organizador Bambu Modular",
       "Manta Sofá Algodão", "Vaso Mini Terracota",
     ],
+    productCategoryIndexes: [0, 0, 0, 1, 2, 0, 1, 0, 0, 1, 2, 1, 0, 0, 1, 2, 0, 0],
   },
 ];
 
@@ -136,7 +141,10 @@ function productsFor(blueprint: StoreBlueprint): DemoProduct[] {
   return blueprint.productNames.map((name, index) => {
     const priceCents = blueprint.basePrice + index * 770;
     const sku = `HML-${blueprint.key.toUpperCase()}-${String(index + 1).padStart(3, "0")}`;
-    const categoryPair = index % blueprint.categoryPairs.length;
+    const categoryPair = blueprint.productCategoryIndexes[index];
+    if (categoryPair === undefined || !blueprint.categoryPairs[categoryPair]) {
+      throw new Error(`categoria semântica ausente para ${blueprint.key}/${name}`);
+    }
     const categoryKey = `${blueprint.key}:category:${categoryPair}:child`;
     return {
       id: stableUuid(`${blueprint.key}:product:${index}`), name, slug: slugify(name), sku,
