@@ -41,8 +41,8 @@ export function ControlTenantBilling({ initial }: Readonly<{ initial: TenantBill
       </div>
       <div className="control-card">
         <div className="k-form__grid">
-          <div className="k-field"><label htmlFor="billing-search">Buscar</label><input id="billing-search" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-          <div className="k-field"><label htmlFor="billing-status">Status</label><select id="billing-status" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="all">Todos</option><option value="trialing">Trial</option><option value="active">Ativo</option><option value="past_due">Past due</option><option value="suspended">Suspenso</option><option value="canceled">Cancelado</option><option value="expired">Expirado</option></select></div>
+          <div className="k-field"><label htmlFor="billing-search">Buscar</label><input id="billing-search" value={query} onChange={(event) => { setQuery(event.target.value); }} /></div>
+          <div className="k-field"><label htmlFor="billing-status">Status</label><select id="billing-status" value={status} onChange={(event) => { setStatus(event.target.value as typeof status); }}><option value="all">Todos</option><option value="trialing">Trial</option><option value="active">Ativo</option><option value="past_due">Past due</option><option value="suspended">Suspenso</option><option value="canceled">Cancelado</option><option value="expired">Expirado</option></select></div>
         </div>
         <div className="k-actions"><button className="k-button" disabled={busy} type="button" onClick={() => { void search(1); }}>Filtrar</button></div>
         {data.subscriptions.length ? data.subscriptions.map((item) => (
