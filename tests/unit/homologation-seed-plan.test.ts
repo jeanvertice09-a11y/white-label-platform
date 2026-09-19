@@ -61,7 +61,7 @@ describe("homologation seed plan", () => {
 
     for (const store of DEMO_STORES) {
       const categorySlugByKey = new Map(store.categories.map((category) => [category.key, category.slug]));
-      expect(store.products.map((product) => categorySlugByKey.get(product.categoryKey))).toEqual(expected[store.key]);
+      expect(store.products.map((product) => categorySlugByKey.get(product.categoryKey))).toEqual([...expected[store.key]]);
     }
   });
 
