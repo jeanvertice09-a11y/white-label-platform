@@ -14,6 +14,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 const SHA256_RE = /^[0-9a-f]{64}$/i;
 const PLAN_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const IMAGE_MIME = new Set(["image/webp", "image/jpeg", "image/png"]);
 export const HML_MEDIA_ORIGIN = "https://media.kataluu.com.br";
 
 export const EXPECTED_STORE_TEMPLATES: Readonly<Record<StoreKey, HmlTemplateCode>> = {
@@ -148,6 +149,7 @@ function assertAssetMatchesExpectation(asset: AssetExpectation, resolved: Resolv
     throw new Error(`asset com associação divergente: ${asset.key}`);
   }
   if (!resolved.source.trim()) throw new Error(`asset sem source: ${asset.key}`);
+  if (!IMAGE_MIME.has(resolved.mimeType)) throw new Error(`asset com MIME inválido: ${asset.key}`);
   if (!Number.isSafeInteger(resolved.sizeBytes) || resolved.sizeBytes <= 0) throw new Error(`asset sem sizeBytes real: ${asset.key}`);
   if (!SHA256_RE.test(resolved.sha256)) throw new Error(`asset com sha256 inválido: ${asset.key}`);
 }
