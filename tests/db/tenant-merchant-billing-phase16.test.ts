@@ -207,7 +207,9 @@ describe("phase 16 tenant_billing core", () => {
     expect(hasFeature(valid, "products")).toBe(true);
     expect(getLimit(valid, "max_products")).toBe(20);
     await h.db.query(
-      "update public.store_subscriptions set trial_ends_at=now()-interval '1 day' where id=$1::uuid",
+      `update public.store_subscriptions
+       set trial_started_at=now()-interval '3 days',trial_ends_at=now()-interval '1 day'
+       where id=$1::uuid`,
       [sub.subscriptionId],
     );
     const expired = await loadStoreEntitlementSnapshot(h.db, { tenantId: f.tenantId, storeId: f.storeId });
