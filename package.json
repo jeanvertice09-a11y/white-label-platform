@@ -23,7 +23,12 @@
     "test:db": "bun test tests/db --timeout 120000",
     "test:security": "bun test tests/security --timeout 15000",
     "test:all": "bun test tests/unit tests/integration tests/security packages/*/src --timeout 15000",
-    "test:e2e": "bun tests/e2e/smoke.ts"
+    "test:e2e": "bun tests/e2e/smoke.ts",
+    "homologation:plan": "bun scripts/homologation/cli.ts plan",
+    "homologation:assets": "bun scripts/homologation/cli.ts assets",
+    "homologation:preflight": "bun scripts/homologation/cli.ts preflight",
+    "homologation:apply": "bun scripts/homologation/cli.ts apply",
+    "homologation:cleanup": "bun scripts/homologation/cli.ts cleanup"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
