@@ -1,9 +1,10 @@
 import { dirname, isAbsolute, resolve } from "node:path";
 import postgres from "postgres";
+import { buildAssetManifestTemplate } from "./asset-manifest.ts";
 import { verifyPublishedAssets } from "./assets-verify.ts";
 import { cleanupHomologationSeed, applyHomologationSeed } from "./seed.ts";
 import type { HomologationRuntimeConfig, ResolvedAsset } from "./model.ts";
-import { expectedAssets, homologationPlan, validateRuntimeConfig } from "./plan.ts";
+import { homologationPlan, validateRuntimeConfig } from "./plan.ts";
 import { runHomologationPreflight } from "./preflight.ts";
 
 interface DbClient {
@@ -74,7 +75,7 @@ async function productionPreflight(config: HomologationRuntimeConfig): Promise<R
 
 async function run(command: string | undefined): Promise<void> {
   if (command === "plan") { write(homologationPlan()); return; }
-  if (command === "assets") { write(expectedAssets()); return; }
+  if (command === "assets") { write(buildAssetManifestTemplate()); return; }
   if (command === "preflight") {
     const config = await readConfig();
     write(await withDb((db) => runHomologationPreflight(db, config)));
