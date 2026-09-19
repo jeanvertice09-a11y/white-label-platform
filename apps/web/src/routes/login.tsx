@@ -44,6 +44,11 @@ function AccessChooser({ experience }: Readonly<{ experience: PublicLoginExperie
   );
 }
 
+function readFormText(form: FormData, field: string): string {
+  const value = form.get(field);
+  return typeof value === "string" ? value : "";
+}
+
 function LoginPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   const navigate = useNavigate();
@@ -56,8 +61,8 @@ function LoginPage(): React.JSX.Element {
     event.preventDefault();
     if (!data.experience.available) return;
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "").trim();
-    const password = String(form.get("password") ?? "");
+    const email = readFormText(form, "email").trim();
+    const password = readFormText(form, "password");
     setBusy(true); setMessage("");
     try {
       await signInWithPassword(email, password);
