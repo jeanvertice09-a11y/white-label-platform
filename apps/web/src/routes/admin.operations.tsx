@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { InventoryPage } from "@white-label/inventory";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { MerchantOperationsPage } from "../features/store-admin/merchant-operations-page.tsx";
 import { monthRange } from "../features/store-admin/merchant-operations-utils.ts";
@@ -11,9 +12,29 @@ import {
   listMerchantTasks,
   summarizeMerchantFinance,
 } from "../lib/server/operations-merchant.functions.ts";
+import type {
+  FinanceSummary,
+  FinancialCategory,
+  FinancialEntry,
+  MerchantTask,
+  Page,
+  Purchase,
+  Supplier,
+} from "../../../../packages/merchant-ops/src/types.ts";
+
+interface OperationsLoaderData {
+  suppliers: Page<Supplier>;
+  supplierOptions: Supplier[];
+  purchases: Page<Purchase>;
+  inventory: InventoryPage;
+  finance: Page<FinancialEntry>;
+  financeSummary: FinanceSummary;
+  categories: FinancialCategory[];
+  tasks: MerchantTask[];
+}
 
 export const Route = createFileRoute("/admin/operations")({
-  loader: async () => {
+  loader: async (): Promise<OperationsLoaderData> => {
     const range = monthRange();
     const [suppliers, supplierOptions, purchases, inventory, finance, financeSummary, categories, tasks] = await Promise.all([
       listMerchantSuppliers({ data: { page: 1, pageSize: 25 } }),
