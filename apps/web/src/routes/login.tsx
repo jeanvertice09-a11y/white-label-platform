@@ -3,6 +3,7 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { OnboardingPanel } from "../features/public/onboarding-panel.tsx";
 import { PublicBrandMark, publicBrandStyle } from "../features/public/public-shell.tsx";
 import type { ControlOnboardingData } from "../lib/control-onboarding.types.ts";
+import { parseLoginSearch, postLoginLocation } from "../lib/login-flow.ts";
 import type { PublicLoginExperience } from "../lib/public-site.types.ts";
 import { getBrowserClient, signInWithPassword } from "../lib/supabase-client.ts";
 import { getControlOnboarding } from "../lib/server/control-onboarding.functions.ts";
@@ -10,16 +11,14 @@ import { getPublicLoginExperience } from "../lib/server/public-site.functions.ts
 import { getLoginTarget } from "../lib/server/routing.functions.ts";
 import "../styles/public.css";
 
-type LoginSearch = { onboarding?: boolean };
-
 export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>): LoginSearch => ({ onboarding: search["onboarding"] === "1" || search["onboarding"] === true }),
-  loaderDeps: ({ search }) => ({ onboarding: search.onboarding }),
+  validateSearch: parseLoginSearch,
+  loaderDeps: ({ search }) => ({ onboarding: search.onboarding === true }),
   loader: async ({ deps }) => {
     const [destination, experience] = await Promise.all([getLoginTarget(), getPublicLoginExperience()]);
     let onboarding: ControlOnboardingData | null = null;
     if (deps.onboarding && destination === "/control") {
-      try { onboarding = await getControlOnboarding(); } catch { onboarding = null; }
+      onboarding = await getControlOnboarding();
     }
     if (onboarding?.complete) {
       // TanStack Router redirects are intentionally thrown control-flow objects.
@@ -44,11 +43,6 @@ function AccessChooser({ experience }: Readonly<{ experience: PublicLoginExperie
   );
 }
 
-function readFormText(form: FormData, field: string): string {
-  const value = form.get(field);
-  return typeof value === "string" ? value : "";
-}
-
 function LoginPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   const navigate = useNavigate();
@@ -59,17 +53,20 @@ function LoginPage(): React.JSX.Element {
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!data.experience.available) return;
+    if (!data.experience.available) {
+      setMessage("Este endereço não está disponível para acesso.");
+      return;
+    }
     const form = new FormData(event.currentTarget);
-    const email = readFormText(form, "email").trim();
-    const password = readFormText(form, "password");
+    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
     setBusy(true); setMessage("");
     try {
       await signInWithPassword(email, password);
       const { data: sessionData } = await getBrowserClient().auth.getSession();
       if (!sessionData.session) throw new Error("Sessão não foi persistida. Tente novamente.");
       if (data.destination === "/control") {
-        window.location.assign("/login?onboarding=1");
+        window.location.assign(postLoginLocation(data.destination));
         return;
       }
       await navigate({ to: data.destination });

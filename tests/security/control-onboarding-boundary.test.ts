@@ -24,10 +24,15 @@ describe("control onboarding boundary", () => {
     expect(read).not.toContain("setup_completed");
   });
 
-  test("login fetches onboarding only after authenticated control flow", () => {
+  test("login preserva submit real e recarrega onboarding autenticado com search canônico", () => {
     const route = source("apps/web/src/routes/login.tsx");
+    expect(route).toContain("validateSearch: parseLoginSearch");
     expect(route).toContain('data.destination === "/control"');
-    expect(route).toContain("/login?onboarding=1");
+    expect(route).toContain("window.location.assign(postLoginLocation(data.destination))");
     expect(route).toContain("getControlOnboarding");
+    expect(route).toContain("await signInWithPassword(email, password)");
+    expect(route).toContain("<form onSubmit=");
+    expect(route).not.toContain("if (!data.experience.available) return;");
+    expect(route).not.toContain("try { onboarding = await getControlOnboarding(); } catch");
   });
 });
