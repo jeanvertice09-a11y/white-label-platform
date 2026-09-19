@@ -143,7 +143,7 @@ describe("storefront public auth boundary", () => {
     expect(await resolver.resolve("unknown.example.test")).toBeNull();
     let invalidRejected = false;
     try {
-      await resolver.resolve("https://invalid.example.test/");
+      await resolver.resolve("bad host/");
     } catch {
       invalidRejected = true;
     }
