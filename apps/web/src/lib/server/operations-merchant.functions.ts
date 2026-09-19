@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { PostgresMerchantOperationsRepository } from "@white-label/merchant-ops";
+import { PostgresMerchantOperationsRepository } from "../../../../../packages/merchant-ops/src/index.ts";
 import { createMerchantOperationsContext } from "./operations-context.server.ts";
 
 const uuid = z.string().uuid();
