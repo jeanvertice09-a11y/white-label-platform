@@ -6,12 +6,16 @@ import { buildCustomersOrdersStockSql } from "./fixtures/customers-orders-sql.ts
 import { buildFoundationSql } from "./fixtures/foundation-sql.ts";
 import { buildMarketingSql } from "./fixtures/marketing-sql.ts";
 import { buildOperationsSql } from "./fixtures/operations-sql.ts";
-import type { HomologationRuntimeConfig, SqlExecutor } from "./model.ts";
+import type { HomologationMediaMode, HomologationRuntimeConfig, SqlExecutor } from "./model.ts";
 import { quoteSql } from "./model.ts";
 import { runHomologationPreflight } from "./preflight.ts";
 
 export interface HomologationSqlExecutor extends SqlExecutor {
   execScript(sql: string): Promise<void>;
+}
+
+export interface ApplyHomologationOptions {
+  mediaMode?: HomologationMediaMode;
 }
 
 function integrityAssertionsSql(): string {
@@ -67,12 +71,14 @@ async function executeTransactional(sql: HomologationSqlExecutor, body: string):
 export async function applyHomologationSeed(
   sql: HomologationSqlExecutor,
   config: HomologationRuntimeConfig,
+  options: ApplyHomologationOptions = {},
 ): Promise<void> {
+  const mediaMode = options.mediaMode ?? "required";
   const preflight = await runHomologationPreflight(sql, config);
   const body = [
     buildCleanupStatements(),
-    buildFoundationSql(config),
-    buildCatalogSql(config),
+    buildFoundationSql(config, mediaMode),
+    buildCatalogSql(config, mediaMode),
     buildCustomersOrdersStockSql(config.anchorIso),
     buildMarketingSql(config.anchorIso),
     buildOperationsSql(config),
