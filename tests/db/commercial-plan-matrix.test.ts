@@ -52,6 +52,11 @@ async function expectRejectedWithMessage(
   throw new Error(`Promessa deveria rejeitar com mensagem contendo: ${expectedMessage}`);
 }
 
+async function expectResolvedUndefined(promise: Promise<unknown>): Promise<void> {
+  const value = await promise;
+  expect(value).toBeUndefined();
+}
+
 async function feature(code: string, key: string): Promise<boolean> {
   const rows = await h.db.query(
     `select e.enabled from public.plan_template_entitlements e
@@ -213,11 +218,9 @@ describe("commercial plan matrix", () => {
        from generate_series(1,1001) g`,
       [T.a, STORES.complete],
     );
-    expect(await assertProductMutationEntitlements(
-      h.db,
-      { tenantId: T.a, storeId: STORES.complete },
-      "create",
-    )).toBeUndefined();
+    await expectResolvedUndefined(
+      assertProductMutationEntitlements(h.db, { tenantId: T.a, storeId: STORES.complete }, "create"),
+    );
   });
 
   test("custom_domain é server-side e downgrade suspende domínio sem apagar", async () => {
@@ -225,7 +228,7 @@ describe("commercial plan matrix", () => {
       assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan1),
       "custom_domain",
     );
-    expect(await assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan2)).toBeUndefined();
+    await expectResolvedUndefined(assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan2));
     await h.db.query(
       `insert into public.domains(tenant_id,store_id,hostname,type,status,verified_at)
        values ($1,$2,'downgrade.example.test','store_catalog','active',now())`,
