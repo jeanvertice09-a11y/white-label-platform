@@ -27,22 +27,24 @@
     "homologation:plan": "bun scripts/homologation/cli.ts plan",
     "homologation:assets": "bun scripts/homologation/cli.ts assets",
     "homologation:preflight": "bun scripts/homologation/cli.ts preflight",
+    "homologation:preflight:functional": "bun scripts/homologation/cli.ts preflight",
     "homologation:preflight:production": "bun scripts/homologation/cli.ts preflight-production",
     "homologation:apply": "bun scripts/homologation/cli.ts apply",
+    "homologation:apply:functional": "bun scripts/homologation/cli.ts apply-functional",
     "homologation:cleanup": "bun scripts/homologation/cli.ts cleanup"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
-    "@eslint/js": "^9.18.0",
-    "@playwright/test": "^1.49.1",
-    "@types/bun": "^1.2.5",
-    "@types/react": "^19.0.7",
-    "@types/react-dom": "^19.0.3",
-    "eslint": "^9.18.0",
-    "globals": "^15.14.0",
-    "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0",
-    "vite": "^7.1.7"
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "@types/bun": "^1.4.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^7.3.6"
   },
   "dependencies": {
     "postgres": "^3.4.9"
