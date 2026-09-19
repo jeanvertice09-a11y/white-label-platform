@@ -1,5 +1,5 @@
 import { DEMO_STORES, DEMO_TENANTS } from "./data.ts";
-import type { HomologationRuntimeConfig } from "../model.ts";
+import type { HomologationMediaMode, HomologationRuntimeConfig } from "../model.ts";
 import { DEFAULT_ANCHOR_ISO, isoDaysFrom, quoteSql, requireStoreDomain, stableUuid } from "../model.ts";
 
 function json(value: unknown): string {
@@ -37,9 +37,15 @@ function domainRows(config: HomologationRuntimeConfig, anchor: string): string {
   return rows.join(",\n");
 }
 
-export function buildFoundationSql(config: HomologationRuntimeConfig): string {
+export function buildFoundationSql(
+  config: HomologationRuntimeConfig,
+  mediaMode: HomologationMediaMode = "required",
+): string {
   const anchor = config.anchorIso ?? DEFAULT_ANCHOR_ISO;
-  const branding = DEMO_TENANTS.map((tenant) => `(${quoteSql(tenant.id)}::uuid,${quoteSql(config.tenantLogoUrls[tenant.key])},${quoteSql(tenant.primaryColor)},${quoteSql(anchor)}::timestamptz)`).join(",\n");
+  const branding = DEMO_TENANTS.map((tenant) => {
+    const logo = mediaMode === "deferred" ? "null" : quoteSql(config.tenantLogoUrls[tenant.key]);
+    return `(${quoteSql(tenant.id)}::uuid,${logo},${quoteSql(tenant.primaryColor)},${quoteSql(anchor)}::timestamptz)`;
+  }).join(",\n");
   const tenantSettings = DEMO_TENANTS.map((tenant) => `(${quoteSql(tenant.id)}::uuid,${json({ demoSeed: true, companyName: tenant.companyName, environment: "homologation", contactEmail: `contato+${tenant.key}@example.test` })},${quoteSql(anchor)}::timestamptz)`).join(",\n");
   const tenantMembers = DEMO_TENANTS.map((tenant) => `(${quoteSql(tenant.id)}::uuid,${quoteSql(config.tenantOwners[tenant.key])}::uuid,'tenant_owner',${quoteSql(anchor)}::timestamptz)`).join(",\n");
   const storeMembers = DEMO_STORES.map((store) => {
