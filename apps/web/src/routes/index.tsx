@@ -1,7 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { KataluuLanding } from "../features/public/kataluu-landing.tsx";
+import { PublicDomainStateView } from "../features/public/public-domain-state.tsx";
+import { WhiteLabelLanding } from "../features/public/white-label-landing.tsx";
 import { StorefrontView } from "../features/storefront/storefront-view.tsx";
 import { getPublicCatalog } from "../lib/server/catalog.functions.ts";
+import { getPublicSiteExperience } from "../lib/server/public-site.functions.ts";
 import { getRootResolution } from "../lib/server/routing.functions.ts";
+import "../styles/public.css";
 
 export const Route = createFileRoute("/")({
   loader: async () => {
@@ -11,19 +16,31 @@ export const Route = createFileRoute("/")({
       // eslint-disable-next-line @typescript-eslint/only-throw-error
       throw redirect({ to: resolution.target });
     }
-    if (!resolution.storefront) return { kind: "landing" as const, catalog: null };
-    const catalog = await getPublicCatalog({ data: { page: 1, pageSize: 12, sort: "position" } });
-    return { kind: "storefront" as const, catalog };
+    if (resolution.storefront) {
+      const catalog = await getPublicCatalog({ data: { categoryId: null, search: "", limit: 24, offset: 0 } });
+      return { kind: "storefront" as const, catalog };
+    }
+    return { kind: "public" as const, site: await getPublicSiteExperience() };
   },
   head: ({ loaderData }) => {
-    if (loaderData?.kind !== "storefront") return { meta: [{ title: "Kataluu" }] };
-    const data = loaderData.catalog;
+    if (loaderData?.kind === "storefront") {
+      return { meta: [{ title: `${loaderData.catalog.store.name} | Catálogo` }, { name: "description", content: `Catálogo online de ${loaderData.catalog.store.name}.` }] };
+    }
+    const site = loaderData?.kind === "public" ? loaderData.site : null;
+    if (site?.kind === "white_label") {
+      const description = `Plataforma digital de ${site.brand.name} para gestão de lojistas, catálogo e operação.`;
+      return {
+        meta: [{ title: site.brand.name }, { name: "description", content: description }, { property: "og:title", content: site.brand.name }, { property: "og:description", content: description }, { property: "og:type", content: "website" }],
+        links: site.canonicalUrl ? [{ rel: "canonical", href: site.canonicalUrl }] : [],
+      };
+    }
+    if (site?.kind === "state") {
+      return { meta: [{ title: "Endereço indisponível" }, { name: "robots", content: "noindex,nofollow" }] };
+    }
+    const description = "Infraestrutura White Label para empresas oferecerem sua própria plataforma de catálogo e comércio digital.";
     return {
-      meta: [
-        { title: data.settings.seoTitle ?? data.store.name },
-        { name: "description", content: data.settings.seoDescription ?? `Loja online de ${data.store.name}` },
-      ],
-      links: [{ rel: "canonical", href: data.canonicalUrl }],
+      meta: [{ title: "Kataluu | Infraestrutura White Label" }, { name: "description", content: description }, { property: "og:title", content: "Kataluu | Infraestrutura White Label" }, { property: "og:description", content: description }, { property: "og:type", content: "website" }],
+      links: site?.kind === "kataluu" && site.canonicalUrl ? [{ rel: "canonical", href: site.canonicalUrl }] : [],
     };
   },
   pendingComponent: RootLoading,
@@ -32,16 +49,17 @@ export const Route = createFileRoute("/")({
 });
 
 function RootLoading(): React.JSX.Element {
-  return <main className="sf-state"><div className="sf-state__skeleton" /><div className="sf-state__skeleton sf-state__skeleton--short" /></main>;
+  return <main className="public-state"><section><span className="public-eyebrow">Carregando</span><h1>Preparando a experiência.</h1></section></main>;
 }
+
 function RootError(): React.JSX.Element {
-  return <main className="sf-state"><h1>Não foi possível carregar esta página</h1><p>Tente novamente em alguns instantes.</p></main>;
+  return <main className="public-state"><section><span className="public-eyebrow">Indisponível</span><h1>Não foi possível abrir esta página.</h1><p>Tente novamente em alguns instantes.</p></section></main>;
 }
+
 function RootPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   if (data.kind === "storefront") return <StorefrontView data={data.catalog} />;
-  return <InstitutionalHome />;
-}
-function InstitutionalHome(): React.JSX.Element {
-  return <main style={{ minHeight:"100vh",display:"grid",placeItems:"center",padding:32,fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',background:"#f7f8fa",color:"#111318" }}><section style={{maxWidth:720,textAlign:"center"}}><strong style={{fontSize:14,letterSpacing:".08em",textTransform:"uppercase"}}>Kataluu</strong><h1 style={{fontSize:"clamp(36px, 7vw, 64px)",margin:"18px 0 14px",letterSpacing:"-.05em"}}>Sua operação digital em uma única plataforma.</h1><p style={{color:"#69707d",lineHeight:1.6,fontSize:17}}>Gestão, catálogo, vendas e operação para plataformas White Label e seus lojistas.</p></section></main>;
+  if (data.site.kind === "white_label") return <WhiteLabelLanding brand={data.site.brand} loginUrl={data.site.loginUrl} />;
+  if (data.site.kind === "state") return <PublicDomainStateView state={data.site.state} />;
+  return <KataluuLanding />;
 }
