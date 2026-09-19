@@ -13,7 +13,8 @@ describe("merchant operations entitlement boundary", () => {
     expect(server.match(/context\(\["purchases"\]\)/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(server).toContain('const features: MerchantOperationsFeature[] = ["purchases", "inventory"];');
     expect(server).toContain('context(["purchases", "inventory"])');
-    expect(server.match(/context\(\["finance"\]\)/g)?.length ?? 0).toBeGreaterThanOrEqual(7);
+    expect(server.match(/context\(\["finance"\]\)/g)?.length ?? 0).toBeGreaterThanOrEqual(6);
+    expect(server).toContain('const features: MerchantOperationsFeature[] = ["finance"];');
     expect(server).toContain('if (data.supplierId) features.push("suppliers");');
     expect(server).toContain('if (data.purchaseId) features.push("purchases");');
   });
