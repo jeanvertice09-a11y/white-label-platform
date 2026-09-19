@@ -64,18 +64,4 @@ export async function prepareHomologationHarness(h: Harness, config: Homologatio
      values ($1,'Plano Kataluu HML',19900,true,'monthly')`,
     [config.platformPlanSlug],
   );
-  await h.db.query(
-    `insert into public.plan_template_entitlements(template_id,entitlement_key,enabled,limit_value)
-     select t.id,v.key,null,v.limit_value
-     from public.plan_templates t
-     cross join (values
-       ('max_users',10::bigint),
-       ('max_stores',4::bigint),
-       ('max_storage_bytes',1000000000::bigint)
-     ) v(key,limit_value)
-     where t.code=$1
-     on conflict (template_id,entitlement_key) do update set
-       enabled=null,limit_value=excluded.limit_value,updated_at=now()`,
-    [config.planTemplateCode],
-  );
 }
