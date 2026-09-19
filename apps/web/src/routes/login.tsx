@@ -10,7 +10,7 @@ import { getPublicLoginExperience } from "../lib/server/public-site.functions.ts
 import { getLoginTarget } from "../lib/server/routing.functions.ts";
 import "../styles/public.css";
 
-type LoginSearch = { onboarding: boolean };
+type LoginSearch = { onboarding?: boolean };
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({ onboarding: search["onboarding"] === "1" || search["onboarding"] === true }),

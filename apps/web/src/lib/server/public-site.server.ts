@@ -1,5 +1,5 @@
 import { DomainResolver } from "@white-label/domains";
-import type { DomainRecord, SqlExecutor } from "@white-label/domains";
+import type { ResolvedDomain, SqlExecutor } from "@white-label/domains";
 import {
   isKataluuPublicHost,
   publicCanonicalUrl,
@@ -68,7 +68,7 @@ async function unresolvedState(sql: SqlExecutor, host: string): Promise<PublicSi
 async function whiteLabelSite(
   sql: SqlExecutor,
   host: string,
-  resolved: DomainRecord,
+  resolved: ResolvedDomain,
 ): Promise<PublicSiteExperience> {
   if (resolved.type !== "tenant_site") return { kind: "state", state: "unknown" };
   const row = await tenantPublicRow(sql, resolved.tenantId);
