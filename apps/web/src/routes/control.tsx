@@ -4,12 +4,14 @@ import { ControlDomainManager } from "../features/control/control-domain-manager
 import { ControlGatewayManager } from "../features/control/control-gateway-manager.tsx";
 import { ControlMerchantsManager } from "../features/control/control-merchants-manager.tsx";
 import { ControlPlanManager } from "../features/control/control-plan-manager.tsx";
+import { ControlTenantBilling } from "../features/control/control-tenant-billing.tsx";
 import { loadControlContext } from "../lib/client-guard.ts";
 import { getControlDomainWorkspace } from "../lib/server/control-domains.functions.ts";
 import { getControlGatewayWorkspace } from "../lib/server/control-gateways.functions.ts";
 import { getControlMerchantWorkspace } from "../lib/server/control-merchants.functions.ts";
 import { getTenantPlanCatalog } from "../lib/server/commercial-plans.functions.ts";
 import { getTenantControlDashboard } from "../lib/server/platform-console.functions.ts";
+import { getControlTenantBillingWorkspace } from "../lib/server/tenant-billing.functions.ts";
 import "../styles/control.css";
 import "../styles/control-plans.css";
 import "../styles/dashboard-rich.css";
@@ -19,14 +21,15 @@ import { AccessDenied } from "./-access-denied.tsx";
 export const Route = createFileRoute("/control")({
   loader: async () => {
     await loadControlContext();
-    const [dashboard, planCatalog, merchants, domains, gateways] = await Promise.all([
+    const [dashboard, planCatalog, merchants, domains, gateways, billing] = await Promise.all([
       getTenantControlDashboard(),
       getTenantPlanCatalog(),
       getControlMerchantWorkspace(),
       getControlDomainWorkspace(),
       getControlGatewayWorkspace(),
+      getControlTenantBillingWorkspace(),
     ]);
-    return { dashboard, planCatalog, merchants, domains, gateways };
+    return { dashboard, planCatalog, merchants, domains, gateways, billing };
   },
   errorComponent: AccessDenied,
   component: ControlPage,
@@ -37,6 +40,7 @@ function ControlPage(): React.JSX.Element {
   return (
     <>
       <ControlDashboard data={data.dashboard} />
+      <ControlTenantBilling initial={data.billing} />
       <ControlMerchantsManager initial={data.merchants} />
       <ControlDomainManager initial={data.domains} />
       <ControlGatewayManager initial={data.gateways} />

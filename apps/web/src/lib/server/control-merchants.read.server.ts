@@ -3,6 +3,7 @@ import type {
   ControlMerchantEntitlement,
   ControlMerchantListItem,
   ControlMerchantListResult,
+  ControlMerchantPayment,
   ControlMerchantPlanOption,
   ControlMerchantWorkspace,
   ControlStoreStatus,
@@ -25,7 +26,7 @@ const STORE_SELECT = `select s.id::text,s.name,s.slug,s.status,s.created_at::tex
   (select count(*) from public.domains d
     where d.tenant_id=s.tenant_id and d.store_id=s.id)::integer domain_count,
   sub.id::text subscription_id,sub.status subscription_status,
-  sub.trial_started_at::text,sub.trial_ends_at::text,
+  sub.trial_started_at::text,sub.trial_ends_at::text,sub.current_period_ends_at::text,
   p.id::text plan_id,p.name plan_name
 from public.stores s
 left join lateral (
@@ -35,7 +36,8 @@ left join lateral (
   order by sm.created_at,sm.user_id limit 1
 ) owner on true
 left join lateral (
-  select ss.id,ss.status,ss.tenant_plan_id,ss.trial_started_at,ss.trial_ends_at
+  select ss.id,ss.status,ss.tenant_plan_id,ss.trial_started_at,ss.trial_ends_at,
+    ss.current_period_ends_at
   from public.store_subscriptions ss
   where ss.tenant_id=s.tenant_id and ss.store_id=s.id
   order by (ss.status in ('trialing','active','past_due','suspended')) desc,ss.created_at desc
@@ -60,6 +62,7 @@ function mapMerchant(row: Record<string, unknown>): ControlMerchantListItem {
     planName: nullableText(row, "plan_name"),
     trialStartedAt: nullableText(row, "trial_started_at"),
     trialEndsAt: nullableText(row, "trial_ends_at"),
+    currentPeriodEndsAt: nullableText(row, "current_period_ends_at"),
   };
 }
 
@@ -108,10 +111,8 @@ export async function listControlMerchants(
   tenantId: string,
   input: ControlMerchantListInput,
 ): Promise<ControlMerchantListResult> {
-  const [rows, total] = await Promise.all([
-    merchantRows(sql, tenantId, input),
-    merchantCount(sql, tenantId, input),
-  ]);
+  const rows = await merchantRows(sql, tenantId, input);
+  const total = await merchantCount(sql, tenantId, input);
   return {
     items: rows.map(mapMerchant),
     total,
@@ -148,10 +149,8 @@ export async function loadControlMerchantWorkspace(
   tenantId: string,
 ): Promise<ControlMerchantWorkspace> {
   const input: ControlMerchantListInput = { query: "", status: "all", page: 1, pageSize: 10 };
-  const [list, plans] = await Promise.all([
-    listControlMerchants(sql, tenantId, input),
-    listControlMerchantPlans(sql, tenantId),
-  ]);
+  const list = await listControlMerchants(sql, tenantId, input);
+  const plans = await listControlMerchantPlans(sql, tenantId);
   return { list, plans };
 }
 
@@ -165,24 +164,41 @@ function mapEntitlement(row: Record<string, unknown>): ControlMerchantEntitlemen
   };
 }
 
+function mapPayment(row: Record<string, unknown>): ControlMerchantPayment {
+  return {
+    id: text(row, "id"),
+    status: text(row, "status"),
+    amountCents: numberValue(row, "amount_cents"),
+    provider: text(row, "provider"),
+    createdAt: text(row, "created_at"),
+  };
+}
+
 async function detailCollections(sql: ControlSql, tenantId: string, storeId: string) {
-  return Promise.all([
-    sql.query(`${STORE_SELECT} where s.tenant_id=$1::uuid and s.id=$2::uuid`, [tenantId, storeId]),
-    sql.query(
-      `select sm.user_id::text,u.email::text,sm.role,sm.created_at::text
-       from public.store_members sm left join auth.users u on u.id=sm.user_id
-       where sm.tenant_id=$1::uuid and sm.store_id=$2::uuid
-       order by sm.role,sm.created_at`,
-      [tenantId, storeId],
-    ),
-    sql.query(
-      `select id::text,hostname,type,status,verified_at::text
-       from public.domains
-       where tenant_id=$1::uuid and store_id=$2::uuid
-       order by created_at desc`,
-      [tenantId, storeId],
-    ),
-  ]);
+  const storeRows = await sql.query(`${STORE_SELECT} where s.tenant_id=$1::uuid and s.id=$2::uuid`, [tenantId, storeId]);
+  const members = await sql.query(
+    `select sm.user_id::text,u.email::text,sm.role,sm.created_at::text
+     from public.store_members sm left join auth.users u on u.id=sm.user_id
+     where sm.tenant_id=$1::uuid and sm.store_id=$2::uuid
+     order by sm.role,sm.created_at`,
+    [tenantId, storeId],
+  );
+  const domains = await sql.query(
+    `select id::text,hostname,type,status,verified_at::text
+     from public.domains
+     where tenant_id=$1::uuid and store_id=$2::uuid
+     order by created_at desc`,
+    [tenantId, storeId],
+  );
+  const payments = await sql.query(
+    `select p.id::text,p.status,p.amount_cents,p.created_at::text,ga.provider
+     from public.payments p
+     join public.gateway_accounts ga on ga.id=p.gateway_account_id
+     where p.level='tenant_billing' and p.tenant_id=$1::uuid and p.store_id=$2::uuid
+     order by p.created_at desc,p.id desc limit 50`,
+    [tenantId, storeId],
+  );
+  return { storeRows, members, domains, payments };
 }
 
 async function detailEntitlements(
@@ -207,19 +223,19 @@ export async function getControlMerchantDetail(
   tenantId: string,
   storeId: string,
 ): Promise<ControlMerchantDetail | null> {
-  const [storeRows, members, domains] = await detailCollections(sql, tenantId, storeId);
-  const row = storeRows.at(0);
+  const collections = await detailCollections(sql, tenantId, storeId);
+  const row = collections.storeRows.at(0);
   if (!row) return null;
   const merchant = mapMerchant(row);
   return {
     merchant,
-    members: members.map((member) => ({
+    members: collections.members.map((member) => ({
       userId: text(member, "user_id"),
       email: nullableText(member, "email"),
       role: text(member, "role"),
       createdAt: text(member, "created_at"),
     })),
-    domains: domains.map((domain) => ({
+    domains: collections.domains.map((domain) => ({
       id: text(domain, "id"),
       hostname: text(domain, "hostname"),
       type: text(domain, "type"),
@@ -227,5 +243,6 @@ export async function getControlMerchantDetail(
       verifiedAt: nullableText(domain, "verified_at"),
     })),
     entitlements: await detailEntitlements(sql, tenantId, merchant.planId),
+    payments: collections.payments.map(mapPayment),
   };
 }

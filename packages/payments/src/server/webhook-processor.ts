@@ -1,5 +1,6 @@
 import type { PaymentProvider, PaymentStatus, ProviderPaymentId } from "../types.ts";
 import { applyPlatformBillingEffect } from "./platform-billing-effect.ts";
+import { applyTenantBillingEffect } from "./tenant-billing-effect.ts";
 import {
   applyPaymentStatus,
   claimWebhook,
@@ -20,6 +21,15 @@ export interface WebhookProcessorDeps {
 export interface WebhookProcessResult {
   outcome: "processed" | "ignored" | "retry" | "dead_letter" | "busy";
   changed?: boolean;
+}
+
+async function applyFinancialEffects(
+  sql: PaymentSql,
+  paymentId: string,
+  status: PaymentStatus,
+): Promise<void> {
+  await applyPlatformBillingEffect(sql, paymentId, status);
+  await applyTenantBillingEffect(sql, paymentId, status);
 }
 
 export async function processWebhookEvent(
@@ -58,7 +68,7 @@ export async function processWebhookEvent(
       status,
       normalized.occurredAt,
     );
-    await applyPlatformBillingEffect(sql, target.id, status);
+    await applyFinancialEffects(sql, target.id, status);
     await markWebhookDone(sql, event.id, "processed", target.id, status);
     return { outcome: "processed", changed };
   } catch (error) {
@@ -92,7 +102,7 @@ export async function reconcilePaymentStatus(
     status,
     null,
   );
-  await applyPlatformBillingEffect(sql, target.id, status);
+  await applyFinancialEffects(sql, target.id, status);
   await sql.query(
     `insert into public.audit_logs(
        actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata

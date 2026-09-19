@@ -10,10 +10,18 @@ import {
   setControlSubscriptionStatusAction,
   updateControlMerchantAction,
 } from "../../lib/server/control-merchants.functions.ts";
+import {
+  createControlTenantCharge,
+  reconcileControlTenantPayment,
+} from "../../lib/server/tenant-billing.functions.ts";
 
 function formText(form: FormData, key: string): string {
   const value = form.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function money(cents: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
 type DetailProps = Readonly<{
@@ -29,11 +37,7 @@ function StoreEditor({ detail, onChanged }: DetailProps): React.JSX.Element {
     const form = new FormData(event.currentTarget);
     try {
       await updateControlMerchantAction({
-        data: {
-          storeId: detail.merchant.id,
-          name: formText(form, "name"),
-          slug: formText(form, "slug"),
-        },
+        data: { storeId: detail.merchant.id, name: formText(form, "name"), slug: formText(form, "slug") },
       });
       setMessage("Dados atualizados.");
       await onChanged();
@@ -50,9 +54,7 @@ function OwnerEditor({ detail, onChanged }: DetailProps): React.JSX.Element {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      await changeControlMerchantOwnerAction({
-        data: { storeId: detail.merchant.id, ownerEmail: formText(form, "ownerEmail") },
-      });
+      await changeControlMerchantOwnerAction({ data: { storeId: detail.merchant.id, ownerEmail: formText(form, "ownerEmail") } });
       setMessage("Responsável atualizado.");
       await onChanged();
     } catch (error) {
@@ -69,11 +71,7 @@ function PlanEditor({ detail, plans, onChanged }: DetailProps): React.JSX.Elemen
     const form = new FormData(event.currentTarget);
     try {
       await assignControlMerchantPlanAction({
-        data: {
-          storeId: detail.merchant.id,
-          planId: formText(form, "planId"),
-          useTrial: form.get("useTrial") === "on",
-        },
+        data: { storeId: detail.merchant.id, planId: formText(form, "planId"), useTrial: form.get("useTrial") === "on" },
       });
       setMessage("Plano/assinatura atualizado.");
       await onChanged();
@@ -103,28 +101,40 @@ function SubscriptionActions({ detail, onChanged }: DetailProps): React.JSX.Elem
   async function change(status: "active" | "suspended" | "canceled" | "expired"): Promise<void> {
     if (!detail.merchant.subscriptionId) return;
     try {
-      await setControlSubscriptionStatusAction({
-        data: {
-          storeId: detail.merchant.id,
-          subscriptionId: detail.merchant.subscriptionId,
-          status,
-        },
-      });
+      await setControlSubscriptionStatusAction({ data: { storeId: detail.merchant.id, subscriptionId: detail.merchant.subscriptionId, status } });
       setMessage("Status da assinatura atualizado.");
       await onChanged();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao alterar assinatura.");
     }
   }
-  return <div className="control-card"><h3>Assinatura / trial</h3><p>Status: <strong>{detail.merchant.subscriptionStatus ?? "sem assinatura"}</strong></p><p>Trial até: {detail.merchant.trialEndsAt ? new Date(detail.merchant.trialEndsAt).toLocaleString("pt-BR") : "—"}</p>{detail.merchant.subscriptionId ? <div className="k-actions"><button className="k-button" type="button" onClick={() => { void change("active"); }}>Ativar</button><button className="k-button" type="button" onClick={() => { void change("suspended"); }}>Suspender</button><button className="k-button" type="button" onClick={() => { void change("canceled"); }}>Cancelar</button>{detail.merchant.subscriptionStatus === "trialing" ? <button className="k-button" type="button" onClick={() => { void change("expired"); }}>Expirar trial</button> : null}</div> : null}{message ? <div className="k-status">{message}</div> : null}</div>;
+  async function charge(): Promise<void> {
+    if (!detail.merchant.subscriptionId) return;
+    try {
+      const result = await createControlTenantCharge({ data: { storeId: detail.merchant.id, subscriptionId: detail.merchant.subscriptionId } });
+      setMessage(result.created ? "Cobrança criada." : "Cobrança idempotente já existente.");
+      await onChanged();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao gerar cobrança.");
+    }
+  }
+  return <div className="control-card"><h3>Assinatura / trial</h3><p>Status: <strong>{detail.merchant.subscriptionStatus ?? "sem assinatura"}</strong></p><p>Trial até: {detail.merchant.trialEndsAt ? new Date(detail.merchant.trialEndsAt).toLocaleString("pt-BR") : "—"}</p><p>Período até: {detail.merchant.currentPeriodEndsAt ? new Date(detail.merchant.currentPeriodEndsAt).toLocaleString("pt-BR") : "—"}</p>{detail.merchant.subscriptionId ? <div className="k-actions"><button className="k-button" type="button" onClick={() => { void charge(); }}>Gerar cobrança</button><button className="k-button" type="button" onClick={() => { void change("active"); }}>Ativar</button><button className="k-button" type="button" onClick={() => { void change("suspended"); }}>Suspender</button><button className="k-button" type="button" onClick={() => { void change("canceled"); }}>Cancelar</button>{detail.merchant.subscriptionStatus === "trialing" ? <button className="k-button" type="button" onClick={() => { void change("expired"); }}>Expirar trial</button> : null}</div> : null}{message ? <div className="k-status">{message}</div> : null}</div>;
 }
 
-function RelatedData({ detail }: Readonly<{ detail: ControlMerchantDetail }>): React.JSX.Element {
-  return <div className="control-grid control-grid--two"><div className="control-card"><h3>Membros</h3>{detail.members.length ? detail.members.map((member) => <div className="control-row" key={member.userId}><div><strong>{member.email ?? member.userId}</strong><small>{member.role}</small></div></div>) : <div className="control-empty">Nenhum membro.</div>}</div><div className="control-card"><h3>Domínios</h3>{detail.domains.length ? detail.domains.map((domain) => <div className="control-row" key={domain.id}><div><strong>{domain.hostname}</strong><small>{domain.type} · {domain.status}</small></div></div>) : <div className="control-empty">Nenhum domínio da store.</div>}</div><div className="control-card"><h3>Capacidades</h3>{detail.entitlements.length ? detail.entitlements.map((item) => <div className="control-row" key={item.key}><div><strong>{item.name}</strong><small>{item.kind === "feature" ? (item.enabled ? "habilitado" : "desabilitado") : `limite ${String(item.limitValue ?? 0)}`}</small></div></div>) : <div className="control-empty">Plano sem matriz de entitlements configurada.</div>}</div></div>;
+function RelatedData({ detail, onChanged }: Pick<DetailProps, "detail" | "onChanged">): React.JSX.Element {
+  const [message, setMessage] = useState("");
+  async function reconcile(paymentId: string): Promise<void> {
+    try {
+      await reconcileControlTenantPayment({ data: { storeId: detail.merchant.id, paymentId } });
+      setMessage("Pagamento reconciliado.");
+      await onChanged();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao reconciliar pagamento.");
+    }
+  }
+  return <div className="control-grid control-grid--two"><div className="control-card"><h3>Membros</h3>{detail.members.length ? detail.members.map((member) => <div className="control-row" key={member.userId}><div><strong>{member.email ?? member.userId}</strong><small>{member.role}</small></div></div>) : <div className="control-empty">Nenhum membro.</div>}</div><div className="control-card"><h3>Domínios</h3>{detail.domains.length ? detail.domains.map((domain) => <div className="control-row" key={domain.id}><div><strong>{domain.hostname}</strong><small>{domain.type} · {domain.status}</small></div></div>) : <div className="control-empty">Nenhum domínio da store.</div>}</div><div className="control-card"><h3>Capacidades</h3>{detail.entitlements.length ? detail.entitlements.map((item) => <div className="control-row" key={item.key}><div><strong>{item.name}</strong><small>{item.kind === "feature" ? (item.enabled ? "habilitado" : "desabilitado") : `limite ${String(item.limitValue ?? 0)}`}</small></div></div>) : <div className="control-empty">Plano sem matriz de entitlements configurada.</div>}</div><div className="control-card"><h3>Pagamentos tenant_billing</h3>{detail.payments.length ? detail.payments.map((payment) => <div className="control-row" key={payment.id}><div><strong>{money(payment.amountCents)} · {payment.status}</strong><small>{payment.provider} · {new Date(payment.createdAt).toLocaleString("pt-BR")}</small></div><button className="k-button" type="button" onClick={() => { void reconcile(payment.id); }}>Reconciliar</button></div>) : <div className="control-empty">Nenhum pagamento.</div>}{message ? <div className="k-status">{message}</div> : null}</div></div>;
 }
 
-export function ControlMerchantDetailPanel(props: DetailProps & Readonly<{
-  onClose: () => void;
-}>): React.JSX.Element {
-  return <div className="control-section"><div className="control-section__head"><div><h2>{props.detail.merchant.name}</h2><p>{props.detail.merchant.slug} · {props.detail.merchant.ownerEmail ?? "sem responsável"}</p></div><button className="k-button" type="button" onClick={props.onClose}>Fechar detalhe</button></div><div className="control-grid control-grid--two"><StoreEditor {...props} /><OwnerEditor {...props} /><PlanEditor {...props} /><StatusActions {...props} /><SubscriptionActions {...props} /></div><RelatedData detail={props.detail} /></div>;
+export function ControlMerchantDetailPanel(props: DetailProps & Readonly<{ onClose: () => void }>): React.JSX.Element {
+  return <div className="control-section"><div className="control-section__head"><div><h2>{props.detail.merchant.name}</h2><p>{props.detail.merchant.slug} · {props.detail.merchant.ownerEmail ?? "sem responsável"}</p></div><button className="k-button" type="button" onClick={props.onClose}>Fechar detalhe</button></div><div className="control-grid control-grid--two"><StoreEditor {...props} /><OwnerEditor {...props} /><PlanEditor {...props} /><StatusActions {...props} /><SubscriptionActions {...props} /></div><RelatedData detail={props.detail} onChanged={props.onChanged} /></div>;
 }
