@@ -11,8 +11,8 @@ describe("homologation deferred media mode", () => {
     config.tenantLogoUrls = { aurora: "", nexo: "" };
     config.mediaOrigin = "";
 
-    expect(() => validateRuntimeConfig(config, { mediaMode: "deferred" })).not.toThrow();
-    expect(() => validateRuntimeConfig(config, { mediaMode: "required" })).toThrow();
+    expect(() => { validateRuntimeConfig(config, { mediaMode: "deferred" }); }).not.toThrow();
+    expect(() => { validateRuntimeConfig(config, { mediaMode: "required" }); }).toThrow();
   });
 
   test("deferred SQL never persists fake media references", () => {
