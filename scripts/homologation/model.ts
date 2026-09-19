@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 export type DemoLayout = "classic" | "modern";
 export type StoreKey = "lume" | "botanica" | "passo" | "casa";
 export type TenantKey = "aurora" | "nexo";
+export type BillingInterval = "monthly" | "quarterly" | "yearly";
+export type HmlTemplateCode = "monthly_entry" | "monthly_intermediate" | "monthly_complete" | "complete";
 
 export interface SqlExecutor {
   query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]>;
@@ -20,18 +22,38 @@ export interface DomainConfig {
   stores: Partial<Record<StoreKey, StoreDomainConfig>>;
 }
 
+export interface TenantPlanRuntimeConfig {
+  templateCode: HmlTemplateCode;
+  slug: string;
+  name: string;
+  priceCents: number | null;
+  billingInterval: BillingInterval | null;
+  trialEnabled: boolean | null;
+  trialDays: number | null;
+}
+
 export interface ResolvedAsset {
-  mime: "image/webp" | "image/jpeg" | "image/png";
+  source: string;
+  mimeType: "image/webp" | "image/jpeg" | "image/png";
   sizeBytes: number;
+  sha256: string;
+  storeKey: StoreKey;
+  kind: "product" | "banner";
+  productSlug: string | null;
 }
 
 export interface HomologationRuntimeConfig {
   platformPlanSlug: string;
-  planTemplateCode: string;
+  platformBillingAmountCents: Record<TenantKey, number | null>;
+  storePlans: Record<StoreKey, TenantPlanRuntimeConfig>;
   tenantOwners: Record<TenantKey, string>;
   storeOwners: Record<StoreKey, string>;
+  tenantOwnerEmails: Record<TenantKey, string>;
+  storeOwnerEmails: Record<StoreKey, string>;
   tenantLogoUrls: Record<TenantKey, string>;
   domains: Record<TenantKey, DomainConfig>;
+  mediaOrigin: string;
+  assetManifestFile?: string;
   resolvedAssets: Partial<Record<string, ResolvedAsset>>;
   anchorIso?: string;
 }
@@ -118,6 +140,10 @@ export function tenantIdFor(key: TenantKey): string {
 
 export function storeIdFor(key: StoreKey): string {
   return stableUuid(`store:${key}`);
+}
+
+export function tenantPlanIdFor(tenantKey: TenantKey, templateCode: HmlTemplateCode): string {
+  return stableUuid(`tenant-plan:${tenantKey}:${templateCode}`);
 }
 
 export function objectKey(store: DemoStore, purpose: string): string {

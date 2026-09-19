@@ -65,7 +65,7 @@ function assetRows(config: HomologationRuntimeConfig, anchor: string): string {
     for (const key of keys) {
       const asset = config.resolvedAssets[key];
       if (!asset) throw new Error(`asset não resolvido: ${key}`);
-      rows.push(`(${quoteSql(stableUuid(`media:${key}`))}::uuid,${quoteSql(tenant)}::uuid,${quoteSql(store.id)}::uuid,${quoteSql(key)},${quoteSql(asset.mime)},${asset.sizeBytes},${quoteSql(anchor)}::timestamptz)`);
+      rows.push(`(${quoteSql(stableUuid(`media:${key}`))}::uuid,${quoteSql(tenant)}::uuid,${quoteSql(store.id)}::uuid,${quoteSql(key)},${quoteSql(asset.mimeType)},${asset.sizeBytes},${quoteSql(anchor)}::timestamptz)`);
     }
   }
   return rows.join(",\n");

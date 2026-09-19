@@ -11,6 +11,11 @@ test-results/
 .env.*
 !.env.example
 
+# Homologação Production — config/manifest reais nunca entram no Git
+scripts/homologation/hml-production.json
+scripts/homologation/hml-assets.json
+scripts/homologation/private/
+
 # Bun / Node
 bun.lockb
 *.tsbuildinfo
