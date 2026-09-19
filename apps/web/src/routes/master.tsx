@@ -7,6 +7,7 @@ import "../styles/master-data.css";
 import "../styles/console-system.css";
 import "../styles/console-compat.css";
 import "../styles/console-pages.css";
+import "../styles/editorial-console.css";
 
 export const Route = createFileRoute("/master")({
   loader: () => loadMasterContext(),

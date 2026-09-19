@@ -1,4 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { signOut } from "../../lib/supabase-client.ts";
 import {
   DashboardIcon,
   type DashboardIconName,
@@ -41,48 +42,31 @@ const navigation: readonly NavigationGroup[] = [
   },
 ];
 
+function MasterSidebarAccount(): React.JSX.Element {
+  const navigate = useNavigate();
+  async function handleLogout(): Promise<void> {
+    try { await signOut(); }
+    finally { await navigate({ to: "/login" }); }
+  }
+  return <div className="master-sidebar__account">
+    <span className="master-sidebar__avatar" aria-hidden="true">K</span>
+    <div><strong>Conta da plataforma</strong><small>Super Admin</small></div>
+    <button type="button" className="master-sidebar__logout" onClick={() => { void handleLogout(); }} aria-label="Sair da conta" title="Sair"><DashboardIcon name="logout" /></button>
+  </div>;
+}
+
 export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
-  return (
-    <>
-      <button
-        type="button"
-        className={open ? "master-overlay is-open" : "master-overlay"}
-        onClick={onClose}
-        aria-label="Fechar menu"
-      />
-      <aside className={open ? "master-sidebar is-open" : "master-sidebar"} aria-label="Navegação principal">
-        <div className="master-brand">
-          <span className="master-brand__mark" aria-hidden="true">K</span>
-          <div>
-            <strong>Kataluu</strong>
-            <small>Administração da plataforma</small>
-          </div>
-        </div>
-        <nav className="master-nav" aria-label="Super Admin">
-          {navigation.map((group) => (
-            <div className="console-nav-group" key={group.label}>
-              <span className="console-nav-group__label">{group.label}</span>
-              {group.items.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  activeOptions={{ exact: item.exact }}
-                  activeProps={{ "data-active": "true" }}
-                  className="master-nav__link"
-                  onClick={onClose}
-                >
-                  <DashboardIcon name={item.icon} />
-                  <span>{item.label}</span>
-                </Link>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div className="master-sidebar__footer console-sidebar-context">
-          <span>Ambiente</span>
-          <strong>Super Admin Kataluu</strong>
-        </div>
-      </aside>
-    </>
-  );
+  return <>
+    <button type="button" className={open ? "master-overlay is-open" : "master-overlay"} onClick={onClose} aria-label="Fechar menu" />
+    <aside className={open ? "master-sidebar is-open" : "master-sidebar"} aria-label="Navegação principal">
+      <div className="master-brand"><span className="master-brand__mark" aria-hidden="true">K</span><div><strong>Kataluu</strong><small>Operação da plataforma</small></div></div>
+      <nav className="master-nav" aria-label="Super Admin">
+        {navigation.map((group) => <div className="console-nav-group" key={group.label}>
+          <span className="console-nav-group__label">{group.label}</span>
+          {group.items.map((item) => <Link key={item.to} to={item.to} activeOptions={{ exact: item.exact }} activeProps={{ "data-active": "true" }} className="master-nav__link" onClick={onClose}><DashboardIcon name={item.icon} /><span>{item.label}</span></Link>)}
+        </div>)}
+      </nav>
+      <MasterSidebarAccount />
+    </aside>
+  </>;
 }
