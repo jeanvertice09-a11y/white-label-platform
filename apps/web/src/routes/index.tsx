@@ -17,7 +17,7 @@ export const Route = createFileRoute("/")({
       throw redirect({ to: resolution.target });
     }
     if (resolution.storefront) {
-      const catalog = await getPublicCatalog({ data: { categoryId: undefined, search: "", limit: 24, offset: 0 } });
+      const catalog = await getPublicCatalog({ data: { page: 1, pageSize: 24, search: "" } });
       return { kind: "storefront" as const, catalog };
     }
     return { kind: "public" as const, site: await getPublicSiteExperience() };
