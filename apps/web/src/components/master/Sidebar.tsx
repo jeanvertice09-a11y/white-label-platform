@@ -1,4 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { signOut } from "../../lib/supabase-client.ts";
 import {
   DashboardIcon,
   type DashboardIconName,
@@ -42,6 +43,16 @@ const navigation: readonly NavigationGroup[] = [
 ];
 
 export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
+  const navigate = useNavigate();
+
+  async function handleLogout(): Promise<void> {
+    try {
+      await signOut();
+    } finally {
+      await navigate({ to: "/login" });
+    }
+  }
+
   return (
     <>
       <button
@@ -55,7 +66,7 @@ export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
           <span className="master-brand__mark" aria-hidden="true">K</span>
           <div>
             <strong>Kataluu</strong>
-            <small>Administração da plataforma</small>
+            <small>Operação da plataforma</small>
           </div>
         </div>
         <nav className="master-nav" aria-label="Super Admin">
@@ -78,9 +89,21 @@ export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
             </div>
           ))}
         </nav>
-        <div className="master-sidebar__footer console-sidebar-context">
-          <span>Ambiente</span>
-          <strong>Super Admin Kataluu</strong>
+        <div className="master-sidebar__account">
+          <span className="master-sidebar__avatar" aria-hidden="true">K</span>
+          <div>
+            <strong>Conta da plataforma</strong>
+            <small>Super Admin</small>
+          </div>
+          <button
+            type="button"
+            className="master-sidebar__logout"
+            onClick={() => { void handleLogout(); }}
+            aria-label="Sair da conta"
+            title="Sair"
+          >
+            <DashboardIcon name="logout" />
+          </button>
         </div>
       </aside>
     </>

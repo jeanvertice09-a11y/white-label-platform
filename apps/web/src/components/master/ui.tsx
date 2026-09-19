@@ -27,7 +27,7 @@ export function MasterMetricCard(props: Readonly<{
   icon: DashboardIconName;
 }>) {
   return (
-    <article className="master-card master-metric">
+    <div className="master-metric">
       <div className="master-metric__heading">
         <span className="master-metric__icon" aria-hidden="true">
           <DashboardIcon name={props.icon} />
@@ -36,7 +36,7 @@ export function MasterMetricCard(props: Readonly<{
       </div>
       <strong>{props.value ?? "—"}</strong>
       <small>{props.detail}</small>
-    </article>
+    </div>
   );
 }
 
@@ -45,7 +45,7 @@ export function MasterPanel(props: Readonly<{
   children: ReactNode;
 }>) {
   return (
-    <section className="master-card master-panel">
+    <section className="master-panel master-editorial-section">
       <div className="master-panel__header"><h2>{props.title}</h2></div>
       <div className="master-panel__body">{props.children}</div>
     </section>
@@ -58,7 +58,6 @@ export function MasterEmptyState(props: Readonly<{
 }>) {
   return (
     <div className="master-empty">
-      <span className="master-empty__rule" aria-hidden="true" />
       <strong>{props.title}</strong>
       <p>{props.description}</p>
     </div>
