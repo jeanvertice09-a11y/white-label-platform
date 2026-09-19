@@ -87,7 +87,7 @@ export const getMerchantStorefrontStatus = createServerFn({ method: "GET" })
       [context.scope.tenantId, context.scope.storeId],
     );
     if (rows.length === 0) return { store: context.store, domain: null };
-    return { store: context.store, domain: domainSnapshot(rows[0] as Record<string, unknown>) };
+    return { store: context.store, domain: domainSnapshot(rows[0]) };
   });
 
 export const listMerchantCategories = createServerFn({ method: "GET" })
