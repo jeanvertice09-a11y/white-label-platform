@@ -23,6 +23,7 @@ export interface ControlMerchantListItem {
   planName: string | null;
   trialStartedAt: string | null;
   trialEndsAt: string | null;
+  currentPeriodEndsAt: string | null;
 }
 
 export interface ControlMerchantListResult {
@@ -51,6 +52,14 @@ export interface ControlMerchantEntitlement {
   limitValue: number | null;
 }
 
+export interface ControlMerchantPayment {
+  id: string;
+  status: string;
+  amountCents: number;
+  provider: string;
+  createdAt: string;
+}
+
 export interface ControlMerchantDetail {
   merchant: ControlMerchantListItem;
   members: Array<{
@@ -67,6 +76,7 @@ export interface ControlMerchantDetail {
     verifiedAt: string | null;
   }>;
   entitlements: ControlMerchantEntitlement[];
+  payments: ControlMerchantPayment[];
 }
 
 export interface ControlMerchantWorkspace {

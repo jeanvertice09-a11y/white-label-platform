@@ -54,6 +54,7 @@ async function controlContext(requireAdmin: boolean) {
     requireTenantRole({ tenantRoles: ctx.tenantRoles }, "tenant_owner", "tenant_admin");
   }
   return {
+    actorUserId: String(ctx.userId),
     tenantId: String(ctx.tenantId),
     sql: createAdminSqlExecutor(),
   };
@@ -68,7 +69,32 @@ export const saveControlPlan = createServerFn({ method: "POST" })
   .validator(planSchema)
   .handler(async ({ data }) => {
     const ctx = await controlContext(true);
-    return saveTenantPlan(ctx.sql, ctx.tenantId, data);
+    const previous = await ctx.sql.query(
+      `select id::text,active from public.tenant_plans
+       where tenant_id=$1::uuid and template_id=$2::uuid limit 1`,
+      [ctx.tenantId, data.templateId],
+    );
+    const planId = await saveTenantPlan(ctx.sql, ctx.tenantId, data);
+    const prior = previous.at(0);
+    await ctx.sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,action,resource_type,resource_id,metadata)
+       values ($1::uuid,$2::uuid,$3,'tenant_plan',$4,$5::jsonb)`,
+      [
+        ctx.actorUserId,
+        ctx.tenantId,
+        prior ? "plan.updated" : "plan.created",
+        planId,
+        JSON.stringify({ active: data.active, billing_interval: data.billingInterval, price_cents: data.priceCents }),
+      ],
+    );
+    if (prior && prior["active"] !== data.active) {
+      await ctx.sql.query(
+        `insert into public.audit_logs(actor_user_id,tenant_id,action,resource_type,resource_id,metadata)
+         values ($1::uuid,$2::uuid,$3,'tenant_plan',$4,jsonb_build_object('active',$5::boolean))`,
+        [ctx.actorUserId, ctx.tenantId, data.active ? "plan.activated" : "plan.deactivated", planId, data.active],
+      );
+    }
+    return planId;
   });
 
 export const saveControlPlanEntitlements = createServerFn({ method: "POST" })
@@ -76,6 +102,13 @@ export const saveControlPlanEntitlements = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const ctx = await controlContext(true);
     await replaceTenantPlanEntitlements(ctx.sql, ctx.tenantId, data.planId, data.values);
+    await ctx.sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,action,resource_type,resource_id,metadata)
+       select $1::uuid,$2::uuid,'plan.entitlements_updated','tenant_plan',$3,
+         jsonb_build_object('count',$4::int)
+       where exists(select 1 from public.tenant_plans where tenant_id=$2::uuid and id=$3::uuid)`,
+      [ctx.actorUserId, ctx.tenantId, data.planId, data.values.length],
+    );
     return { ok: true };
   });
 
