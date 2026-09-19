@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ConsoleRouteError, ConsoleRoutePending } from "../components/console/ConsoleRouteState.tsx";
 import { ControlDashboard } from "../features/control/control-dashboard.tsx";
 import { ControlDomainManager } from "../features/control/control-domain-manager.tsx";
 import { ControlGatewayManager } from "../features/control/control-gateway-manager.tsx";
@@ -17,7 +18,6 @@ import "../styles/control-plans.css";
 import "../styles/console-system.css";
 import "../styles/console-compat.css";
 import "../styles/console-pages.css";
-import { AccessDenied } from "./-access-denied.tsx";
 
 export const Route = createFileRoute("/control")({
   loader: async () => {
@@ -32,7 +32,8 @@ export const Route = createFileRoute("/control")({
     ]);
     return { dashboard, planCatalog, merchants, domains, gateways, billing };
   },
-  errorComponent: AccessDenied,
+  pendingComponent: ConsoleRoutePending,
+  errorComponent: ConsoleRouteError,
   component: ControlPage,
 });
 
