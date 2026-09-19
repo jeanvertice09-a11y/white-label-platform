@@ -19,7 +19,7 @@ export function parseMoneyToCents(value: string): number {
 
 export function today(): string {
   const now = new Date();
-  const year = now.getFullYear();
+  const year = String(now.getFullYear());
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
@@ -27,9 +27,11 @@ export function today(): string {
 
 export function monthRange(): { from: string; to: string } {
   const now = new Date();
-  const from = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const fromYear = String(now.getFullYear());
+  const from = `${fromYear}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const to = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+  const toYear = String(end.getFullYear());
+  const to = `${toYear}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
   return { from, to };
 }
 

@@ -45,6 +45,15 @@ function OperationsRoutePage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return <div className="k-page">
     <PageHead title="Operações" description="Fornecedores, compras, financeiro interno e tarefas da loja em um único espaço operacional." />
-    <MerchantOperationsPage {...data} />
+    <MerchantOperationsPage
+      suppliers={data.suppliers}
+      supplierOptions={data.supplierOptions}
+      purchases={data.purchases}
+      inventory={data.inventory}
+      finance={data.finance}
+      financeSummary={data.financeSummary}
+      categories={data.categories}
+      tasks={data.tasks}
+    />
   </div>;
 }
