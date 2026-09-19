@@ -16,7 +16,8 @@ interface ProductPageData {
   canonicalUrl: string;
 }
 
-export const Route = createFileRoute("/produto/$slug" as never)({
+// @ts-expect-error -- TanStack gera o tipo desta nova rota durante o build.
+export const Route = createFileRoute("/produto/$slug")({
   loader: ({ params }) => getPublicProductPage({ data: { slug: (params as { slug: string }).slug } }),
   head: ({ loaderData }) => {
     const data = loaderData as unknown as ProductPageData | undefined;

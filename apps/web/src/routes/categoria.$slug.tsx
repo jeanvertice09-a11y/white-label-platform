@@ -13,7 +13,8 @@ interface CategoryPageData {
   canonicalUrl: string;
 }
 
-export const Route = createFileRoute("/categoria/$slug" as never)({
+// @ts-expect-error -- TanStack gera o tipo desta nova rota durante o build.
+export const Route = createFileRoute("/categoria/$slug")({
   loader: ({ params }) => getPublicCategoryPage({ data: { slug: (params as { slug: string }).slug } }),
   head: ({ loaderData }) => {
     const data = loaderData as unknown as CategoryPageData | undefined;
