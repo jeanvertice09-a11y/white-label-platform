@@ -85,7 +85,7 @@ async function verifyTenantPlanIdentity(sql: SqlExecutor, store: DemoStore, conf
   const tenant = DEMO_TENANTS.find((item) => item.key === store.tenantKey);
   if (!tenant) throw new Error(`preflight: tenant ausente para plano ${store.key}`);
   const rows = await sql.query(`select tenant_id::text,slug from public.tenant_plans where id=$1::uuid`, [id]);
-  const row = rows[0];
+  const row = rows.at(0);
   if (row && (row["tenant_id"] !== tenant.id || row["slug"] !== plan.slug)) {
     throw new Error(`preflight: ID determinístico pertence a outro tenant_plan: ${id}`);
   }
@@ -176,7 +176,8 @@ async function verifyAuthUsers(sql: SqlExecutor, config: HomologationRuntimeConf
   if (rows.length !== ids.length) throw new Error("preflight: um ou mais usuários Auth ainda não existem");
   for (const row of rows) {
     const user = expected.get(text(row, "id"));
-    if (!user || String(row["email"] ?? "").toLowerCase() !== user.email.toLowerCase()) {
+    const email = row["email"];
+    if (!user || typeof email !== "string" || email.toLowerCase() !== user.email.toLowerCase()) {
       throw new Error(`preflight: email Auth divergente para ${text(row, "id")}`);
     }
   }
