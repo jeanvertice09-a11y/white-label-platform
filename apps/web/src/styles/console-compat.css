@@ -1,0 +1,62 @@
+/* Compatibility layer for existing Master/Control feature markup.
+   Scoped to these consoles so Merchant Admin and storefront remain untouched. */
+
+.master-shell .master-panel > h2:first-child {
+  margin: 0;
+  padding: 18px 18px 0;
+  color: var(--console-text-strong);
+  font-size: 14px;
+  font-weight: 680;
+}
+.master-shell form.master-panel > .k-form__grid,
+.master-shell section.master-panel > .k-form__grid { padding: 16px 18px 0; }
+.master-shell form.master-panel > .k-field,
+.master-shell section.master-panel > .k-field { margin: 16px 18px 0; }
+.master-shell form.master-panel > .k-actions,
+.master-shell section.master-panel > .k-actions { padding: 0 18px 18px; }
+.master-shell form.master-panel > .k-status,
+.master-shell section.master-panel > .k-status { margin: 14px 18px 0; }
+.master-shell form.master-panel > p,
+.master-shell section.master-panel > p { margin: 8px 18px 0; color: var(--console-muted); font-size: 11.5px; }
+.master-shell .k-field--full { grid-column: 1 / -1; }
+
+.master-shell .master-grid { display: grid; gap: 16px; }
+.master-shell .master-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.master-shell .master-grid--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+.master-shell .master-service,
+.master-shell .master-setting { border: 1px solid var(--console-border); border-radius: var(--console-radius); background: var(--console-surface); box-shadow: none; }
+
+.control-shell .control-plan-management > .k-form,
+.control-shell .control-plan-management > .master-card,
+.control-shell .control-plan-management > .control-card { margin-top: 14px; }
+.control-shell .control-plan-management > .master-card { overflow: hidden; }
+.control-shell .control-plan-management > .master-card > .k-form { border: 0; border-radius: 0; }
+.control-shell .control-plan-management > .k-muted { margin: 12px 0 0; }
+
+.control-shell .control-section > .control-card { overflow: hidden; }
+.control-shell .control-section > .control-card > .control-table-wrap { margin-top: 14px; }
+.control-shell .control-section > .control-card > .control-row:first-of-type { margin-top: 8px; }
+
+.control-shell .control-plan-management .k-form__grid,
+.control-shell .control-card .k-form__grid { margin-top: 2px; }
+.control-shell .control-card > .k-field { margin-top: 12px; }
+.control-shell .control-card > .k-status { margin-top: 12px; }
+
+.control-shell .control-section .control-section {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--console-border);
+}
+
+.control-shell .control-plan-feature input[type="checkbox"],
+.control-shell .control-plan-check input[type="checkbox"],
+.control-shell .k-field input[type="checkbox"] {
+  accent-color: var(--console-primary);
+}
+
+@media (max-width: 760px) {
+  .master-shell .master-grid--two,
+  .master-shell .master-grid--three { grid-template-columns: 1fr; }
+  .master-shell .k-field--full { grid-column: auto; }
+}

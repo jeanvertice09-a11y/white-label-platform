@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ConsoleRouteError, ConsoleRoutePending } from "../components/console/ConsoleRouteState.tsx";
 import { ControlDashboard } from "../features/control/control-dashboard.tsx";
 import { ControlDomainManager } from "../features/control/control-domain-manager.tsx";
 import { ControlGatewayManager } from "../features/control/control-gateway-manager.tsx";
@@ -14,9 +15,9 @@ import { getTenantControlDashboard } from "../lib/server/platform-console.functi
 import { getControlTenantBillingWorkspace } from "../lib/server/tenant-billing.functions.ts";
 import "../styles/control.css";
 import "../styles/control-plans.css";
-import "../styles/dashboard-rich.css";
-import "../styles/dashboard-pages.css";
-import { AccessDenied } from "./-access-denied.tsx";
+import "../styles/console-system.css";
+import "../styles/console-compat.css";
+import "../styles/console-pages.css";
 
 export const Route = createFileRoute("/control")({
   loader: async () => {
@@ -31,29 +32,29 @@ export const Route = createFileRoute("/control")({
     ]);
     return { dashboard, planCatalog, merchants, domains, gateways, billing };
   },
-  errorComponent: AccessDenied,
+  pendingComponent: ConsoleRoutePending,
+  errorComponent: ConsoleRouteError,
   component: ControlPage,
 });
 
 function ControlPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return (
-    <>
-      <ControlDashboard data={data.dashboard} />
+    <ControlDashboard data={data.dashboard}>
       <ControlTenantBilling initial={data.billing} />
       <ControlMerchantsManager initial={data.merchants} />
-      <ControlDomainManager initial={data.domains} />
-      <ControlGatewayManager initial={data.gateways} />
       <section className="control-plan-management-shell" id="plan-management">
         <div className="control-plan-management">
           <header>
             <span>Planos comerciais</span>
-            <h2>Configurar oferta para lojistas</h2>
-            <p>Preço, periodicidade, trial, destaque, recursos e limites respeitam o teto definido pela Kataluu.</p>
+            <h2>Oferta para lojistas</h2>
+            <p>Configure preço, periodicidade, trial, recursos e limites dentro das permissões definidas pela Kataluu.</p>
           </header>
           <ControlPlanManager catalog={data.planCatalog} />
         </div>
       </section>
-    </>
+      <ControlDomainManager initial={data.domains} />
+      <ControlGatewayManager initial={data.gateways} />
+    </ControlDashboard>
   );
 }
