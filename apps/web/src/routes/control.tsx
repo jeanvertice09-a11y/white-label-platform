@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ConsoleRouteError, ConsoleRoutePending } from "../components/console/ConsoleRouteState.tsx";
+import { ControlAuditManager } from "../features/control/control-audit-manager.tsx";
 import { ControlBrandingManager } from "../features/control/control-branding-manager.tsx";
 import { ControlDashboard } from "../features/control/control-dashboard.tsx";
 import { ControlDomainManager } from "../features/control/control-domain-manager.tsx";
@@ -8,6 +9,7 @@ import { ControlMerchantsManager } from "../features/control/control-merchants-m
 import { ControlPlanManager } from "../features/control/control-plan-manager.tsx";
 import { ControlTenantBilling } from "../features/control/control-tenant-billing.tsx";
 import { loadControlContext } from "../lib/client-guard.ts";
+import { getControlAuditWorkspace } from "../lib/server/control-audit.functions.ts";
 import { getControlDomainWorkspace } from "../lib/server/control-domains.functions.ts";
 import { getControlGatewayWorkspace } from "../lib/server/control-gateways.functions.ts";
 import { getControlMerchantWorkspace } from "../lib/server/control-merchants.functions.ts";
@@ -24,15 +26,16 @@ import "../styles/editorial-console.css";
 export const Route = createFileRoute("/control")({
   loader: async () => {
     await loadControlContext();
-    const [dashboard, planCatalog, merchants, domains, gateways, billing] = await Promise.all([
+    const [dashboard, planCatalog, merchants, domains, gateways, billing, audit] = await Promise.all([
       getTenantControlDashboard(),
       getTenantPlanCatalog(),
       getControlMerchantWorkspace(),
       getControlDomainWorkspace(),
       getControlGatewayWorkspace(),
       getControlTenantBillingWorkspace(),
+      getControlAuditWorkspace(),
     ]);
-    return { dashboard, planCatalog, merchants, domains, gateways, billing };
+    return { dashboard, planCatalog, merchants, domains, gateways, billing, audit };
   },
   pendingComponent: ConsoleRoutePending,
   errorComponent: ConsoleRouteError,
@@ -58,6 +61,7 @@ function ControlPage(): React.JSX.Element {
       <ControlBrandingManager initial={data.dashboard.tenant} />
       <ControlDomainManager initial={data.domains} />
       <ControlGatewayManager initial={data.gateways} />
+      <ControlAuditManager initial={data.audit} />
     </ControlDashboard>
   );
 }
