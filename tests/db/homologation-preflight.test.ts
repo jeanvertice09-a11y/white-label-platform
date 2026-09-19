@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { DEMO_TENANTS } from "../../scripts/homologation/fixtures/data.ts";
+import { stableUuid } from "../../scripts/homologation/model.ts";
 import { runHomologationPreflight } from "../../scripts/homologation/preflight.ts";
 import { expectReject, setupDatabase } from "./harness.ts";
 import type { Harness } from "./harness.ts";
@@ -44,6 +45,12 @@ describe("homologation production preflight", () => {
     await h.db.query("delete from public.tenants where id=$1::uuid", [tenant.id]);
   });
 
+  test("bloqueia Auth UUID duplicado", async () => {
+    const duplicate = structuredClone(config);
+    duplicate.storeOwners.lume = duplicate.tenantOwners.aurora;
+    await expectReject(runHomologationPreflight(h.db, duplicate), "preflight deve rejeitar UUID Auth duplicado");
+  });
+
   test("bloqueia Auth ausente em vez de seguir com warning", async () => {
     const ownerId = config.tenantOwners.aurora;
     const email = config.tenantOwnerEmails.aurora;
@@ -61,17 +68,31 @@ describe("homologation production preflight", () => {
   });
 
   test("bloqueia membership dos usuários HML fora do escopo esperado", async () => {
-    const tenant = DEMO_TENANTS.at(1);
-    if (!tenant) throw new Error("tenant de teste ausente");
+    const foreignTenant = stableUuid("test:foreign-membership");
     await h.db.query(
       "insert into public.tenants(id,slug,name,status) values ($1::uuid,'foreign-membership','Foreign Membership','active')",
-      [tenant.id],
+      [foreignTenant],
     );
     await h.db.query(
       "insert into public.tenant_members(tenant_id,user_id,role) values ($1::uuid,$2::uuid,'tenant_owner')",
-      [tenant.id, config.storeOwners.lume],
+      [foreignTenant, config.storeOwners.lume],
     );
     await expectReject(runHomologationPreflight(h.db, config), "preflight deve rejeitar membership fora do escopo");
-    await h.db.query("delete from public.tenants where id=$1::uuid", [tenant.id]);
+    await h.db.query("delete from public.tenants where id=$1::uuid", [foreignTenant]);
+  });
+
+  test("bloqueia colisão de qualquer hostname configurado", async () => {
+    const foreignTenant = stableUuid("test:foreign-domain");
+    await h.db.query(
+      "insert into public.tenants(id,slug,name,status) values ($1::uuid,'foreign-domain','Foreign Domain','active')",
+      [foreignTenant],
+    );
+    await h.db.query(
+      `insert into public.domains(id,tenant_id,hostname,type,status)
+       values ($1::uuid,$2::uuid,$3,'tenant_site','active')`,
+      [stableUuid("test:foreign-domain-row"), foreignTenant, config.domains.aurora.tenantSite],
+    );
+    await expectReject(runHomologationPreflight(h.db, config), "preflight deve rejeitar hostname ocupado");
+    await h.db.query("delete from public.tenants where id=$1::uuid", [foreignTenant]);
   });
 });
