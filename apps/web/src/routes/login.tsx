@@ -58,8 +58,10 @@ function LoginPage(): React.JSX.Element {
       return;
     }
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "").trim();
-    const password = String(form.get("password") ?? "");
+    const emailValue = form.get("email");
+    const passwordValue = form.get("password");
+    const email = typeof emailValue === "string" ? emailValue.trim() : "";
+    const password = typeof passwordValue === "string" ? passwordValue : "";
     setBusy(true); setMessage("");
     try {
       await signInWithPassword(email, password);
