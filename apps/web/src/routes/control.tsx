@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ConsoleRouteError, ConsoleRoutePending } from "../components/console/ConsoleRouteState.tsx";
+import { ControlBrandingManager } from "../features/control/control-branding-manager.tsx";
 import { ControlDashboard } from "../features/control/control-dashboard.tsx";
 import { ControlDomainManager } from "../features/control/control-domain-manager.tsx";
 import { ControlGatewayManager } from "../features/control/control-gateway-manager.tsx";
@@ -54,6 +55,7 @@ function ControlPage(): React.JSX.Element {
           <ControlPlanManager catalog={data.planCatalog} />
         </div>
       </section>
+      <ControlBrandingManager initial={data.dashboard.tenant} />
       <ControlDomainManager initial={data.domains} />
       <ControlGatewayManager initial={data.gateways} />
     </ControlDashboard>
