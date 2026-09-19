@@ -34,7 +34,7 @@ function openDb(url: string): DbClient {
   const client = postgres(url, { max: 1 });
   return {
     async query(sql, params = []) {
-      const rows = await client.unsafe(sql, params);
+      const rows = await client.unsafe(sql, params as never[]);
       return rows;
     },
     async execScript(sql) { await client.unsafe(sql); },
