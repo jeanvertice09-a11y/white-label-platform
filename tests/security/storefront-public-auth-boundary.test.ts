@@ -141,7 +141,13 @@ describe("storefront public auth boundary", () => {
   test("domínio inexistente ou inválido falha fechado", async () => {
     const resolver = new DomainResolver(domainStore([]));
     expect(await resolver.resolve("unknown.example.test")).toBeNull();
-    await expect(resolver.resolve("https://invalid.example.test/")).rejects.toThrow();
+    let invalidRejected = false;
+    try {
+      await resolver.resolve("https://invalid.example.test/");
+    } catch {
+      invalidRejected = true;
+    }
+    expect(invalidRejected).toBe(true);
   });
 
   test("store_catalog válido não depende de auth.getUser ou sessão para conteúdo público", () => {
