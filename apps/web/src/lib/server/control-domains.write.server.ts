@@ -121,9 +121,9 @@ export async function setControlDomainStatus(
        where tenant_id=$1::uuid and id=$2::uuid limit 1`,
       [tenantId, domainId],
     );
-    const row = domain[0];
-    const storeId = typeof row?.["store_id"] === "string" ? row["store_id"] : null;
-    const type = row?.["type"];
+    const row = domain.at(0);
+    const storeId = row && typeof row["store_id"] === "string" ? row["store_id"] : null;
+    const type = row ? row["type"] : undefined;
     if (storeId && (type === "store_admin" || type === "store_catalog")) {
       await assertStoreCustomDomainEntitlement(sql, tenantId, storeId);
     }

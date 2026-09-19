@@ -34,11 +34,11 @@ function integer(row: Record<string, unknown>, key: string): number {
   return value;
 }
 
-export async function loadStoreEntitlementSnapshot(
+async function loadEffectiveEntitlementRows(
   sql: BillingSqlExecutor,
   scope: BillingScope,
-): Promise<StoreSubscriptionSnapshot | null> {
-  const rows = await sql.query(
+): Promise<Record<string, unknown>[]> {
+  return sql.query(
     `with current_subscription as (
        select * from public.store_subscriptions
        where tenant_id=$1 and store_id=$2
@@ -72,6 +72,13 @@ export async function loadStoreEntitlementSnapshot(
      order by d.key nulls last`,
     [scope.tenantId, scope.storeId],
   );
+}
+
+export async function loadStoreEntitlementSnapshot(
+  sql: BillingSqlExecutor,
+  scope: BillingScope,
+): Promise<StoreSubscriptionSnapshot | null> {
+  const rows = await loadEffectiveEntitlementRows(sql, scope);
   if (rows.length === 0) return null;
 
   const first = rows[0];

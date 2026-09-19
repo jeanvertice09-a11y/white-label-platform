@@ -37,6 +37,21 @@ function stringField(row: Record<string, unknown>, key: string): string {
   return value;
 }
 
+async function expectRejectedWithMessage(
+  promise: Promise<unknown>,
+  expectedMessage: string,
+): Promise<void> {
+  try {
+    await promise;
+  } catch (error) {
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) throw error;
+    expect(error.message).toContain(expectedMessage);
+    return;
+  }
+  throw new Error(`Promessa deveria rejeitar com mensagem contendo: ${expectedMessage}`);
+}
+
 async function feature(code: string, key: string): Promise<boolean> {
   const rows = await h.db.query(
     `select e.enabled from public.plan_template_entitlements e
@@ -187,7 +202,10 @@ describe("commercial plan matrix", () => {
          from generate_series(1,$3::int) g`,
         [T.a, storeId, limit],
       );
-      await expect(assertProductMutationEntitlements(h.db, { tenantId: T.a, storeId }, "create")).rejects.toThrow("max_products");
+      await expectRejectedWithMessage(
+        assertProductMutationEntitlements(h.db, { tenantId: T.a, storeId }, "create"),
+        "max_products",
+      );
     }
     await h.db.query(
       `insert into public.products(tenant_id,store_id,slug,name,price_cents)
@@ -195,12 +213,19 @@ describe("commercial plan matrix", () => {
        from generate_series(1,1001) g`,
       [T.a, STORES.complete],
     );
-    await expect(assertProductMutationEntitlements(h.db, { tenantId: T.a, storeId: STORES.complete }, "create")).resolves.toBeUndefined();
+    expect(await assertProductMutationEntitlements(
+      h.db,
+      { tenantId: T.a, storeId: STORES.complete },
+      "create",
+    )).toBeUndefined();
   });
 
   test("custom_domain é server-side e downgrade suspende domínio sem apagar", async () => {
-    await expect(assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan1)).rejects.toThrow("custom_domain");
-    await expect(assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan2)).resolves.toBeUndefined();
+    await expectRejectedWithMessage(
+      assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan1),
+      "custom_domain",
+    );
+    expect(await assertStoreCustomDomainEntitlement(h.db, T.a, STORES.plan2)).toBeUndefined();
     await h.db.query(
       `insert into public.domains(tenant_id,store_id,hostname,type,status,verified_at)
        values ($1,$2,'downgrade.example.test','store_catalog','active',now())`,
