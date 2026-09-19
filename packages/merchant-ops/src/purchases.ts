@@ -99,6 +99,82 @@ export async function listPurchases(
   };
 }
 
+const CREATE_PURCHASE_SQL = `with raw_items as (
+  select product_id,variant_id,quantity,unit_cost_cents
+  from jsonb_to_recordset($8::jsonb) as x(
+    product_id uuid,variant_id uuid,quantity integer,unit_cost_cents bigint
+  )
+), valid_items as (
+  select r.product_id,r.variant_id,r.quantity,r.unit_cost_cents,
+         p.name as product_name,
+         case when r.variant_id is null then null else v.name end as variant_name,
+         coalesce(v.sku,p.sku) as sku
+  from raw_items r
+  join public.products p
+    on p.tenant_id=$1 and p.store_id=$2 and p.id=r.product_id
+   and p.track_inventory=true
+  left join public.product_variants v
+    on r.variant_id is not null
+   and v.tenant_id=$1 and v.store_id=$2
+   and v.product_id=r.product_id and v.id=r.variant_id
+  where r.quantity > 0 and r.unit_cost_cents >= 0
+    and (r.variant_id is null or v.id is not null)
+    and (
+      r.variant_id is not null
+      or not exists (
+        select 1 from public.product_variants vx
+        where vx.tenant_id=$1 and vx.store_id=$2 and vx.product_id=r.product_id
+      )
+    )
+), stats as (
+  select
+    (select count(*) from raw_items)::integer as raw_count,
+    count(*)::integer as valid_count,
+    coalesce(sum(quantity::bigint * unit_cost_cents),0)::bigint as subtotal_cents
+  from valid_items
+), supplier_ok as (
+  select ($3::uuid is null or exists (
+    select 1 from public.merchant_suppliers s
+    where s.tenant_id=$1 and s.store_id=$2 and s.id=$3::uuid and s.status='active'
+  )) as ok
+), inserted_purchase as (
+  insert into public.merchant_purchases (
+    tenant_id,store_id,supplier_id,purchased_at,status,
+    subtotal_cents,discount_cents,surcharge_cents,total_cents,notes,created_by
+  )
+  select $1,$2,$3::uuid,$4::date,'draft',
+         st.subtotal_cents,$5::bigint,$6::bigint,
+         st.subtotal_cents-$5::bigint+$6::bigint,$7,$9::uuid
+  from stats st cross join supplier_ok so
+  where so.ok and st.raw_count > 0 and st.raw_count=st.valid_count
+    and $5::bigint <= st.subtotal_cents+$6::bigint
+  returning *
+), inserted_items as (
+  insert into public.merchant_purchase_items (
+    tenant_id,store_id,purchase_id,product_id,variant_id,
+    product_name,variant_name,sku,quantity,unit_cost_cents,subtotal_cents
+  )
+  select $1,$2,p.id,v.product_id,v.variant_id,
+         v.product_name,v.variant_name,v.sku,v.quantity,v.unit_cost_cents,
+         v.quantity::bigint*v.unit_cost_cents
+  from valid_items v cross join inserted_purchase p
+  returning id
+)
+select p.*,s.name as supplier_name,
+  (select count(*) from inserted_items)::integer as inserted_item_count
+from inserted_purchase p
+left join public.merchant_suppliers s
+  on s.tenant_id=p.tenant_id and s.store_id=p.store_id and s.id=p.supplier_id`;
+
+function serializePurchaseItems(input: PurchaseInput): string {
+  return JSON.stringify(input.items.map((item) => ({
+    product_id: item.productId,
+    variant_id: item.variantId,
+    quantity: item.quantity,
+    unit_cost_cents: item.unitCostCents,
+  })));
+}
+
 export async function createPurchase(
   sql: MerchantOpsSqlExecutor,
   scope: MerchantScope,
@@ -107,90 +183,17 @@ export async function createPurchase(
 ): Promise<Purchase> {
   assertScope(scope);
   assertPurchase(input);
-  const rows = await sql.query(
-    `with raw_items as (
-       select product_id,variant_id,quantity,unit_cost_cents
-       from jsonb_to_recordset($8::jsonb) as x(
-         product_id uuid,variant_id uuid,quantity integer,unit_cost_cents bigint
-       )
-     ), valid_items as (
-       select r.product_id,r.variant_id,r.quantity,r.unit_cost_cents,
-              p.name as product_name,
-              case when r.variant_id is null then null else v.name end as variant_name,
-              coalesce(v.sku,p.sku) as sku
-       from raw_items r
-       join public.products p
-         on p.tenant_id=$1 and p.store_id=$2 and p.id=r.product_id
-        and p.track_inventory=true
-       left join public.product_variants v
-         on r.variant_id is not null
-        and v.tenant_id=$1 and v.store_id=$2
-        and v.product_id=r.product_id and v.id=r.variant_id
-       where r.quantity > 0 and r.unit_cost_cents >= 0
-         and (r.variant_id is null or v.id is not null)
-         and (
-           r.variant_id is not null
-           or not exists (
-             select 1 from public.product_variants vx
-             where vx.tenant_id=$1 and vx.store_id=$2 and vx.product_id=r.product_id
-           )
-         )
-     ), stats as (
-       select
-         (select count(*) from raw_items)::integer as raw_count,
-         count(*)::integer as valid_count,
-         coalesce(sum(quantity::bigint * unit_cost_cents),0)::bigint as subtotal_cents
-       from valid_items
-     ), supplier_ok as (
-       select ($3::uuid is null or exists (
-         select 1 from public.merchant_suppliers s
-         where s.tenant_id=$1 and s.store_id=$2 and s.id=$3::uuid and s.status='active'
-       )) as ok
-     ), inserted_purchase as (
-       insert into public.merchant_purchases (
-         tenant_id,store_id,supplier_id,purchased_at,status,
-         subtotal_cents,discount_cents,surcharge_cents,total_cents,notes,created_by
-       )
-       select $1,$2,$3::uuid,$4::date,'draft',
-              st.subtotal_cents,$5::bigint,$6::bigint,
-              st.subtotal_cents-$5::bigint+$6::bigint,$7,$9::uuid
-       from stats st cross join supplier_ok so
-       where so.ok and st.raw_count > 0 and st.raw_count=st.valid_count
-         and $5::bigint <= st.subtotal_cents+$6::bigint
-       returning *
-     ), inserted_items as (
-       insert into public.merchant_purchase_items (
-         tenant_id,store_id,purchase_id,product_id,variant_id,
-         product_name,variant_name,sku,quantity,unit_cost_cents,subtotal_cents
-       )
-       select $1,$2,p.id,v.product_id,v.variant_id,
-              v.product_name,v.variant_name,v.sku,v.quantity,v.unit_cost_cents,
-              v.quantity::bigint*v.unit_cost_cents
-       from valid_items v cross join inserted_purchase p
-       returning id
-     )
-     select p.*,s.name as supplier_name,
-       (select count(*) from inserted_items)::integer as inserted_item_count
-     from inserted_purchase p
-     left join public.merchant_suppliers s
-       on s.tenant_id=p.tenant_id and s.store_id=p.store_id and s.id=p.supplier_id`,
-    [
-      scope.tenantId,
-      scope.storeId,
-      input.supplierId,
-      input.purchasedAt,
-      input.discountCents,
-      input.surchargeCents,
-      nullable(input.notes),
-      JSON.stringify(input.items.map((item) => ({
-        product_id: item.productId,
-        variant_id: item.variantId,
-        quantity: item.quantity,
-        unit_cost_cents: item.unitCostCents,
-      }))),
-      actorId,
-    ],
-  );
+  const rows = await sql.query(CREATE_PURCHASE_SQL, [
+    scope.tenantId,
+    scope.storeId,
+    input.supplierId,
+    input.purchasedAt,
+    input.discountCents,
+    input.surchargeCents,
+    nullable(input.notes),
+    serializePurchaseItems(input),
+    actorId,
+  ]);
   if (!rows[0] || integer(rows[0], "inserted_item_count") !== input.items.length) {
     throw new Error("Compra inválida: verifique fornecedor, produtos, variantes e estoque controlado");
   }
