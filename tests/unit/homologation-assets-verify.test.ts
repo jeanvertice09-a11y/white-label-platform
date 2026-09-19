@@ -20,14 +20,24 @@ function physicalConfig() {
 }
 
 function fakeMediaFetch(): typeof fetch {
-  return (async (input: string | URL | Request) => {
+  const implementation = (input: string | URL | Request): Promise<Response> => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     if (url.hostname === "assets.example.test") {
-      return new Response(bytes(`logo:${url.pathname}`), { status: 200, headers: { "content-type": "image/webp" } });
+      return Promise.resolve(new Response(bytes(`logo:${url.pathname}`), { status: 200, headers: { "content-type": "image/webp" } }));
     }
     const objectKey = url.pathname.slice(1).split("/").map((segment) => decodeURIComponent(segment)).join("/");
-    return new Response(bytes(objectKey), { status: 200, headers: { "content-type": "image/webp" } });
-  }) as typeof fetch;
+    return Promise.resolve(new Response(bytes(objectKey), { status: 200, headers: { "content-type": "image/webp" } }));
+  };
+  return implementation as typeof fetch;
+}
+
+async function rejectionMessage(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("era esperada uma rejeição");
 }
 
 describe("homologation physical media preflight", () => {
@@ -43,6 +53,7 @@ describe("homologation physical media preflight", () => {
     const resolved = config.resolvedAssets[first.key];
     if (!resolved) throw new Error("asset resolvido ausente");
     resolved.sha256 = "0".repeat(64);
-    await expect(verifyPublishedAssets(config, fakeMediaFetch())).rejects.toThrow("sha256 divergente");
+    const message = await rejectionMessage(verifyPublishedAssets(config, fakeMediaFetch()));
+    expect(message).toContain("sha256 divergente");
   });
 });
