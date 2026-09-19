@@ -23,7 +23,7 @@ async function readAssetManifest(configPath: string, manifestPath: string): Prom
   if (!(await file.exists())) throw new Error(`manifesto de assets não encontrado: ${path}`);
   const parsed = JSON.parse(await file.text()) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("manifesto de assets inválido");
-  return parsed as Partial<Record<string, ResolvedAsset>>;
+  return parsed;
 }
 
 async function readConfig(): Promise<HomologationRuntimeConfig> {
