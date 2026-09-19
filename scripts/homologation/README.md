@@ -27,7 +27,7 @@ Este pacote prepara uma massa funcional, determinística e removível para valid
 Antes de Production, o operador precisa preparar fora do Git:
 
 1. Um registro real e ativo em `public.plans`, com `billing_interval` configurado.
-2. Um `plan_template` real com as features exigidas e limites suficientes (`max_products >= 18`, `max_stores >= 2`, storage suficiente).
+2. Um `plan_template` real com as features exigidas. Limits ausentes representam ausência de teto; se `max_products`, `max_stores` ou `max_storage_bytes` estiverem configurados, o preflight exige capacidade suficiente para a massa.
 3. Seis usuários Supabase Auth já criados: 2 tenant owners + 4 store owners. Apenas os UUIDs entram no config local.
 4. Doze hostnames controlados e verificados: site/panel de cada White Label e admin/catalog de cada store.
 5. Setenta e seis assets já enviados ao R2 nos object keys retornados por `bun run homologation:assets`.
@@ -83,7 +83,7 @@ Crie um JSON fora do repositório e aponte `HOMOLOGATION_CONFIG_FILE` para ele. 
 }
 ```
 
-`resolvedAssets` deve conter exatamente as 76 chaves do manifesto e cada `sizeBytes` deve vir do objeto realmente enviado.
+`resolvedAssets` deve conter exatamente as 76 chaves do manifesto. O preflight valida chave, MIME e `sizeBytes`, mas não consulta o bucket R2; portanto `HOMOLOGATION_ASSETS_READY=true` continua sendo uma confirmação operacional do operador de que os objetos reais já existem nas chaves informadas.
 
 ## Comandos seguros
 
@@ -101,6 +101,8 @@ DATABASE_URL='...' \
 HOMOLOGATION_CONFIG_FILE='/caminho/seguro/hml.json' \
 bun run homologation:preflight
 ```
+
+O preflight é read-only. Ele valida o plano Kataluu, o template/entitlements, os seis UUIDs em `auth.users`, hostnames e colisões de slugs/IDs determinísticos de tenants/stores/gateway. Ele não executa cleanup nem inserts da massa.
 
 ## Apply em Production — somente após autorização explícita
 
