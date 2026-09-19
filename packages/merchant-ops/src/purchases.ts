@@ -128,6 +128,13 @@ export async function createPurchase(
         and v.product_id=r.product_id and v.id=r.variant_id
        where r.quantity > 0 and r.unit_cost_cents >= 0
          and (r.variant_id is null or v.id is not null)
+         and (
+           r.variant_id is not null
+           or not exists (
+             select 1 from public.product_variants vx
+             where vx.tenant_id=$1 and vx.store_id=$2 and vx.product_id=r.product_id
+           )
+         )
      ), stats as (
        select
          (select count(*) from raw_items)::integer as raw_count,
@@ -147,7 +154,7 @@ export async function createPurchase(
        select $1,$2,$3::uuid,$4::date,'draft',
               st.subtotal_cents,$5::bigint,$6::bigint,
               st.subtotal_cents-$5::bigint+$6::bigint,$7,$9::uuid
-       from stats st,cross join supplier_ok so
+       from stats st cross join supplier_ok so
        where so.ok and st.raw_count > 0 and st.raw_count=st.valid_count
          and $5::bigint <= st.subtotal_cents+$6::bigint
        returning *
@@ -197,14 +204,6 @@ export async function receivePurchase(
   actorId: string,
 ): Promise<Purchase> {
   assertScope(scope);
-  const state = await sql.query(
-    `select status from public.merchant_purchases
-     where tenant_id=$1 and store_id=$2 and id=$3::uuid`,
-    [scope.tenantId, scope.storeId, purchaseId],
-  );
-  if (!state[0]) throw new Error("Compra não encontrada");
-  if (text(state[0], "status") === "cancelled") throw new Error("Compra cancelada não pode ser recebida");
-
   await sql.query(
     `with locked as (
        update public.merchant_purchases
@@ -245,7 +244,9 @@ export async function receivePurchase(
      on conflict do nothing`,
     [scope.tenantId, scope.storeId, purchaseId, actorId],
   );
-  return getPurchase(sql, scope, purchaseId);
+  const current = await getPurchase(sql, scope, purchaseId);
+  if (current.status === "cancelled") throw new Error("Compra cancelada não pode ser recebida");
+  return current;
 }
 
 export async function cancelPurchase(
