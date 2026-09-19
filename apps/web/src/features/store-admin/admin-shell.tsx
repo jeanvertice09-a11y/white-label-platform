@@ -27,6 +27,7 @@ const navigation: readonly NavGroup[] = [
     items: [
       { to: "/admin/orders", label: "Pedidos", exact: false, icon: "orders" },
       { to: "/admin/customers", label: "Clientes", exact: false, icon: "customers" },
+      { to: "/admin/operations", label: "Operações", exact: false, icon: "revenue" },
     ],
   },
   {
