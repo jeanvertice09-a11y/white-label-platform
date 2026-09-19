@@ -108,16 +108,15 @@ describe("homologation seed database", () => {
 
   test("FK composta e RLS continuam bloqueando cross-tenant/cross-store", async () => {
     const storeB = DEMO_STORES[2];
-    expect(storeB).toBeDefined();
     await expectReject(h.db.query(
       `insert into public.products(tenant_id,store_id,slug,name,price_cents)
        values ($1::uuid,$2::uuid,'cross-hml','Cross HML',100)`,
-      [DEMO_TENANTS[0]?.id, storeB?.id],
+      [DEMO_TENANTS[0].id, storeB.id],
     ), "cross tenant/store");
     const ownerA = config.storeOwners.lume;
     await h.asUser(ownerA, "authenticated", async () => {
       expect(await scalar("select count(*)::int total from public.products")).toBe(18);
-      expect(await scalar("select count(*)::int total from public.products where store_id=$1::uuid", [storeB?.id])).toBe(0);
+      expect(await scalar("select count(*)::int total from public.products where store_id=$1::uuid", [storeB.id])).toBe(0);
     });
   });
 

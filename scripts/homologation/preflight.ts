@@ -36,7 +36,7 @@ function validateTemplateCapacity(rows: Record<string, unknown>[], config: Homol
   if (missing.length > 0) throw new Error(`preflight: template não habilita: ${missing.join(", ")}`);
   if ((limits.get("max_products") ?? -1) < 18) throw new Error("preflight: template exige max_products >= 18");
   if ((limits.get("max_stores") ?? -1) < 2) throw new Error("preflight: template exige max_stores >= 2");
-  const assetBytes = Object.values(config.resolvedAssets).reduce((sum, asset) => sum + asset.sizeBytes, 0);
+  const assetBytes = Object.values(config.resolvedAssets).reduce((sum, asset) => sum + (asset?.sizeBytes ?? 0), 0);
   if ((limits.get("max_storage_bytes") ?? -1) < assetBytes) throw new Error(`preflight: max_storage_bytes insuficiente para ${String(assetBytes)} bytes de assets`);
 }
 

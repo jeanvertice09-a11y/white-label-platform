@@ -30,8 +30,8 @@ begin
   select count(*)::integer into store_count from public.stores where tenant_id in (${tenantIds});
   select count(*)::integer into product_count from public.products where tenant_id in (${tenantIds});
   select count(*)::integer into order_count from public.orders where tenant_id in (${tenantIds});
-  if tenant_count <> ${DEMO_COUNTS.tenants} or store_count <> ${DEMO_COUNTS.stores}
-    or product_count <> ${DEMO_COUNTS.products} or order_count <> ${DEMO_COUNTS.orders} then
+  if tenant_count <> ${String(DEMO_COUNTS.tenants)} or store_count <> ${String(DEMO_COUNTS.stores)}
+    or product_count <> ${String(DEMO_COUNTS.products)} or order_count <> ${String(DEMO_COUNTS.orders)} then
     raise exception 'homologation seed: contagens centrais divergentes';
   end if;
 

@@ -32,7 +32,7 @@ export interface HomologationRuntimeConfig {
   storeOwners: Record<StoreKey, string>;
   tenantLogoUrls: Record<TenantKey, string>;
   domains: Record<TenantKey, DomainConfig>;
-  resolvedAssets: Record<string, ResolvedAsset>;
+  resolvedAssets: Partial<Record<string, ResolvedAsset>>;
   anchorIso?: string;
 }
 
