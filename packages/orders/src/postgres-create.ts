@@ -43,6 +43,11 @@ const CREATE_ORDER_SQL = `with raw_input as (
       ))
       or (i.variant_id is not null and v.id is not null)
     )
+    and (
+      p.track_inventory=false
+      or (i.variant_id is null and p.stock_quantity>=i.qty)
+      or (i.variant_id is not null and v.stock_quantity>=i.qty)
+    )
 ), valid as (
   select
     (select count(*) from input) as input_count,
@@ -190,7 +195,7 @@ export async function createOrderFromCart(
   assertCreateOrderInput(input);
   const rows = await sql.query(CREATE_ORDER_SQL, orderParams(scope, input));
   if (rows.length === 0) {
-    throw new Error("Carrinho, cliente ou cupom inválido");
+    throw new Error("Carrinho, estoque, cliente ou cupom inválido");
   }
   const order = await getOrderById(sql, scope, String(rows[0]["id"]));
   if (!order) throw new Error("Pedido não encontrado após criação");

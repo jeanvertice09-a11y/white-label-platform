@@ -58,8 +58,17 @@ export const createWhatsappOrder = createServerFn({ method: "POST" })
       orderId: order.id,
       orderNumber: order.orderNumber,
       displayNumber: formatOrderNumber(order.orderNumber),
-      totalCents: order.totalCents,
+      status: order.status,
+      subtotalCents: order.subtotalCents,
       discountCents: order.discountCents,
+      totalCents: order.totalCents,
+      items: order.items.map((item) => ({
+        productName: item.productName,
+        variantName: item.variantName,
+        quantity: item.quantity,
+        unitCents: item.unitCents,
+        totalCents: item.totalCents,
+      })),
       whatsappUrl: buildOrderWhatsappUrl(
         settings.whatsappPhone,
         order,

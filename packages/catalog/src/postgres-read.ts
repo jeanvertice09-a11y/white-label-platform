@@ -21,6 +21,17 @@ import type {
 } from "./types.ts";
 import type { CatalogReadRepository, CatalogSqlExecutor } from "./repository.ts";
 
+function stripPublicCosts(product: Product): Product {
+  const { costCents, variants, ...safeProduct } = product;
+  void costCents;
+  const safeVariants = variants.map((variant) => {
+    const { costCents: variantCostCents, ...safeVariant } = variant;
+    void variantCostCents;
+    return safeVariant;
+  });
+  return { ...safeProduct, variants: safeVariants } as Product;
+}
+
 async function hydrateProducts(
   sql: CatalogSqlExecutor,
   scope: CatalogScope,
@@ -43,17 +54,21 @@ async function hydrateProducts(
       "and product_id=any($3::uuid[]) order by position,id",
     [scope.tenantId, scope.storeId, ids],
   );
-  return products.map((product) => ({
+  const hydrated = products.map((product) => ({
     ...product,
     variants: variants.filter((row) => row["product_id"] === product.id).map(mapVariant),
     images: images.filter((row) => row["product_id"] === product.id).map(mapImage),
   }));
+  return publicOnly ? hydrated.map(stripPublicCosts) : hydrated;
 }
 
 function publicProductFilter(): string {
   return "p.active=true and (p.category_id is null or exists (" +
     "select 1 from public.categories c where c.tenant_id=p.tenant_id " +
-    "and c.store_id=p.store_id and c.id=p.category_id and c.active=true)) " +
+    "and c.store_id=p.store_id and c.id=p.category_id and c.active=true " +
+    "and (c.parent_id is null or exists (select 1 from public.categories pc " +
+    "where pc.tenant_id=c.tenant_id and pc.store_id=c.store_id " +
+    "and pc.id=c.parent_id and pc.active=true)))) " +
     "and (not exists (select 1 from public.product_variants va " +
     "where va.tenant_id=p.tenant_id and va.store_id=p.store_id and va.product_id=p.id) " +
     "or exists (select 1 from public.product_variants vv where vv.tenant_id=p.tenant_id " +
@@ -116,7 +131,11 @@ async function listCategories(
   publicOnly: boolean,
 ): Promise<Category[]> {
   assertCatalogScope(scope);
-  const active = publicOnly ? " and active=true" : "";
+  const active = publicOnly
+    ? " and active=true and (parent_id is null or exists (select 1 from public.categories parent " +
+      "where parent.tenant_id=categories.tenant_id and parent.store_id=categories.store_id " +
+      "and parent.id=categories.parent_id and parent.active=true))"
+    : "";
   const rows = await sql.query(
     "select id,tenant_id,store_id,name,slug,description,parent_id,active,position " +
       "from public.categories where tenant_id=$1 and store_id=$2" + active +
@@ -153,7 +172,12 @@ function productWhere(query: CatalogQuery, publicOnly: boolean) {
   }
   if (query.categoryId) {
     params.push(query.categoryId);
-    where.push("p.category_id=$" + String(params.length));
+    const index = String(params.length);
+    where.push(
+      "(p.category_id=$" + index + " or exists (select 1 from public.categories child " +
+      "where child.tenant_id=p.tenant_id and child.store_id=p.store_id " +
+      "and child.id=p.category_id and child.parent_id=$" + index + "))",
+    );
   }
   return { where, params };
 }

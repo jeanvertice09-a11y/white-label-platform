@@ -5,6 +5,7 @@ import {
   createMerchantCatalogContext,
   createPublicCatalogContext,
 } from "./catalog-context.server.ts";
+import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 
 const querySchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -37,6 +38,7 @@ async function publicSnapshot(input: QueryInput) {
     categories,
     banners,
     products,
+    canonicalUrl: `https://${context.hostname}/catalog`,
   };
 }
 
@@ -66,6 +68,13 @@ export const getPublicCatalog = createServerFn({ method: "GET" })
   .validator((data: QueryInput | undefined) => querySchema.parse(data ?? {}))
   .handler(async ({ data }) => publicSnapshot(data));
 
+export const listPublicCatalogProducts = createServerFn({ method: "GET" })
+  .validator((data: QueryInput | undefined) => querySchema.parse(data ?? {}))
+  .handler(async ({ data }) => {
+    const context = await createPublicCatalogContext(getRequestHost());
+    return context.repository.listProducts({ ...context.scope, ...data }, true);
+  });
+
 export const getPublicCatalogProduct = createServerFn({ method: "GET" })
   .validator(slugSchema)
   .handler(async ({ data }) => {
@@ -75,6 +84,36 @@ export const getPublicCatalogProduct = createServerFn({ method: "GET" })
 
 export const getMerchantCatalogOverview = createServerFn({ method: "GET" })
   .handler(async () => merchantSnapshot());
+
+export const getMerchantStorefrontStatus = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const context = await createMerchantCatalogContext(getRequestHost());
+    const rows = await createAdminSqlExecutor().query(
+      `select hostname,status,verified_at
+       from public.domains
+       where tenant_id=$1 and store_id=$2 and type='store_catalog'
+       order by case when status='active' then 0 when status='pending' then 1 else 2 end,
+         verified_at desc nulls last, hostname asc
+       limit 1`,
+      [context.scope.tenantId, context.scope.storeId],
+    );
+    const row = rows[0];
+    if (!row) return { store: context.store, domain: null };
+    const hostname = String(row["hostname"]);
+    const status = String(row["status"]);
+    const verifiedAt = row["verified_at"] ? String(row["verified_at"]) : null;
+    return {
+      store: context.store,
+      domain: {
+        hostname,
+        status,
+        verifiedAt,
+        previewUrl: status === "active" && verifiedAt
+          ? `https://${hostname}/catalog`
+          : null,
+      },
+    };
+  });
 
 export const listMerchantCategories = createServerFn({ method: "GET" })
   .handler(async () => {
