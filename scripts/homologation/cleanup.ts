@@ -15,6 +15,15 @@ delete from public.payments where tenant_id in (${tenantIds});
 delete from private.gateway_account_secrets where gateway_account_id=${gateway};
 delete from public.gateway_accounts where id=${gateway} or tenant_id in (${tenantIds});
 delete from public.audit_logs where tenant_id in (${tenantIds});
+-- 0025 contains RESTRICT links across sibling branches of the tenant/store
+-- cascade graph. Remove those rows explicitly in dependency order before the
+-- tenant delete so PostgreSQL never has to resolve RESTRICT vs CASCADE order.
+delete from public.merchant_financial_entries where tenant_id in (${tenantIds});
+delete from public.merchant_purchase_items where tenant_id in (${tenantIds});
+delete from public.merchant_purchases where tenant_id in (${tenantIds});
+delete from public.merchant_tasks where tenant_id in (${tenantIds});
+delete from public.merchant_suppliers where tenant_id in (${tenantIds});
+delete from public.merchant_financial_categories where tenant_id in (${tenantIds});
 delete from public.tenants where id in (${tenantIds});
 commit;`;
 }
