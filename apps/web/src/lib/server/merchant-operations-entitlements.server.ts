@@ -33,7 +33,7 @@ function configuredFeature(
   snapshot: StoreSubscriptionSnapshot,
   feature: MerchantOperationsFeature,
 ): boolean {
-  return !hasOwn(snapshot.features, feature) || snapshot.features[feature] === true;
+  return !hasOwn(snapshot.features, feature) || snapshot.features[feature];
 }
 
 export function resolveMerchantOperationsAccess(
