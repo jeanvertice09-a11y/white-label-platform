@@ -62,6 +62,31 @@ function groupEntitlements(rows: Row[], idKey: string): Map<string, PlanEntitlem
   return out;
 }
 
+function effectiveEntitlements(
+  templateValues: PlanEntitlementValue[],
+  overrides: PlanEntitlementValue[],
+): PlanEntitlementValue[] {
+  const byKey = new Map(overrides.map((value) => [value.key, value]));
+  return templateValues.map((template) => {
+    const override = byKey.get(template.key);
+    if (template.kind === "feature") {
+      const templateEnabled = template.enabled === true;
+      const overrideEnabled = override?.enabled ?? template.enabled;
+      return { ...template, enabled: templateEnabled && overrideEnabled === true, limitValue: null };
+    }
+    const templateLimit = template.limitValue;
+    const overrideLimit = override?.limitValue;
+    if (templateLimit === null) return template;
+    return {
+      ...template,
+      enabled: null,
+      limitValue: overrideLimit === null || overrideLimit === undefined
+        ? templateLimit
+        : Math.min(templateLimit, overrideLimit),
+    };
+  });
+}
+
 async function loadCatalogRows(sql: BillingSqlExecutor, tenantId: string): Promise<CatalogRows> {
   const [templates, templateEntitlements, plans, planEntitlements] = await Promise.all([
     sql.query(
@@ -117,24 +142,32 @@ function mapTemplates(rows: CatalogRows): PlanTemplateView[] {
 }
 
 function mapPlans(rows: CatalogRows): TenantCommercialPlan[] {
-  const entitlements = groupEntitlements(rows.planEntitlements, "tenant_plan_id");
-  return rows.plans.map((row) => ({
-    id: text(row, "id"),
-    tenantId: text(row, "tenant_id"),
-    templateId: text(row, "template_id"),
-    templateCode: text(row, "template_code"),
-    slug: text(row, "slug"),
-    name: text(row, "name"),
-    description: nullableText(row, "description"),
-    priceCents: numberValue(row, "price_cents"),
-    billingInterval: text(row, "billing_interval") as TenantCommercialPlan["billingInterval"],
-    active: boolValue(row, "active"),
-    trialEnabled: boolValue(row, "trial_enabled"),
-    trialDays: numberValue(row, "trial_days"),
-    displayOrder: numberValue(row, "display_order"),
-    recommended: boolValue(row, "recommended"),
-    entitlements: entitlements.get(text(row, "id")) ?? [],
-  }));
+  const templateEntitlements = groupEntitlements(rows.templateEntitlements, "template_id");
+  const planEntitlements = groupEntitlements(rows.planEntitlements, "tenant_plan_id");
+  return rows.plans.map((row) => {
+    const planId = text(row, "id");
+    const templateId = text(row, "template_id");
+    return {
+      id: planId,
+      tenantId: text(row, "tenant_id"),
+      templateId,
+      templateCode: text(row, "template_code"),
+      slug: text(row, "slug"),
+      name: text(row, "name"),
+      description: nullableText(row, "description"),
+      priceCents: numberValue(row, "price_cents"),
+      billingInterval: text(row, "billing_interval") as TenantCommercialPlan["billingInterval"],
+      active: boolValue(row, "active"),
+      trialEnabled: boolValue(row, "trial_enabled"),
+      trialDays: numberValue(row, "trial_days"),
+      displayOrder: numberValue(row, "display_order"),
+      recommended: boolValue(row, "recommended"),
+      entitlements: effectiveEntitlements(
+        templateEntitlements.get(templateId) ?? [],
+        planEntitlements.get(planId) ?? [],
+      ),
+    };
+  });
 }
 
 export async function listTenantPlanCatalog(

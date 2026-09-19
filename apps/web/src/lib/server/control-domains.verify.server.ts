@@ -1,5 +1,6 @@
 import type { DomainProvider, DomainVerificationResult } from "@white-label/domains";
 import type { ControlSql } from "./control-merchants.shared.server.ts";
+import { assertStoreCustomDomainEntitlement } from "./domain-entitlements.server.ts";
 
 function stringValue(row: Record<string, unknown>, key: string): string | null {
   const value = row[key];
@@ -44,7 +45,7 @@ export async function verifyControlDomain(
   provider: DomainProvider,
 ) {
   const rows = await sql.query(
-    `select id::text,hostname,status,verification_token,verified_at::text
+    `select id::text,store_id::text,hostname,status,verification_token,verified_at::text
      from public.domains where tenant_id=$1::uuid and id=$2::uuid limit 1`,
     [tenantId, domainId],
   );
@@ -53,7 +54,9 @@ export async function verifyControlDomain(
   const hostname = stringValue(row, "hostname");
   const status = stringValue(row, "status");
   const token = stringValue(row, "verification_token");
+  const storeId = stringValue(row, "store_id");
   if (!hostname || !status) throw new Error("Registro de domínio inválido.");
+  if (storeId) await assertStoreCustomDomainEntitlement(sql, tenantId, storeId);
   if (status === "suspended") throw new Error("Domínio suspenso deve voltar para pending antes da verificação.");
   if (status === "active" && stringValue(row, "verified_at")) {
     return { verified: true, status: "active" as const, reason: "Domínio já está ativo e verificado." };

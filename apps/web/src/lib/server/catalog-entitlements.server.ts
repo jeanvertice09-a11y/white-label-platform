@@ -2,13 +2,18 @@ import {
   assertFeature,
   assertSubscriptionAccess,
   assertWithinLimit,
+  hasFeature,
   loadStoreEntitlementSnapshot,
 } from "@white-label/billing";
 import type {
   BillingSqlExecutor,
   StoreSubscriptionSnapshot,
 } from "@white-label/billing";
-import type { CatalogScope } from "@white-label/catalog";
+import type {
+  CatalogLayout,
+  CatalogScope,
+  CatalogSettings,
+} from "@white-label/catalog";
 
 function hasOwn(record: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
@@ -17,7 +22,7 @@ function hasOwn(record: Record<string, unknown>, key: string): boolean {
 export function assertConfiguredCatalogEntitlements(
   snapshot: StoreSubscriptionSnapshot | null,
   options: Readonly<{
-    feature?: "products" | "variants";
+    feature?: "products" | "variants" | "banners" | "layouts" | "online_payments";
     maxProductsUsage?: number;
     maxProductsIncrement?: number;
   }>,
@@ -38,6 +43,35 @@ export function assertConfiguredCatalogEntitlements(
       options.maxProductsIncrement ?? 1,
     );
   }
+}
+
+function featureAvailable(
+  snapshot: StoreSubscriptionSnapshot | null,
+  key: "layouts" | "online_payments",
+): boolean | null {
+  if (!snapshot || !hasOwn(snapshot.features, key)) return null;
+  return hasFeature(snapshot, key);
+}
+
+export function resolveConfiguredCatalogLayout(
+  snapshot: StoreSubscriptionSnapshot | null,
+  configured: CatalogLayout,
+): CatalogLayout {
+  if (configured === "classic") return "classic";
+  const available = featureAvailable(snapshot, "layouts");
+  return available === false ? "classic" : configured;
+}
+
+export function resolveConfiguredCatalogSettings(
+  snapshot: StoreSubscriptionSnapshot | null,
+  settings: CatalogSettings,
+): CatalogSettings {
+  const layout = resolveConfiguredCatalogLayout(snapshot, settings.layout);
+  const onlineAvailable = featureAvailable(snapshot, "online_payments");
+  const checkoutMode = onlineAvailable === false && settings.checkoutMode !== "whatsapp"
+    ? "whatsapp"
+    : settings.checkoutMode;
+  return { ...settings, layout, checkoutMode };
 }
 
 async function productCount(
@@ -78,4 +112,36 @@ export async function assertVariantMutationEntitlements(
 ): Promise<void> {
   const snapshot = await loadStoreEntitlementSnapshot(sql, scope);
   assertConfiguredCatalogEntitlements(snapshot, { feature: "variants" });
+}
+
+export async function assertCatalogFeatureEntitlement(
+  sql: BillingSqlExecutor,
+  scope: CatalogScope,
+  feature: "banners",
+): Promise<void> {
+  const snapshot = await loadStoreEntitlementSnapshot(sql, scope);
+  assertConfiguredCatalogEntitlements(snapshot, { feature });
+}
+
+export async function assertCatalogSettingsEntitlements(
+  sql: BillingSqlExecutor,
+  scope: CatalogScope,
+  settings: Pick<CatalogSettings, "layout" | "checkoutMode">,
+): Promise<void> {
+  const snapshot = await loadStoreEntitlementSnapshot(sql, scope);
+  if (settings.layout === "modern") {
+    assertConfiguredCatalogEntitlements(snapshot, { feature: "layouts" });
+  }
+  if (settings.checkoutMode !== "whatsapp") {
+    assertConfiguredCatalogEntitlements(snapshot, { feature: "online_payments" });
+  }
+}
+
+export async function resolveCatalogSettingsEntitlements(
+  sql: BillingSqlExecutor,
+  scope: CatalogScope,
+  settings: CatalogSettings,
+): Promise<CatalogSettings> {
+  const snapshot = await loadStoreEntitlementSnapshot(sql, scope);
+  return resolveConfiguredCatalogSettings(snapshot, settings);
 }

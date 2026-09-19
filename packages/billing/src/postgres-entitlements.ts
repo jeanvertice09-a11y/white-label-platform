@@ -49,14 +49,26 @@ export async function loadStoreEntitlementSnapshot(
        s.trial_started_at,s.trial_ends_at,s.current_period_ends_at,
        p.id as plan_id,p.name as plan_name,
        d.key as entitlement_key,d.kind,
-       e.enabled,e.limit_value
+       case when d.kind='feature' then
+         (coalesce(te.enabled,false) and coalesce(e.enabled,te.enabled,false))
+         else null end as enabled,
+       case when d.kind='limit' then
+         case
+           when te.limit_value is null then null
+           when e.limit_value is null then te.limit_value
+           else least(te.limit_value,e.limit_value)
+         end
+         else null end as limit_value
      from current_subscription s
      join public.tenant_plans p
        on p.tenant_id=s.tenant_id and p.id=s.tenant_plan_id
+     left join public.plan_template_entitlements te
+       on te.template_id=p.template_id
+     left join public.entitlement_definitions d
+       on d.key=te.entitlement_key and d.active=true
      left join public.tenant_plan_entitlements e
        on e.tenant_id=p.tenant_id and e.tenant_plan_id=p.id
-     left join public.entitlement_definitions d
-       on d.key=e.entitlement_key and d.active=true
+      and e.entitlement_key=te.entitlement_key
      order by d.key nulls last`,
     [scope.tenantId, scope.storeId],
   );
@@ -70,7 +82,7 @@ export async function loadStoreEntitlementSnapshot(
     const kind = row["kind"];
     if (typeof key !== "string" || typeof kind !== "string") continue;
     if (kind === "feature") features[key] = bool(row, "enabled");
-    if (kind === "limit") limits[key] = integer(row, "limit_value");
+    if (kind === "limit" && row["limit_value"] !== null) limits[key] = integer(row, "limit_value");
   }
 
   return {

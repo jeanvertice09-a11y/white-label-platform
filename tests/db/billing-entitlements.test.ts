@@ -32,12 +32,6 @@ beforeAll(async () => {
     "select id from public.plan_templates where code='monthly_complete' limit 1",
   );
   templateId = requiredString(templates, "id");
-  await h.db.query(
-    `insert into public.plan_template_entitlements
-      (template_id,entitlement_key,enabled,limit_value)
-     values ($1,'products',true,null),($1,'reports',false,null),($1,'max_products',null,100)`,
-    [templateId],
-  );
   planA = await saveTenantPlan(h.db, ids.tenantA, {
     templateId,
     slug: "completo-a",
@@ -99,7 +93,7 @@ describe("commercial plans, subscriptions and billing", () => {
     );
     await expectReject(
       replaceTenantPlanEntitlements(h.db, ids.tenantA, planA, [
-        { key: "max_products", kind: "limit", enabled: null, limitValue: 101 },
+        { key: "max_products", kind: "limit", enabled: null, limitValue: 1001 },
       ]),
       "limite acima do teto Kataluu",
     );

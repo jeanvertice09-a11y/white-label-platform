@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { assertAllowedCustomHostname, normalizeDomainRegistrationInput, type DomainType } from "@white-label/domains";
 import type { ControlSql } from "./control-merchants.shared.server.ts";
+import { assertStoreCustomDomainEntitlement } from "./domain-entitlements.server.ts";
 import type { ControlDomainInput, ControlDomainUpdateInput } from "./control-domains.types.ts";
 
 function challengeToken(): string {
@@ -11,6 +12,21 @@ function assertScope(type: DomainType, storeId: string | null): void {
   const storeDomain = type === "store_admin" || type === "store_catalog";
   if (storeDomain && !storeId) throw new Error("Domínio de loja exige uma loja.");
   if (!storeDomain && storeId) throw new Error("Domínio da White Label não pode receber loja.");
+}
+
+function isStoreDomain(type: DomainType): boolean {
+  return type === "store_admin" || type === "store_catalog";
+}
+
+async function assertCommercialDomainAccess(
+  sql: ControlSql,
+  tenantId: string,
+  type: DomainType,
+  storeId: string | null,
+): Promise<void> {
+  if (isStoreDomain(type) && storeId) {
+    await assertStoreCustomDomainEntitlement(sql, tenantId, storeId);
+  }
 }
 
 async function assertHostnameFree(
@@ -33,6 +49,7 @@ export async function createControlDomain(
   input: ControlDomainInput,
 ) {
   assertScope(input.type, input.storeId);
+  await assertCommercialDomainAccess(sql, tenantId, input.type, input.storeId);
   const hostname = assertAllowedCustomHostname(normalizeDomainRegistrationInput(input.hostname));
   await assertHostnameFree(sql, hostname, null);
   const token = challengeToken();
@@ -64,6 +81,7 @@ export async function updateControlDomain(
   input: ControlDomainUpdateInput,
 ): Promise<{ ok: true }> {
   assertScope(input.type, input.storeId);
+  await assertCommercialDomainAccess(sql, tenantId, input.type, input.storeId);
   const hostname = assertAllowedCustomHostname(normalizeDomainRegistrationInput(input.hostname));
   await assertHostnameFree(sql, hostname, input.domainId);
   const token = challengeToken();
@@ -97,6 +115,19 @@ export async function setControlDomainStatus(
   domainId: string,
   status: "pending" | "suspended",
 ) {
+  if (status === "pending") {
+    const domain = await sql.query(
+      `select store_id::text,type from public.domains
+       where tenant_id=$1::uuid and id=$2::uuid limit 1`,
+      [tenantId, domainId],
+    );
+    const row = domain[0];
+    const storeId = typeof row?.["store_id"] === "string" ? row["store_id"] : null;
+    const type = row?.["type"];
+    if (storeId && (type === "store_admin" || type === "store_catalog")) {
+      await assertStoreCustomDomainEntitlement(sql, tenantId, storeId);
+    }
+  }
   const token = challengeToken();
   const rows = await sql.query(
     `with current as (

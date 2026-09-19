@@ -6,6 +6,8 @@ import type { CatalogScope, VariantMutationInput } from "@white-label/catalog";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createMerchantCatalogContext } from "./catalog-context.server.ts";
 import {
+  assertCatalogFeatureEntitlement,
+  assertCatalogSettingsEntitlements,
   assertProductMutationEntitlements,
   assertVariantMutationEntitlements,
 } from "./catalog-entitlements.server.ts";
@@ -101,17 +103,20 @@ export const updateMerchantCategory = createServerFn({ method: "POST" }).validat
   const context = await adminContext(); return context.repository.updateCategory(context.scope, data.id, data.input);
 });
 export const createMerchantBanner = createServerFn({ method: "POST" }).validator(bannerSchema).handler(async ({ data }) => {
-  const context = await adminContext(); const banner = await context.repository.createBanner(context.scope, data);
+  const context = await adminContext(); await assertCatalogFeatureEntitlement(context.sql, context.scope, "banners");
+  const banner = await context.repository.createBanner(context.scope, data);
   await auditConfiguration(context.sql, context.scope, context.userId, "storefront.banner.created", "store_banner", banner.id, { active: banner.active, position: banner.position });
   return banner;
 });
 export const updateMerchantBanner = createServerFn({ method: "POST" }).validator(withId(bannerSchema)).handler(async ({ data }) => {
-  const context = await adminContext(); const banner = await context.repository.updateBanner(context.scope, data.id, data.input);
+  const context = await adminContext(); await assertCatalogFeatureEntitlement(context.sql, context.scope, "banners");
+  const banner = await context.repository.updateBanner(context.scope, data.id, data.input);
   if (banner) await auditConfiguration(context.sql, context.scope, context.userId, "storefront.banner.updated", "store_banner", banner.id, { active: banner.active, position: banner.position });
   return banner;
 });
 export const saveMerchantCatalogSettings = createServerFn({ method: "POST" }).validator(settingsSchema).handler(async ({ data }) => {
-  const context = await adminContext(); const settings = await context.repository.updateSettings(context.scope, data);
+  const context = await adminContext(); await assertCatalogSettingsEntitlements(context.sql, context.scope, data);
+  const settings = await context.repository.updateSettings(context.scope, data);
   await auditConfiguration(context.sql, context.scope, context.userId, "storefront.settings.updated", "catalog_settings", context.scope.storeId, {
     layout: settings.layout, checkout_mode: settings.checkoutMode, show_search: settings.showSearch,
     show_categories: settings.showCategories, show_price: settings.showPrice, show_stock: settings.showStock,
