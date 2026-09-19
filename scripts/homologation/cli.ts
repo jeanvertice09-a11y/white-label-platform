@@ -1,6 +1,8 @@
+import { dirname, isAbsolute, resolve } from "node:path";
 import postgres from "postgres";
+import { verifyPublishedAssets } from "./assets-verify.ts";
 import { cleanupHomologationSeed, applyHomologationSeed } from "./seed.ts";
-import type { HomologationRuntimeConfig } from "./model.ts";
+import type { HomologationRuntimeConfig, ResolvedAsset } from "./model.ts";
 import { expectedAssets, homologationPlan, validateRuntimeConfig } from "./plan.ts";
 import { runHomologationPreflight } from "./preflight.ts";
 
@@ -14,12 +16,22 @@ function write(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+async function readAssetManifest(configPath: string, manifestPath: string): Promise<Partial<Record<string, ResolvedAsset>>> {
+  const path = isAbsolute(manifestPath) ? manifestPath : resolve(dirname(configPath), manifestPath);
+  const file = Bun.file(path);
+  if (!(await file.exists())) throw new Error(`manifesto de assets não encontrado: ${path}`);
+  const parsed = JSON.parse(await file.text()) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("manifesto de assets inválido");
+  return parsed as Partial<Record<string, ResolvedAsset>>;
+}
+
 async function readConfig(): Promise<HomologationRuntimeConfig> {
   const path = process.env["HOMOLOGATION_CONFIG_FILE"];
   if (!path) throw new Error("HOMOLOGATION_CONFIG_FILE obrigatório");
   const file = Bun.file(path);
   if (!(await file.exists())) throw new Error(`config não encontrado: ${path}`);
   const config = JSON.parse(await file.text()) as HomologationRuntimeConfig;
+  if (config.assetManifestFile) config.resolvedAssets = await readAssetManifest(path, config.assetManifestFile);
   validateRuntimeConfig(config);
   return config;
 }
@@ -54,6 +66,12 @@ async function withDb<T>(fn: (db: DbClient) => Promise<T>): Promise<T> {
   try { return await fn(db); } finally { await db.close(); }
 }
 
+async function productionPreflight(config: HomologationRuntimeConfig): Promise<Record<string, unknown>> {
+  const database = await withDb((db) => runHomologationPreflight(db, config));
+  const media = await verifyPublishedAssets(config);
+  return { database, media };
+}
+
 async function run(command: string | undefined): Promise<void> {
   if (command === "plan") { write(homologationPlan()); return; }
   if (command === "assets") { write(expectedAssets()); return; }
@@ -62,9 +80,15 @@ async function run(command: string | undefined): Promise<void> {
     write(await withDb((db) => runHomologationPreflight(db, config)));
     return;
   }
+  if (command === "preflight-production") {
+    const config = await readConfig();
+    write(await productionPreflight(config));
+    return;
+  }
   if (command === "apply") {
     assertApplyConfirmation();
     const config = await readConfig();
+    await verifyPublishedAssets(config);
     await withDb((db) => applyHomologationSeed(db, config));
     write({ ok: true, action: "apply", version: "kataluu-homologation-v1" });
     return;
@@ -75,7 +99,7 @@ async function run(command: string | undefined): Promise<void> {
     write({ ok: true, action: "cleanup", version: "kataluu-homologation-v1" });
     return;
   }
-  throw new Error("Uso: bun scripts/homologation/cli.ts <plan|assets|preflight|apply|cleanup>");
+  throw new Error("Uso: bun scripts/homologation/cli.ts <plan|assets|preflight|preflight-production|apply|cleanup>");
 }
 
 run(process.argv[2]).catch((error: unknown) => {
