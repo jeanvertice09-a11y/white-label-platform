@@ -16,20 +16,26 @@ import type {
   CatalogSettings,
   Category,
   Product,
+  ProductVariant,
   StoreBanner,
   StorefrontStore,
 } from "./types.ts";
 import type { CatalogReadRepository, CatalogSqlExecutor } from "./repository.ts";
 
+type SafeVariant = Omit<ProductVariant, "costCents"> & { costCents?: number | null };
+type SafeProduct = Omit<Product, "costCents" | "variants"> & {
+  costCents?: number | null;
+  variants: SafeVariant[];
+};
+
 function stripPublicCosts(product: Product): Product {
-  const { costCents, variants, ...safeProduct } = product;
-  void costCents;
-  const safeVariants = variants.map((variant) => {
-    const { costCents: variantCostCents, ...safeVariant } = variant;
-    void variantCostCents;
-    return safeVariant;
-  });
-  return { ...safeProduct, variants: safeVariants } as Product;
+  const safe: SafeProduct = {
+    ...product,
+    variants: product.variants.map((variant) => ({ ...variant })),
+  };
+  delete safe.costCents;
+  for (const variant of safe.variants) delete variant.costCents;
+  return safe as Product;
 }
 
 async function hydrateProducts(
@@ -96,10 +102,7 @@ async function getProduct(
   return hydrated[0] ?? null;
 }
 
-async function getStore(
-  sql: CatalogSqlExecutor,
-  scope: CatalogScope,
-): Promise<StorefrontStore | null> {
+async function getStore(sql: CatalogSqlExecutor, scope: CatalogScope): Promise<StorefrontStore | null> {
   assertCatalogScope(scope);
   const rows = await sql.query(
     "select s.tenant_id,s.id as store_id,s.name,s.slug,t.status as tenant_status," +
@@ -110,10 +113,7 @@ async function getStore(
   return rows[0] ? mapStore(rows[0]) : null;
 }
 
-async function getSettings(
-  sql: CatalogSqlExecutor,
-  scope: CatalogScope,
-): Promise<CatalogSettings> {
+async function getSettings(sql: CatalogSqlExecutor, scope: CatalogScope): Promise<CatalogSettings> {
   assertCatalogScope(scope);
   const rows = await sql.query(
     "select tenant_id,store_id,layout,primary_color,accent_color,background_color," +
@@ -125,11 +125,7 @@ async function getSettings(
   return rows[0] ? mapSettings(rows[0]) : defaultCatalogSettings(scope);
 }
 
-async function listCategories(
-  sql: CatalogSqlExecutor,
-  scope: CatalogScope,
-  publicOnly: boolean,
-): Promise<Category[]> {
+async function listCategories(sql: CatalogSqlExecutor, scope: CatalogScope, publicOnly: boolean): Promise<Category[]> {
   assertCatalogScope(scope);
   const active = publicOnly
     ? " and active=true and (parent_id is null or exists (select 1 from public.categories parent " +
@@ -138,24 +134,18 @@ async function listCategories(
     : "";
   const rows = await sql.query(
     "select id,tenant_id,store_id,name,slug,description,parent_id,active,position " +
-      "from public.categories where tenant_id=$1 and store_id=$2" + active +
-      " order by position,name",
+      "from public.categories where tenant_id=$1 and store_id=$2" + active + " order by position,name",
     [scope.tenantId, scope.storeId],
   );
   return rows.map(mapCategory);
 }
 
-async function listBanners(
-  sql: CatalogSqlExecutor,
-  scope: CatalogScope,
-  publicOnly: boolean,
-): Promise<StoreBanner[]> {
+async function listBanners(sql: CatalogSqlExecutor, scope: CatalogScope, publicOnly: boolean): Promise<StoreBanner[]> {
   assertCatalogScope(scope);
   const active = publicOnly ? " and active=true" : "";
   const rows = await sql.query(
     "select id,tenant_id,store_id,title,alt_text,image_object_key,href,active,position " +
-      "from public.store_banners where tenant_id=$1 and store_id=$2" + active +
-      " order by position,id",
+      "from public.store_banners where tenant_id=$1 and store_id=$2" + active + " order by position,id",
     [scope.tenantId, scope.storeId],
   );
   return rows.map(mapBanner);
@@ -182,22 +172,12 @@ function productWhere(query: CatalogQuery, publicOnly: boolean) {
   return { where, params };
 }
 
-async function listProducts(
-  sql: CatalogSqlExecutor,
-  query: CatalogQuery,
-  publicOnly: boolean,
-): Promise<CatalogPage> {
+async function listProducts(sql: CatalogSqlExecutor, query: CatalogQuery, publicOnly: boolean): Promise<CatalogPage> {
   assertCatalogQuery(query);
   const { where, params } = productWhere(query, publicOnly);
-  const orders = {
-    position: "p.position asc,p.name asc",
-    name: "p.name asc",
-    price_asc: "p.price_cents asc,p.name asc",
-    price_desc: "p.price_cents desc,p.name asc",
-  } as const;
+  const orders = { position: "p.position asc,p.name asc", name: "p.name asc", price_asc: "p.price_cents asc,p.name asc", price_desc: "p.price_cents desc,p.name asc" } as const;
   params.push(query.pageSize, (query.page - 1) * query.pageSize);
-  const limit = String(params.length - 1);
-  const offset = String(params.length);
+  const limit = String(params.length - 1); const offset = String(params.length);
   const rows = await sql.query(
     "select p.id,p.tenant_id,p.store_id,p.name,p.slug,p.description,p.sku,p.category_id," +
       "p.price_cents,p.compare_at_price_cents,p.cost_cents,p.active,p.track_inventory," +
@@ -206,12 +186,7 @@ async function listProducts(
       " limit $" + limit + " offset $" + offset,
     params,
   );
-  return {
-    items: await hydrateProducts(sql, query, rows.map(mapProduct), publicOnly),
-    page: query.page,
-    pageSize: query.pageSize,
-    total: rows[0] ? Number(rows[0]["total_count"]) : 0,
-  };
+  return { items: await hydrateProducts(sql, query, rows.map(mapProduct), publicOnly), page: query.page, pageSize: query.pageSize, total: rows[0] ? Number(rows[0]["total_count"]) : 0 };
 }
 
 export function createCatalogReadRepository(sql: CatalogSqlExecutor): CatalogReadRepository {
@@ -221,8 +196,7 @@ export function createCatalogReadRepository(sql: CatalogSqlExecutor): CatalogRea
     listCategories: (scope, publicOnly) => listCategories(sql, scope, publicOnly),
     listBanners: (scope, publicOnly) => listBanners(sql, scope, publicOnly),
     listProducts: (query, publicOnly) => listProducts(sql, query, publicOnly),
-    getProductBySlug: (scope, slug, publicOnly) =>
-      getProduct(sql, scope, "slug", slug, publicOnly),
+    getProductBySlug: (scope, slug, publicOnly) => getProduct(sql, scope, "slug", slug, publicOnly),
     getProductById: (scope, id) => getProduct(sql, scope, "id", id, false),
   };
 }

@@ -14,13 +14,8 @@ const querySchema = z.object({
   categoryId: z.string().uuid().optional(),
   sort: z.enum(["position", "name", "price_asc", "price_desc"]).default("position"),
 });
-
-const slugSchema = z.object({
-  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(180),
-});
-
+const slugSchema = z.object({ slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(180) });
 const idSchema = z.object({ id: z.string().uuid() });
-
 type QueryInput = z.input<typeof querySchema>;
 
 async function publicSnapshot(input: QueryInput) {
@@ -32,14 +27,7 @@ async function publicSnapshot(input: QueryInput) {
     context.repository.listBanners(context.scope, true),
     context.repository.listProducts({ ...context.scope, ...query }, true),
   ]);
-  return {
-    store: context.store,
-    settings,
-    categories,
-    banners,
-    products,
-    canonicalUrl: `https://${context.hostname}/catalog`,
-  };
+  return { store: context.store, settings, categories, banners, products, canonicalUrl: `https://${context.hostname}/catalog` };
 }
 
 async function merchantSnapshot() {
@@ -48,19 +36,22 @@ async function merchantSnapshot() {
     context.repository.getSettings(context.scope),
     context.repository.listCategories(context.scope, false),
     context.repository.listBanners(context.scope, false),
-    context.repository.listProducts({
-      ...context.scope,
-      page: 1,
-      pageSize: 48,
-      sort: "position",
-    }, false),
+    context.repository.listProducts({ ...context.scope, page: 1, pageSize: 48, sort: "position" }, false),
   ]);
+  return { store: context.store, settings, categories, banners, products };
+}
+
+function domainSnapshot(row: Record<string, unknown>): { hostname: string; status: string; verifiedAt: string | null; previewUrl: string | null } {
+  const hostnameValue = row["hostname"];
+  const statusValue = row["status"];
+  const verifiedValue = row["verified_at"];
+  if (typeof hostnameValue !== "string" || typeof statusValue !== "string") throw new Error("Domínio público inválido");
+  const verifiedAt = typeof verifiedValue === "string" ? verifiedValue : verifiedValue instanceof Date ? verifiedValue.toISOString() : null;
   return {
-    store: context.store,
-    settings,
-    categories,
-    banners,
-    products,
+    hostname: hostnameValue,
+    status: statusValue,
+    verifiedAt,
+    previewUrl: statusValue === "active" && verifiedAt !== null ? `https://${hostnameValue}/catalog` : null,
   };
 }
 
@@ -89,30 +80,14 @@ export const getMerchantStorefrontStatus = createServerFn({ method: "GET" })
   .handler(async () => {
     const context = await createMerchantCatalogContext(getRequestHost());
     const rows = await createAdminSqlExecutor().query(
-      `select hostname,status,verified_at
-       from public.domains
+      `select hostname,status,verified_at from public.domains
        where tenant_id=$1 and store_id=$2 and type='store_catalog'
        order by case when status='active' then 0 when status='pending' then 1 else 2 end,
-         verified_at desc nulls last, hostname asc
-       limit 1`,
+         verified_at desc nulls last, hostname asc limit 1`,
       [context.scope.tenantId, context.scope.storeId],
     );
-    const row = rows[0];
-    if (!row) return { store: context.store, domain: null };
-    const hostname = String(row["hostname"]);
-    const status = String(row["status"]);
-    const verifiedAt = row["verified_at"] ? String(row["verified_at"]) : null;
-    return {
-      store: context.store,
-      domain: {
-        hostname,
-        status,
-        verifiedAt,
-        previewUrl: status === "active" && verifiedAt
-          ? `https://${hostname}/catalog`
-          : null,
-      },
-    };
+    if (rows.length === 0) return { store: context.store, domain: null };
+    return { store: context.store, domain: domainSnapshot(rows[0] as Record<string, unknown>) };
   });
 
 export const listMerchantCategories = createServerFn({ method: "GET" })
