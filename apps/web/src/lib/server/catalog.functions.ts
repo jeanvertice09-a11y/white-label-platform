@@ -6,6 +6,7 @@ import {
   createMerchantCatalogContext,
   createPublicCatalogContext,
 } from "./catalog-context.server.ts";
+import { resolveCatalogSettingsEntitlements } from "./catalog-entitlements.server.ts";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 
 const querySchema = z.object({
@@ -19,11 +20,18 @@ const slugSchema = z.object({ slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$
 const idSchema = z.object({ id: z.string().uuid() });
 type QueryInput = z.input<typeof querySchema>;
 
+async function entitledSettings(
+  context: Awaited<ReturnType<typeof createPublicCatalogContext>>,
+) {
+  const raw = await context.repository.getSettings(context.scope);
+  return resolveCatalogSettingsEntitlements(createAdminSqlExecutor(), context.scope, raw);
+}
+
 async function publicSnapshot(input: QueryInput) {
   const query = querySchema.parse(input);
   const context = await createPublicCatalogContext(getRequestHost());
   const [settings, categories, banners, products] = await Promise.all([
-    context.repository.getSettings(context.scope),
+    entitledSettings(context),
     context.repository.listCategories(context.scope, true),
     context.repository.listBanners(context.scope, true),
     context.repository.listProducts({ ...context.scope, ...query }, true),
@@ -34,7 +42,7 @@ async function publicSnapshot(input: QueryInput) {
 async function merchantSnapshot() {
   const context = await createMerchantCatalogContext(getRequestHost());
   const [settings, categories, banners, products] = await Promise.all([
-    context.repository.getSettings(context.scope),
+    entitledSettings(context),
     context.repository.listCategories(context.scope, false),
     context.repository.listBanners(context.scope, false),
     context.repository.listProducts({ ...context.scope, page: 1, pageSize: 48, sort: "position" }, false),
@@ -79,7 +87,7 @@ export const getPublicProductPage = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const context = await createPublicCatalogContext(getRequestHost());
     const [settings, categories, product] = await Promise.all([
-      context.repository.getSettings(context.scope),
+      entitledSettings(context),
       context.repository.listCategories(context.scope, true),
       context.repository.getProductBySlug(context.scope, data.slug, true),
     ]);
@@ -98,7 +106,7 @@ export const getPublicCategoryPage = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const context = await createPublicCatalogContext(getRequestHost());
     const [settings, categories, banners] = await Promise.all([
-      context.repository.getSettings(context.scope),
+      entitledSettings(context),
       context.repository.listCategories(context.scope, true),
       context.repository.listBanners(context.scope, true),
     ]);

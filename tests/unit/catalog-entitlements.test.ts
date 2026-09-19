@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { StoreSubscriptionSnapshot } from "../../packages/billing/src/commercial-types.ts";
-import { assertConfiguredCatalogEntitlements } from "../../apps/web/src/lib/server/catalog-entitlements.server.ts";
+import type { CatalogSettings } from "../../packages/catalog/src/types.ts";
+import {
+  assertConfiguredCatalogEntitlements,
+  resolveConfiguredCatalogLayout,
+  resolveConfiguredCatalogSettings,
+} from "../../apps/web/src/lib/server/catalog-entitlements.server.ts";
 
 function snapshot(overrides: Partial<StoreSubscriptionSnapshot> = {}): StoreSubscriptionSnapshot {
   return {
@@ -15,6 +20,29 @@ function snapshot(overrides: Partial<StoreSubscriptionSnapshot> = {}): StoreSubs
     currentPeriodEndsAt: null,
     features: {},
     limits: {},
+    ...overrides,
+  };
+}
+
+function settings(overrides: Partial<CatalogSettings> = {}): CatalogSettings {
+  return {
+    tenantId: "tenant-a",
+    storeId: "store-a",
+    layout: "classic",
+    primaryColor: "#111111",
+    accentColor: "#222222",
+    backgroundColor: "#ffffff",
+    fontFamily: "system",
+    showSearch: true,
+    showCategories: true,
+    showPrice: true,
+    showStock: true,
+    labels: {},
+    whatsappPhone: null,
+    whatsappMessage: "Olá",
+    checkoutMode: "whatsapp",
+    seoTitle: null,
+    seoDescription: null,
     ...overrides,
   };
 }
@@ -53,13 +81,52 @@ describe("catalog configured entitlements", () => {
     }).toThrow("suspensa");
   });
 
-  test("max_products configurado bloqueia criação acima do limite", () => {
+  test("limites comerciais 20/100/300/1000 bloqueiam exatamente no teto", () => {
+    for (const limit of [20, 100, 300, 1000]) {
+      expect(() => {
+        assertConfiguredCatalogEntitlements(snapshot({ limits: { max_products: limit } }), {
+          maxProductsUsage: limit - 1,
+          maxProductsIncrement: 1,
+        });
+      }).not.toThrow();
+      expect(() => {
+        assertConfiguredCatalogEntitlements(snapshot({ limits: { max_products: limit } }), {
+          maxProductsUsage: limit,
+          maxProductsIncrement: 1,
+        });
+      }).toThrow("max_products");
+    }
+  });
+
+  test("ausência de max_products representa ausência de teto comercial", () => {
     expect(() => {
-      assertConfiguredCatalogEntitlements(snapshot({ limits: { max_products: 10 } }), {
-        maxProductsUsage: 10,
+      assertConfiguredCatalogEntitlements(snapshot({ limits: {} }), {
+        maxProductsUsage: 1_000_000,
         maxProductsIncrement: 1,
       });
-    }).toThrow("max_products");
+    }).not.toThrow();
+  });
+
+  test("Modern sem entitlement faz fallback seguro para Classic", () => {
+    const denied = snapshot({ features: { layouts: false } });
+    expect(resolveConfiguredCatalogLayout(denied, "modern")).toBe("classic");
+    expect(() => {
+      assertConfiguredCatalogEntitlements(denied, { feature: "layouts" });
+    }).toThrow("layouts");
+  });
+
+  test("Modern permitido permanece Modern e configuração legada sem key continua compatível", () => {
+    expect(resolveConfiguredCatalogLayout(snapshot({ features: { layouts: true } }), "modern")).toBe("modern");
+    expect(resolveConfiguredCatalogLayout(snapshot(), "modern")).toBe("modern");
+  });
+
+  test("checkout online configurado cai para WhatsApp quando online_payments não está incluído", () => {
+    const resolved = resolveConfiguredCatalogSettings(
+      snapshot({ features: { online_payments: false, layouts: true } }),
+      settings({ layout: "modern", checkoutMode: "both" }),
+    );
+    expect(resolved.layout).toBe("modern");
+    expect(resolved.checkoutMode).toBe("whatsapp");
   });
 
   test("trial válido respeita entitlement configurado", () => {

@@ -37,6 +37,7 @@ const MIGRATIONS = [
   "0022_platform_billing.sql",
   "0024_tenant_merchant_billing.sql",
   "0025_merchant_operations.sql",
+  "0026_commercial_plan_matrix.sql",
 ];
 
 class PGliteDb implements TestDb {

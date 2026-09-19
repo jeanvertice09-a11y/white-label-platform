@@ -8,9 +8,20 @@ const ASSIGN_PLAN_SQL = `with lock_scope as materialized (
   select s.id from public.stores s cross join lock_scope l
   where s.tenant_id=$1::uuid and s.id=$2::uuid
 ), plan as (
-  select id,trial_enabled from public.tenant_plans
+  select id,template_id,trial_enabled from public.tenant_plans
   where tenant_id=$1::uuid and id=$3::uuid and active=true
     and ($4::boolean=false or trial_enabled=true)
+), custom_domain_allowed as (
+  select coalesce(
+    bool_or(coalesce(te.enabled,false) and coalesce(pe.enabled,te.enabled,false)),
+    false
+  ) allowed
+  from plan p
+  left join public.plan_template_entitlements te
+    on te.template_id=p.template_id and te.entitlement_key='custom_domain'
+  left join public.tenant_plan_entitlements pe
+    on pe.tenant_id=$1::uuid and pe.tenant_plan_id=p.id
+   and pe.entitlement_key='custom_domain'
 ), current as materialized (
   select ss.id,ss.tenant_plan_id,ss.status,
     ss.current_period_started_at,ss.current_period_ends_at
@@ -41,6 +52,19 @@ const ASSIGN_PLAN_SQL = `with lock_scope as materialized (
   select c.id,c.status from current c
   join plan p on p.id=c.tenant_plan_id
   where not exists(select 1 from created) limit 1
+), suspended_domains as (
+  update public.domains d set status='suspended'
+  where d.tenant_id=$1::uuid and d.store_id=$2::uuid
+    and d.type in ('store_admin','store_catalog')
+    and d.status<>'suspended'
+    and exists(select 1 from result)
+    and not coalesce((select allowed from custom_domain_allowed),false)
+  returning d.id,d.tenant_id,d.store_id,d.hostname,d.type
+), domain_audit as (
+  insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+  select $5::uuid,tenant_id,store_id,'subscription.domain_suspended','domain',id::text,
+    jsonb_build_object('hostname',hostname,'type',type,'reason','custom_domain_not_in_plan')
+  from suspended_domains returning id
 ), audit as (
   insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
   select $5::uuid,$1::uuid,$2::uuid,
