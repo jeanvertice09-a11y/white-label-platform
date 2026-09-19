@@ -63,7 +63,15 @@ describe("homologation seed plan", () => {
     expect(() => { validateRuntimeConfig(config); }).toThrow();
   });
 
-  test("config rejeita checksum inválido e conteúdo duplicado", () => {
+  test("config rejeita manifesto incompleto", () => {
+    const config = structuredClone(homologationTestConfig());
+    const first = expectedAssets().at(0);
+    if (!first) throw new Error("asset de teste ausente");
+    delete config.resolvedAssets[first.key];
+    expect(() => { validateRuntimeConfig(config); }).toThrow("asset ausente no manifesto resolvido");
+  });
+
+  test("config rejeita checksum inválido, MIME inválido e conteúdo duplicado", () => {
     const invalid = structuredClone(homologationTestConfig());
     const first = expectedAssets().at(0);
     const second = expectedAssets().at(1);
@@ -72,6 +80,13 @@ describe("homologation seed plan", () => {
     if (!firstAsset) throw new Error("asset de teste ausente");
     firstAsset.sha256 = "abc";
     expect(() => { validateRuntimeConfig(invalid); }).toThrow("sha256 inválido");
+
+    const badMime = structuredClone(homologationTestConfig());
+    const mimeAsset = badMime.resolvedAssets[first.key];
+    if (!mimeAsset) throw new Error("asset de teste ausente");
+    mimeAsset.mimeType = "image/webp";
+    Object.assign(mimeAsset, { mimeType: "application/octet-stream" });
+    expect(() => { validateRuntimeConfig(badMime); }).toThrow("MIME inválido");
 
     const duplicate = structuredClone(homologationTestConfig());
     const one = duplicate.resolvedAssets[first.key];
