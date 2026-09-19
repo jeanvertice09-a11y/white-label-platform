@@ -23,10 +23,10 @@ function fakeMediaFetch(): typeof fetch {
   const implementation = (input: string | URL | Request): Promise<Response> => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     if (url.hostname === "assets.example.test") {
-      return Promise.resolve(new Response(bytes(`logo:${url.pathname}`), { status: 200, headers: { "content-type": "image/webp" } }));
+      return Promise.resolve(new Response(`logo:${url.pathname}`, { status: 200, headers: { "content-type": "image/webp" } }));
     }
     const objectKey = url.pathname.slice(1).split("/").map((segment) => decodeURIComponent(segment)).join("/");
-    return Promise.resolve(new Response(bytes(objectKey), { status: 200, headers: { "content-type": "image/webp" } }));
+    return Promise.resolve(new Response(objectKey, { status: 200, headers: { "content-type": "image/webp" } }));
   };
   return implementation as typeof fetch;
 }
