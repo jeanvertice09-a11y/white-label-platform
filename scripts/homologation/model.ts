@@ -5,6 +5,7 @@ export type StoreKey = "lume" | "botanica" | "passo" | "casa";
 export type TenantKey = "aurora" | "nexo";
 export type BillingInterval = "monthly" | "quarterly" | "yearly";
 export type HmlTemplateCode = "monthly_entry" | "monthly_intermediate" | "monthly_complete" | "complete";
+export type HomologationMediaMode = "required" | "deferred";
 
 export interface SqlExecutor {
   query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]>;
