@@ -44,7 +44,8 @@ const CREATE_ORDER_SQL = `with raw_input as (
       or (i.variant_id is not null and v.id is not null)
     )
     and (
-      p.track_inventory=false
+      $5::text not in ('whatsapp','online')
+      or p.track_inventory=false
       or (i.variant_id is null and p.stock_quantity>=i.qty)
       or (i.variant_id is not null and v.stock_quantity>=i.qty)
     )

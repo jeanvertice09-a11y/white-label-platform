@@ -67,7 +67,7 @@ describe("fase 17 storefront commerce", () => {
     expect(search.total).toBe(1);
     expect(search.items[0]?.id).toBe(SIMPLE);
     const parent = await catalog.listProducts({ ...scope, page: 1, pageSize: 10, categoryId: PARENT, sort: "position" }, true);
-    expect(parent.items.map((item) => item.id)).toEqual([SIMPLE, SECOND]);
+    expect(parent.items.map((item) => item.id)).toEqual([SIMPLE, SECOND, VAR_PRODUCT]);
     const categories = await catalog.listCategories(scope, true);
     expect(categories.some((item) => item.id === CHILD)).toBe(true);
     expect(categories.some((item) => item.id === HIDDEN_CHILD)).toBe(false);
