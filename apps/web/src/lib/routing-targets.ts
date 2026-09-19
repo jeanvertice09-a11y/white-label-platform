@@ -1,6 +1,6 @@
 import type { DomainType } from "@white-label/domains";
 
-export type RootTarget = "/master" | "/control" | "/admin" | "/catalog" | null;
+export type RootTarget = "/master" | "/control" | "/admin" | null;
 export type LoginTarget = "/master" | "/control" | "/admin" | "/";
 
 export function normalizeRoutingHost(rawHost: string | null): string {
@@ -20,6 +20,10 @@ export function systemTargetForHost(host: string): RootTarget | undefined {
   return undefined;
 }
 
+export function isStorefrontDomainType(type: DomainType): boolean {
+  return type === "store_catalog";
+}
+
 export function rootTargetForDomainType(type: DomainType): RootTarget {
   switch (type) {
     case "tenant_panel":
@@ -27,7 +31,6 @@ export function rootTargetForDomainType(type: DomainType): RootTarget {
     case "store_admin":
       return "/admin";
     case "store_catalog":
-      return "/catalog";
     case "tenant_site":
       return null;
   }
