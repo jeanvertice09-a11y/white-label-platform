@@ -35,7 +35,7 @@ function openDb(url: string): DbClient {
   return {
     async query(sql, params = []) {
       const rows = await client.unsafe(sql, params);
-      return rows as unknown as Record<string, unknown>[];
+      return rows;
     },
     async execScript(sql) { await client.unsafe(sql); },
     async close() { await client.end(); },
