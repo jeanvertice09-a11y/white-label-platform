@@ -33,7 +33,7 @@ describe("homologation production preflight", () => {
   });
 
   test("bloqueia ID determinístico de tenant pertencente a outro registro", async () => {
-    const tenant = DEMO_TENANTS[0];
+    const tenant = DEMO_TENANTS.at(0);
     if (!tenant) throw new Error("tenant de homologação ausente");
     await h.db.query(
       "insert into public.tenants(id,slug,name,status) values ($1::uuid,'real-id-collision','Real Collision','active')",
