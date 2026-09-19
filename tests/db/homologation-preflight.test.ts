@@ -89,7 +89,7 @@ describe("homologation production preflight", () => {
     );
     await h.db.query(
       `insert into public.domains(id,tenant_id,hostname,type,status)
-       values ($1::uuid,$2::uuid,$3,'tenant_site','active')`,
+       values ($1::uuid,$2::uuid,$3,'tenant_site','pending')`,
       [stableUuid("test:foreign-domain-row"), foreignTenant, config.domains.aurora.tenantSite],
     );
     await expectReject(runHomologationPreflight(h.db, config), "preflight deve rejeitar hostname ocupado");
