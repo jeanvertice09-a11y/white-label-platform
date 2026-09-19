@@ -41,7 +41,7 @@ export const Route = createFileRoute("/control")({
 function ControlPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return (
-    <ControlDashboard data={data.dashboard}>
+    <ControlDashboard data={data.dashboard} billing={data.billing}>
       <ControlTenantBilling initial={data.billing} />
       <ControlMerchantsManager initial={data.merchants} />
       <section className="control-plan-management-shell" id="plan-management">

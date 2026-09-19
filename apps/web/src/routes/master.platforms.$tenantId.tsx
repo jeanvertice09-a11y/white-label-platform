@@ -17,6 +17,10 @@ export const Route = createFileRoute("/master/platforms/$tenantId")({
   component: MasterWhiteLabelDetailPage,
 });
 
+function dateTime(value: string): string {
+  return value ? new Date(value).toLocaleString("pt-BR") : "—";
+}
+
 function MasterWhiteLabelDetailPage(): React.JSX.Element {
   const loaderData: unknown = Route.useLoaderData();
   const detail = loaderData as MasterWhiteLabelDetail;
@@ -30,9 +34,9 @@ function MasterWhiteLabelDetailPage(): React.JSX.Element {
 
       <div className="master-metrics master-summary-surface" aria-label="Resumo da White Label">
         <MasterMetricCard icon="platforms" label="Status" value={detail.tenant.status} detail="Situação da plataforma" />
+        <MasterMetricCard icon="store" label="Lojas" value={String(detail.stores.length)} detail={`${String(detail.stores.filter((item) => item.status === "active").length)} ativas`} />
         <MasterMetricCard icon="support" label="Membros" value={String(detail.members.length)} detail="Acessos vinculados" />
         <MasterMetricCard icon="domains" label="Domínios" value={String(detail.domains.length)} detail={`${String(detail.domains.filter((item) => item.status === "active").length)} ativos`} />
-        <MasterMetricCard icon="subscriptions" label="Planos comerciais" value={String(detail.commercialPlans.length)} detail="Ofertas para lojistas" />
       </div>
 
       <section className="console-detail-section" aria-labelledby="wl-config-title">
@@ -50,16 +54,27 @@ function MasterWhiteLabelDetailPage(): React.JSX.Element {
         <MasterWhiteLabelDomainManager detail={detail} />
       </section>
 
+      <MasterPanel title="Lojas do tenant">
+        {detail.stores.length ? <div className="master-table-wrap"><table className="master-table">
+          <thead><tr><th>Loja</th><th>Owner</th><th>Membros</th><th>Status</th><th>Criada em</th></tr></thead>
+          <tbody>{detail.stores.map((store) => <tr key={store.id}>
+            <td><strong>{store.name}</strong><small>{store.slug}</small></td>
+            <td>{store.ownerEmail ?? store.ownerUserId ?? "—"}</td><td>{store.memberCount}</td>
+            <td><span className="console-status">{store.status}</span></td><td>{dateTime(store.createdAt)}</td>
+          </tr>)}</tbody>
+        </table></div> : <p className="console-panel-note">Nenhuma loja pertencente a esta White Label.</p>}
+      </MasterPanel>
+
       <div className="master-grid master-grid--two">
         <MasterPanel title="Membros">
-          <div className="master-table-wrap">
+          {detail.members.length ? <div className="master-table-wrap">
             <table className="master-table">
               <thead><tr><th>Usuário</th><th>Role</th></tr></thead>
               <tbody>{detail.members.map((member) => (
                 <tr key={member.userId}><td>{member.email ?? member.userId}</td><td><span className="console-status">{member.role}</span></td></tr>
               ))}</tbody>
             </table>
-          </div>
+          </div> : <p className="console-panel-note">Nenhum membership registrado para este tenant.</p>}
         </MasterPanel>
         <MasterPanel title="Templates comerciais">
           <div className="master-table-wrap">
@@ -77,6 +92,16 @@ function MasterWhiteLabelDetailPage(): React.JSX.Element {
           <p className="console-panel-note">{detail.commercialPlans.length ? `Planos configurados: ${detail.commercialPlans.map((plan) => plan.name).join(", ")}` : "Nenhum plano comercial de lojista configurado."}</p>
         </MasterPanel>
       </div>
+
+      <MasterPanel title="Auditoria recente">
+        {detail.audits.length ? <div className="master-table-wrap"><table className="master-table">
+          <thead><tr><th>Data</th><th>Ação</th><th>Recurso</th><th>Ator</th></tr></thead>
+          <tbody>{detail.audits.map((item) => <tr key={item.id}>
+            <td>{dateTime(item.createdAt)}</td><td><strong>{item.action}</strong></td>
+            <td>{item.resourceType}{item.resourceId ? ` · ${item.resourceId}` : ""}</td><td>{item.actorUserId ?? "Sistema"}</td>
+          </tr>)}</tbody>
+        </table></div> : <p className="console-panel-note">Nenhum evento de auditoria encontrado para esta White Label.</p>}
+      </MasterPanel>
     </div>
   );
 }
