@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { PostgresMerchantOperationsRepository } from "../../packages/merchant-ops/src/index.ts";
-import { setupDatabase } from "./harness.ts";
+import { expectReject, setupDatabase } from "./harness.ts";
 import type { Harness } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
 
@@ -41,7 +41,10 @@ describe("merchant operations", () => {
     const repo = new PostgresMerchantOperationsRepository(h.db);
     const supplier = await repo.createSupplier(scopeA, { name: "Fornecedor A", email: "a@example.test" });
     expect(supplier.status).toBe("active");
-    await expect(repo.updateSupplierStatus({ tenantId: ids.tenantB, storeId: ids.storeB }, supplier.id, "inactive")).rejects.toThrow();
+    await expectReject(
+      repo.updateSupplierStatus({ tenantId: ids.tenantB, storeId: ids.storeB }, supplier.id, "inactive"),
+      "isolamento por tenant",
+    );
     const other = await repo.listSuppliers({ tenantId: ids.tenantB, storeId: ids.storeB }, { page: 1, pageSize: 20 });
     expect(other.items.some((item) => item.id === supplier.id)).toBe(false);
   });
@@ -83,20 +86,26 @@ describe("merchant operations", () => {
 
   test("produto cross-store e base de produto com variantes são rejeitados na compra", async () => {
     const repo = new PostgresMerchantOperationsRepository(h.db);
-    await expect(repo.createPurchase(scopeA, {
-      supplierId: null,
-      purchasedAt: "2026-09-19",
-      discountCents: 0,
-      surchargeCents: 0,
-      items: [{ productId: OTHER_PRODUCT, variantId: null, quantity: 1, unitCostCents: 10 }],
-    }, ids.users.storeA)).rejects.toThrow();
-    await expect(repo.createPurchase(scopeA, {
-      supplierId: null,
-      purchasedAt: "2026-09-19",
-      discountCents: 0,
-      surchargeCents: 0,
-      items: [{ productId: VAR_PRODUCT, variantId: null, quantity: 1, unitCostCents: 10 }],
-    }, ids.users.storeA)).rejects.toThrow();
+    await expectReject(
+      repo.createPurchase(scopeA, {
+        supplierId: null,
+        purchasedAt: "2026-09-19",
+        discountCents: 0,
+        surchargeCents: 0,
+        items: [{ productId: OTHER_PRODUCT, variantId: null, quantity: 1, unitCostCents: 10 }],
+      }, ids.users.storeA),
+      "produto cross-store",
+    );
+    await expectReject(
+      repo.createPurchase(scopeA, {
+        supplierId: null,
+        purchasedAt: "2026-09-19",
+        discountCents: 0,
+        surchargeCents: 0,
+        items: [{ productId: VAR_PRODUCT, variantId: null, quantity: 1, unitCostCents: 10 }],
+      }, ids.users.storeA),
+      "base de produto com variantes",
+    );
   });
 
   test("financeiro usa centavos, liquida idempotente e não aceita categoria cross-store", async () => {
@@ -121,14 +130,17 @@ describe("merchant operations", () => {
       { tenantId: ids.tenantB, storeId: ids.storeB },
       { name: "Outro tenant", direction: "income" },
     );
-    await expect(repo.createFinancialEntry(scopeA, {
-      direction: "receivable",
-      categoryId: otherCategory.id,
-      description: "Cross store",
-      amountCents: 100,
-      dueAt: "2026-09-20",
-      competenceDate: "2026-09-19",
-    }, ids.users.storeA)).rejects.toThrow();
+    await expectReject(
+      repo.createFinancialEntry(scopeA, {
+        direction: "receivable",
+        categoryId: otherCategory.id,
+        description: "Cross store",
+        amountCents: 100,
+        dueAt: "2026-09-20",
+        competenceDate: "2026-09-19",
+      }, ids.users.storeA),
+      "categoria cross-store",
+    );
   });
 
   test("tarefa só aceita responsável membro da mesma loja", async () => {
@@ -136,7 +148,10 @@ describe("merchant operations", () => {
     const task = await repo.createTask(scopeA, { title: "Conferir estoque", priority: "high", assigneeUserId: ids.users.storeA }, ids.users.storeA);
     const done = await repo.completeTask(scopeA, task.id);
     expect(done.status).toBe("done");
-    await expect(repo.createTask(scopeA, { title: "Responsável inválido", priority: "normal", assigneeUserId: ids.users.storeB }, ids.users.storeA)).rejects.toThrow();
+    await expectReject(
+      repo.createTask(scopeA, { title: "Responsável inválido", priority: "normal", assigneeUserId: ids.users.storeB }, ids.users.storeA),
+      "responsável de outra loja",
+    );
   });
 
   test("authenticated direto não lê tabelas Merchant OS sem policy", async () => {
