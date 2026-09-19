@@ -9,65 +9,149 @@ export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
 });
 
-function accountStatus(status: "trial" | "active" | "suspended", trialEndsAt: string | null): string {
-  if (status === "trial") return trialEndsAt ? "Trial até " + new Date(trialEndsAt).toLocaleDateString("pt-BR") : "Trial";
+function accountStatus(
+  status: "trial" | "active" | "suspended",
+  trialEndsAt: string | null,
+): string {
+  if (status === "trial") {
+    return trialEndsAt
+      ? `Trial até ${new Date(trialEndsAt).toLocaleDateString("pt-BR")}`
+      : "Trial";
+  }
   return status === "active" ? "Ativa" : "Suspensa";
 }
 
-function relative(value: number, max: number): number {
-  if (max <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((value / max) * 100)));
+function QuickLink(props: Readonly<{
+  to: "/admin/products" | "/admin/orders" | "/admin/customers" | "/admin/inventory";
+  label: string;
+  detail: string;
+  icon: DashboardIconName;
+}>): React.JSX.Element {
+  return (
+    <Link className="k-quick-row" to={props.to}>
+      <span className="k-quick-row__icon"><DashboardIcon name={props.icon} /></span>
+      <span><strong>{props.label}</strong><small>{props.detail}</small></span>
+      <b aria-hidden="true">→</b>
+    </Link>
+  );
 }
 
-function DashboardBar(props: Readonly<{ label: string; value: number; max: number; detail: string }>): React.JSX.Element {
-  const progress = relative(props.value, props.max);
-  return <div className="k-dashboard-bar"><div className="k-dashboard-bar__head"><strong>{props.label}</strong><span>{props.detail}</span></div><div className="k-dashboard-bar__track" aria-hidden="true"><span style={{ width: `${String(progress)}%` }} /></div></div>;
+function DashboardStrip(props: Readonly<{
+  ordersToday: number;
+  pendingOrders: number;
+  revenuePeriodCents: number;
+  averageTicketCents: number;
+}>): React.JSX.Element {
+  return (
+    <section className="k-dashboard-strip" aria-label="Indicadores principais">
+      <div><span>Pedidos hoje</span><strong>{props.ordersToday}</strong></div>
+      <div><span>Pendentes</span><strong>{props.pendingOrders}</strong></div>
+      <div><span>Faturamento · 30 dias</span><strong>{formatMoney(props.revenuePeriodCents)}</strong></div>
+      <div><span>Ticket médio · 30 dias</span><strong>{formatMoney(props.averageTicketCents)}</strong></div>
+    </section>
+  );
 }
 
-function QuickLink(props: Readonly<{ to: "/admin/products" | "/admin/orders" | "/admin/customers" | "/admin/inventory"; label: string; icon: DashboardIconName }>): React.JSX.Element {
-  return <Link className="k-quick-link" to={props.to}><DashboardIcon name={props.icon} /><strong>{props.label}</strong></Link>;
+function AttentionSection(props: Readonly<{
+  pendingOrders: number;
+  lowStockProducts: number;
+  activeProducts: number;
+}>): React.JSX.Element {
+  return (
+    <section className="k-workspace-section">
+      <header className="k-section-head">
+        <div>
+          <span className="k-section-kicker">Prioridades</span>
+          <h2>Atenção operacional</h2>
+          <p>Itens que podem exigir ação da equipe agora.</p>
+        </div>
+      </header>
+      <div className="k-attention-list">
+        <Link to="/admin/orders">
+          <span><strong>Pedidos pendentes</strong><small>Revise confirmação e andamento.</small></span>
+          <b>{props.pendingOrders}</b>
+        </Link>
+        <Link to="/admin/inventory">
+          <span><strong>Estoque baixo</strong><small>Produtos próximos de ruptura.</small></span>
+          <b>{props.lowStockProducts}</b>
+        </Link>
+        <Link to="/admin/products">
+          <span><strong>Produtos ativos</strong><small>Itens atualmente disponíveis no catálogo.</small></span>
+          <b>{props.activeProducts}</b>
+        </Link>
+      </div>
+    </section>
+  );
 }
 
-function AttentionRow(props: Readonly<{ label: string; value: string | number; to: "/admin/orders" | "/admin/inventory" | "/admin/products" }>): React.JSX.Element {
-  return <Link className="k-store-link" to={props.to}><div><strong>{props.label}</strong><span>Abra a área para revisar e agir.</span></div><b>{props.value}</b></Link>;
+function QuickLinksSection(): React.JSX.Element {
+  return (
+    <section className="k-workspace-section">
+      <header className="k-section-head">
+        <div><span className="k-section-kicker">Atalhos</span><h2>Rotinas da loja</h2></div>
+      </header>
+      <div className="k-quick-list">
+        <QuickLink to="/admin/products" icon="products" label="Produtos" detail="Catálogo, preço e publicação" />
+        <QuickLink to="/admin/orders" icon="orders" label="Pedidos" detail="Venda, status e atendimento" />
+        <QuickLink to="/admin/customers" icon="customers" label="Clientes" detail="CRM e histórico de compras" />
+        <QuickLink to="/admin/inventory" icon="inventory" label="Estoque" detail="Saldos e movimentações" />
+      </div>
+    </section>
+  );
+}
+
+function AccountContext(props: Readonly<{
+  tenantStatus: "trial" | "active" | "suspended";
+  trialEndsAt: string | null;
+  planName: string | null;
+  planSlug: string | null;
+  customers: number;
+  layout: string;
+}>): React.JSX.Element {
+  return (
+    <aside className="k-dashboard-context">
+      <header><span className="k-section-kicker">Contexto</span><h2>Conta e loja</h2></header>
+      <dl>
+        <div><dt>Conta</dt><dd>{accountStatus(props.tenantStatus, props.trialEndsAt)}</dd></div>
+        <div><dt>Plano</dt><dd>{props.planName ?? props.planSlug ?? "Não identificado"}</dd></div>
+        <div><dt>Clientes</dt><dd>{props.customers}</dd></div>
+        <div><dt>Layout</dt><dd>{props.layout === "modern" ? "Modern" : "Classic"}</dd></div>
+      </dl>
+      <Link className="k-text-action" to="/admin/store">Configurar Minha Loja →</Link>
+    </aside>
+  );
 }
 
 function AdminDashboard(): React.JSX.Element {
   const data = Route.useLoaderData();
   const metrics = data.metrics;
-  const maxCount = Math.max(metrics.ordersToday, metrics.pendingOrders, metrics.activeProducts, metrics.customers, 1);
-  return <div className="k-page k-dashboard">
-    <PageHead title={data.store.name} description="O que exige atenção hoje e o estado real da operação da loja." action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>} />
-
-    <div className="k-dashboard-grid">
-      <section className="k-card k-dashboard-panel">
-        <div className="k-dashboard-panel__head"><div><h2>Atenção operacional</h2><p>Priorize pendências antes de acompanhar desempenho.</p></div></div>
-        <div className="k-store-links">
-          <AttentionRow label="Pedidos pendentes" value={metrics.pendingOrders} to="/admin/orders" />
-          <AttentionRow label="Produtos com estoque baixo" value={metrics.lowStockProducts} to="/admin/inventory" />
-          <AttentionRow label="Produtos ativos" value={metrics.activeProducts} to="/admin/products" />
-        </div>
-      </section>
-
-      <aside className="k-card k-dashboard-panel k-account-panel">
-        <div className="k-dashboard-panel__head"><div><h2>Conta e loja</h2><p>Status comercial e configuração atual.</p></div></div>
-        <div className="k-account-card"><span>Conta</span><strong>{accountStatus(data.store.tenantStatus, data.store.trialEndsAt)}</strong></div>
-        <div className="k-account-card"><span>Plano</span><strong>{data.plan?.name ?? data.plan?.slug ?? "Não identificado"}</strong></div>
-        <div className="k-account-card"><span>Catálogo</span><strong>{data.layout === "modern" ? "Modern" : "Classic"}</strong></div>
-      </aside>
-    </div>
-
-    <section className="k-card k-dashboard-panel">
-      <div className="k-dashboard-panel__head"><div><h2>Volume atual</h2><p>Indicadores operacionais reais, sem estimativas.</p></div><span className="k-account-badge">30 dias quando indicado</span></div>
-      <div className="k-dashboard-bars">
-        <DashboardBar label="Pedidos hoje" value={metrics.ordersToday} max={maxCount} detail={String(metrics.ordersToday)} />
-        <DashboardBar label="Pedidos pendentes" value={metrics.pendingOrders} max={maxCount} detail={String(metrics.pendingOrders)} />
-        <DashboardBar label="Clientes" value={metrics.customers} max={maxCount} detail={String(metrics.customers)} />
-        <DashboardBar label="Produtos ativos" value={metrics.activeProducts} max={maxCount} detail={String(metrics.activeProducts)} />
+  return (
+    <div className="k-page k-dashboard">
+      <PageHead
+        title={data.store.name}
+        description="Visão operacional da loja, com o que merece atenção primeiro."
+        action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
+      />
+      <DashboardStrip
+        ordersToday={metrics.ordersToday}
+        pendingOrders={metrics.pendingOrders}
+        revenuePeriodCents={metrics.revenuePeriodCents}
+        averageTicketCents={metrics.averageTicketCents}
+      />
+      <div className="k-dashboard-layout">
+        <main className="k-dashboard-primary">
+          <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
+          <QuickLinksSection />
+        </main>
+        <AccountContext
+          tenantStatus={data.store.tenantStatus}
+          trialEndsAt={data.store.trialEndsAt}
+          planName={data.plan?.name ?? null}
+          planSlug={data.plan?.slug ?? null}
+          customers={metrics.customers}
+          layout={data.layout}
+        />
       </div>
-      <div className="k-row" style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid #ecece7" }}><div><span className="k-muted">Faturamento · 30 dias</span><strong style={{ display: "block", marginTop: 3 }}>{formatMoney(metrics.revenuePeriodCents)}</strong></div><div><span className="k-muted">Ticket médio · 30 dias</span><strong style={{ display: "block", marginTop: 3 }}>{formatMoney(metrics.averageTicketCents)}</strong></div></div>
-    </section>
-
-    <section className="k-dashboard-shortcuts"><div className="k-dashboard-panel__head"><div><h2>Acesso rápido</h2><p>Rotinas mais usadas.</p></div></div><div className="k-quick-grid"><QuickLink to="/admin/products" icon="products" label="Produtos" /><QuickLink to="/admin/orders" icon="orders" label="Pedidos" /><QuickLink to="/admin/customers" icon="customers" label="Clientes" /><QuickLink to="/admin/inventory" icon="inventory" label="Estoque" /></div></section>
-  </div>;
+    </div>
+  );
 }

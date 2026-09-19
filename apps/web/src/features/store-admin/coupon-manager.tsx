@@ -59,17 +59,46 @@ function matches(coupon: Coupon, rawSearch: string): boolean {
     || coupon.name.toLocaleLowerCase("pt-BR").includes(search);
 }
 
-export function CouponManager({ coupons }: Readonly<{ coupons: Coupon[] }>): React.JSX.Element {
+function CouponEditor(props: Readonly<{
+  coupon: Coupon;
+  busy: boolean;
+  save: (event: React.SyntheticEvent<HTMLFormElement>, id?: string) => Promise<void>;
+}>): React.JSX.Element {
+  const { coupon, busy, save } = props;
+  return (
+    <details className="k-record-editor">
+      <summary>
+        <span className="k-record-editor__identity">
+          <strong>{coupon.code}</strong>
+          <small>{coupon.name} · {coupon.usageCount}{coupon.usageLimit ? `/${String(coupon.usageLimit)}` : ""} usos</small>
+        </span>
+        <span className={coupon.active ? "k-status-pill k-status-pill--active" : "k-status-pill"}>
+          {coupon.active ? "Ativo" : "Inativo"}
+        </span>
+      </summary>
+      <form className="k-record-editor__form" onSubmit={(event) => { void save(event, coupon.id); }}>
+        <CouponFields coupon={coupon} />
+        <div className="k-record-editor__footer">
+          <button className="k-button" disabled={busy} type="submit">Salvar cupom</button>
+        </div>
+      </form>
+    </details>
+  );
+}
+
+function useCouponActions(): Readonly<{
+  busy: boolean;
+  message: string;
+  save: (event: React.SyntheticEvent<HTMLFormElement>, id?: string) => Promise<void>;
+}> {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [search, setSearch] = useState("");
-  const visible = useMemo(
-    () => coupons.filter((coupon) => matches(coupon, search)),
-    [coupons, search],
-  );
 
-  async function save(event: React.SyntheticEvent<HTMLFormElement>, id?: string): Promise<void> {
+  async function save(
+    event: React.SyntheticEvent<HTMLFormElement>,
+    id?: string,
+  ): Promise<void> {
     event.preventDefault();
     setBusy(true);
     setMessage("");
@@ -87,30 +116,64 @@ export function CouponManager({ coupons }: Readonly<{ coupons: Coupon[] }>): Rea
     }
   }
 
+  return { busy, message, save };
+}
+
+export function CouponManager({ coupons }: Readonly<{
+  coupons: Coupon[];
+}>): React.JSX.Element {
+  const { busy, message, save } = useCouponActions();
+  const [search, setSearch] = useState("");
+  const visible = useMemo(
+    () => coupons.filter((coupon) => matches(coupon, search)),
+    [coupons, search],
+  );
+
   return (
-    <div className="k-stack">
-      <form className="k-card k-form" onSubmit={(event) => { void save(event); }}>
-        <h2>Novo cupom</h2>
-        <CouponFields />
-        <div className="k-actions"><button className="k-button k-button--primary" disabled={busy} type="submit">Criar cupom</button></div>
-      </form>
-      <div className="k-card k-form">
-        <div className="k-field">
-          <label htmlFor="coupon-search">Pesquisar cupons</label>
+    <section className="k-workspace-section">
+      <header className="k-section-head">
+        <div>
+          <span className="k-section-kicker">Promoções</span>
+          <h2>Cupons</h2>
+          <p>Regras promocionais da loja com consulta e edição em uma lista compacta.</p>
+        </div>
+        <span className="k-section-count">{coupons.length} cupom(ns)</span>
+      </header>
+
+      <details className="k-composer">
+        <summary>
+          <span><strong>Novo cupom</strong><small>Defina código, desconto, vigência e limites.</small></span>
+          <span className="k-composer__action">Criar</span>
+        </summary>
+        <form className="k-composer__body" onSubmit={(event) => { void save(event); }}>
+          <CouponFields />
+          <div className="k-actions">
+            <button className="k-button k-button--primary" disabled={busy} type="submit">Criar cupom</button>
+          </div>
+        </form>
+      </details>
+
+      <div className="k-toolbar">
+        <div className="k-toolbar__search">
+          <label className="k-visually-hidden" htmlFor="coupon-search">Pesquisar cupons</label>
           <input id="coupon-search" value={search} onChange={(event) => { setSearch(event.target.value); }} placeholder="Código ou nome" />
         </div>
+        {search ? <button className="k-button k-button--ghost" type="button" onClick={() => { setSearch(""); }}>Limpar</button> : null}
       </div>
-      {message ? <div className="k-status">{message}</div> : null}
-      {visible.length === 0 ? <div className="k-status">Nenhum cupom encontrado.</div> : null}
-      {visible.map((coupon) => (
-        <details className="k-card" key={coupon.id}>
-          <summary><strong>{coupon.code}</strong> — {coupon.name} · {coupon.active ? "ativo" : "inativo"} · {coupon.usageCount}{coupon.usageLimit ? "/" + String(coupon.usageLimit) : ""} usos</summary>
-          <form className="k-form" onSubmit={(event) => { void save(event, coupon.id); }}>
-            <CouponFields coupon={coupon} />
-            <div className="k-actions"><button className="k-button" disabled={busy} type="submit">Salvar cupom</button></div>
-          </form>
-        </details>
-      ))}
-    </div>
+
+      {message ? <div className="k-inline-state">{message}</div> : null}
+      {visible.length === 0 ? (
+        <div className="k-inline-state">
+          <strong>Nenhum cupom encontrado</strong>
+          <span>Crie um cupom ou ajuste a busca.</span>
+        </div>
+      ) : (
+        <div className="k-record-list">
+          {visible.map((coupon) => (
+            <CouponEditor key={coupon.id} coupon={coupon} busy={busy} save={save} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

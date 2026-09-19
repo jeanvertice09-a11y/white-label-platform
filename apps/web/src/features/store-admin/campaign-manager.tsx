@@ -21,7 +21,15 @@ export function CampaignManager({
   const message = actions.actionMessage || saving.saveMessage;
 
   return (
-    <div className="k-stack">
+    <section className="k-workspace-section">
+      <header className="k-section-head">
+        <div>
+          <span className="k-section-kicker">CRM</span>
+          <h2>Campanhas</h2>
+          <p>Segmentação com consentimento explícito e preparação segura de destinatários.</p>
+        </div>
+        <span className="k-section-count">{listing.page.total} campanha(s)</span>
+      </header>
       <CampaignComposer busy={busy} save={saving.save} />
       <CampaignSearch
         busy={busy}
@@ -29,7 +37,7 @@ export function CampaignManager({
         setSearch={listing.setSearch}
         reload={listing.reload}
       />
-      {message ? <div className="k-status">{message}</div> : null}
+      {message ? <div className="k-inline-state">{message}</div> : null}
       <CampaignList
         page={listing.page}
         detail={actions.detail}
@@ -44,6 +52,6 @@ export function CampaignManager({
         total={listing.page.total}
         reload={listing.reload}
       />
-    </div>
+    </section>
   );
 }

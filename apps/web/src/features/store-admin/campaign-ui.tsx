@@ -40,10 +40,7 @@ export function CampaignFields({
       </div>
       <div className="k-field">
         <label>Público</label>
-        <select
-          name="segmentType"
-          defaultValue={campaign?.segmentType ?? "all"}
-        >
+        <select name="segmentType" defaultValue={campaign?.segmentType ?? "all"}>
           <option value="all">Todos com opt-in</option>
           <option value="with_orders">Com pedidos</option>
           <option value="without_orders">Sem pedidos</option>
@@ -79,24 +76,26 @@ export function CampaignComposer({
   save: (event: React.SyntheticEvent<HTMLFormElement>) => Promise<void>;
 }>): React.JSX.Element {
   return (
-    <form
-      className="k-card k-form"
-      onSubmit={(event) => {
-        void save(event);
-      }}
-    >
-      <h2>Nova campanha</h2>
-      <CampaignFields />
-      <div className="k-actions">
-        <button
-          className="k-button k-button--primary"
-          disabled={busy}
-          type="submit"
-        >
-          Criar campanha
-        </button>
-      </div>
-    </form>
+    <details className="k-composer">
+      <summary>
+        <span>
+          <strong>Nova campanha</strong>
+          <small>Crie um rascunho antes de preparar destinatários.</small>
+        </span>
+        <span className="k-composer__action">Criar</span>
+      </summary>
+      <form
+        className="k-composer__body"
+        onSubmit={(event) => { void save(event); }}
+      >
+        <CampaignFields />
+        <div className="k-actions">
+          <button className="k-button k-button--primary" disabled={busy} type="submit">
+            Criar campanha
+          </button>
+        </div>
+      </form>
+    </details>
   );
 }
 
@@ -113,21 +112,22 @@ export function CampaignSearch({
 }>): React.JSX.Element {
   return (
     <form
-      className="k-card k-actions"
+      className="k-toolbar"
       onSubmit={(event) => {
         event.preventDefault();
         void reload(1);
       }}
     >
-      <input
-        aria-label="Buscar campanhas"
-        onChange={(event) => {
-          setSearch(event.currentTarget.value);
-        }}
-        placeholder="Buscar campanha"
-        value={search}
-      />
-      <button className="k-button" disabled={busy} type="submit">
+      <div className="k-toolbar__search">
+        <label className="k-visually-hidden" htmlFor="campaign-search">Buscar campanhas</label>
+        <input
+          id="campaign-search"
+          onChange={(event) => { setSearch(event.currentTarget.value); }}
+          placeholder="Buscar campanha"
+          value={search}
+        />
+      </div>
+      <button className="k-button k-button--primary" disabled={busy} type="submit">
         Buscar
       </button>
     </form>
@@ -148,31 +148,14 @@ export function CampaignPagination({
   reload: (page?: number) => Promise<void>;
 }>): React.JSX.Element {
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  if (total === 0) return <></>;
   return (
-    <div className="k-actions">
-      <button
-        className="k-button"
-        disabled={busy || page <= 1}
-        onClick={() => {
-          void reload(page - 1);
-        }}
-        type="button"
-      >
-        Anterior
-      </button>
-      <span>
-        Página {page} de {lastPage}
-      </span>
-      <button
-        className="k-button"
-        disabled={busy || page >= lastPage}
-        onClick={() => {
-          void reload(page + 1);
-        }}
-        type="button"
-      >
-        Próxima
-      </button>
+    <div className="k-pagination">
+      <span>{total} campanha(s) · página {page} de {lastPage}</span>
+      <div>
+        <button className="k-button" disabled={busy || page <= 1} onClick={() => { void reload(page - 1); }} type="button">Anterior</button>
+        <button className="k-button" disabled={busy || page >= lastPage} onClick={() => { void reload(page + 1); }} type="button">Próxima</button>
+      </div>
     </div>
   );
 }
@@ -188,37 +171,44 @@ export function CampaignDetailView({
   detail,
 }: Readonly<{ detail: CampaignDetail }>): React.JSX.Element {
   return (
-    <div className="k-stack">
-      <p>
-        <strong>Destinatários:</strong> {detail.recipientCount}
-      </p>
-      <p>
-        <strong>Conteúdo:</strong> {detail.content}
-      </p>
-      <div>
-        <strong>Histórico</strong>
-        <ul>
-          {detail.history.map((item) => (
-            <li key={`${item.action}-${item.createdAt}`}>
-              {item.action} · {new Date(item.createdAt).toLocaleString()}
-            </li>
-          ))}
-        </ul>
+    <div className="k-record-detail">
+      <div className="k-inline-metrics">
+        <span><small>Destinatários</small><strong>{detail.recipientCount}</strong></span>
+        <span><small>Eventos</small><strong>{detail.history.length}</strong></span>
+        <span><small>Fila</small><strong>{detail.recipients.length}</strong></span>
       </div>
-      <div>
-        <strong>Fila</strong>
+      <section>
+        <h4>Conteúdo</h4>
+        <p className="k-record-copy">{detail.content}</p>
+      </section>
+      <section>
+        <h4>Histórico</h4>
+        {detail.history.length ? (
+          <ul className="k-timeline-list">
+            {detail.history.map((item) => (
+              <li key={`${item.action}-${item.createdAt}`}>
+                <strong>{item.action}</strong>
+                <span>{new Date(item.createdAt).toLocaleString()}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="k-muted">Sem eventos registrados.</p>}
+      </section>
+      <section>
+        <h4>Fila</h4>
         {detail.recipients.length === 0 ? (
-          <p>Nenhum destinatário preparado.</p>
+          <p className="k-muted">Nenhum destinatário preparado.</p>
         ) : (
-          <ul>
+          <ul className="k-compact-list">
             {detail.recipients.map((recipient) => (
               <li key={recipient.id}>
-                {recipient.customerName} · {recipient.status}
+                <span>{recipient.customerName}</span>
+                <span>{recipient.status}</span>
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }

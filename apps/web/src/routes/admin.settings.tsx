@@ -5,18 +5,31 @@ export const Route = createFileRoute("/admin/settings")({
   component: SettingsPage,
 });
 
-function SettingsPage() {
+function SettingsPage(): React.JSX.Element {
   return (
     <div className="k-page">
       <PageHead
         title="Configurações"
-        description="A fundação atual concentra as configurações relacionadas à loja e ao catálogo."
+        description="Ajustes disponíveis para a operação atual da loja."
       />
-      <div className="k-card">
-        <h2>Configurações da loja</h2>
-        <p className="k-muted">Acesse aparência, banners, catálogo, WhatsApp e checkout.</p>
-        <Link className="k-button" to="/admin/store">Abrir Minha loja</Link>
-      </div>
+      <section className="k-workspace-section">
+        <header className="k-section-head">
+          <div>
+            <span className="k-section-kicker">Loja</span>
+            <h2>Experiência pública</h2>
+            <p>Aparência, banners, catálogo, WhatsApp e checkout ficam centralizados em Minha Loja.</p>
+          </div>
+        </header>
+        <div className="k-config-list">
+          <Link className="k-config-row" to="/admin/store">
+            <span>
+              <strong>Minha Loja</strong>
+              <small>Abra o configurador e a prévia pública.</small>
+            </span>
+            <b aria-hidden="true">→</b>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
