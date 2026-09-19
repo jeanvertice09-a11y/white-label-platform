@@ -86,17 +86,14 @@ function CouponEditor(props: Readonly<{
   );
 }
 
-export function CouponManager({ coupons }: Readonly<{
-  coupons: Coupon[];
-}>): React.JSX.Element {
+function useCouponActions(): Readonly<{
+  busy: boolean;
+  message: string;
+  save: (event: React.SyntheticEvent<HTMLFormElement>, id?: string) => Promise<void>;
+}> {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [search, setSearch] = useState("");
-  const visible = useMemo(
-    () => coupons.filter((coupon) => matches(coupon, search)),
-    [coupons, search],
-  );
 
   async function save(
     event: React.SyntheticEvent<HTMLFormElement>,
@@ -118,6 +115,19 @@ export function CouponManager({ coupons }: Readonly<{
       setBusy(false);
     }
   }
+
+  return { busy, message, save };
+}
+
+export function CouponManager({ coupons }: Readonly<{
+  coupons: Coupon[];
+}>): React.JSX.Element {
+  const { busy, message, save } = useCouponActions();
+  const [search, setSearch] = useState("");
+  const visible = useMemo(
+    () => coupons.filter((coupon) => matches(coupon, search)),
+    [coupons, search],
+  );
 
   return (
     <section className="k-workspace-section">

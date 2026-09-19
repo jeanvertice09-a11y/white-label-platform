@@ -63,6 +63,20 @@ function toInput(draft: ProductDraft): ProductMutationInput {
   };
 }
 
+function ProductSaveBar(props: Readonly<{
+  status: string;
+  saving: boolean;
+}>): React.JSX.Element {
+  return (
+    <footer className="k-editor-savebar">
+      {props.status ? <span className="k-status" role="status">{props.status}</span> : null}
+      <button className="k-button k-button--primary" type="submit" disabled={props.saving}>
+        {props.saving ? "Salvando…" : "Salvar produto"}
+      </button>
+    </footer>
+  );
+}
+
 export function ProductForm({
   product,
   categories,
@@ -86,23 +100,16 @@ export function ProductForm({
     try {
       const input = toInput(draft);
       if (product) {
-        const updated = await updateMerchantProduct({
-          data: { id: product.id, input },
-        });
+        const updated = await updateMerchantProduct({ data: { id: product.id, input } });
         if (!updated) throw new Error("Produto não encontrado nesta loja");
         setStatus("Produto salvo.");
         await router.invalidate();
       } else {
         const created = await createMerchantProduct({ data: input });
-        await router.navigate({
-          to: "/admin/products/$id",
-          params: { id: created.id },
-        });
+        await router.navigate({ to: "/admin/products/$id", params: { id: created.id } });
       }
     } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Não foi possível salvar.",
-      );
+      setStatus(error instanceof Error ? error.message : "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
@@ -116,16 +123,7 @@ export function ProductForm({
         hasVariants={Boolean(product?.variants.length)}
         setField={setField}
       />
-      <footer className="k-editor-savebar">
-        {status ? <span className="k-status" role="status">{status}</span> : null}
-        <button
-          className="k-button k-button--primary"
-          type="submit"
-          disabled={saving}
-        >
-          {saving ? "Salvando…" : "Salvar produto"}
-        </button>
-      </footer>
+      <ProductSaveBar status={status} saving={saving} />
     </form>
   );
 }

@@ -125,16 +125,25 @@ function VariantFields(props: Readonly<{
       </div>
       <div className="k-field k-field--full">
         <label>Atributos</label>
-        <textarea
-          value={draft.attributes}
-          onChange={(event) => { setField("attributes", event.target.value); }}
-          placeholder={"tamanho=P\ncor=Azul"}
-        />
-        <span className="k-muted">
-          Um por linha em atributo=valor. Combinações duplicadas continuam bloqueadas.
-        </span>
+        <textarea value={draft.attributes} onChange={(event) => { setField("attributes", event.target.value); }} placeholder={"tamanho=P\ncor=Azul"} />
+        <span className="k-muted">Um por linha em atributo=valor. Combinações duplicadas continuam bloqueadas.</span>
       </div>
     </div>
+  );
+}
+
+function VariantSummary({ variant }: Readonly<{
+  variant?: ProductVariant;
+}>): React.JSX.Element {
+  const label = variant ? variant.name : "Adicionar variante";
+  return (
+    <summary>
+      <span>
+        <strong>{label}</strong>
+        {variant ? <small>{variant.sku ?? "Sem SKU"} · estoque {variant.stockQuantity}</small> : <small>Preço, SKU e atributos próprios</small>}
+      </span>
+      {variant ? <span className={variant.active ? "k-status-pill k-status-pill--active" : "k-status-pill"}>{variant.active ? "Ativa" : "Inativa"}</span> : null}
+    </summary>
   );
 }
 
@@ -147,10 +156,7 @@ function VariantForm(props: Readonly<{
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
 
-  function setField<K extends keyof VariantDraft>(
-    key: K,
-    value: VariantDraft[K],
-  ): void {
+  function setField<K extends keyof VariantDraft>(key: K, value: VariantDraft[K]): void {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
@@ -161,9 +167,7 @@ function VariantForm(props: Readonly<{
     try {
       const input = toInput(props.productId, draft);
       if (props.variant) {
-        const updated = await updateMerchantVariant({
-          data: { id: props.variant.id, input },
-        });
+        const updated = await updateMerchantVariant({ data: { id: props.variant.id, input } });
         if (!updated) throw new Error("Variante não encontrada neste produto");
       } else {
         await createMerchantVariant({ data: input });
@@ -178,27 +182,15 @@ function VariantForm(props: Readonly<{
     }
   }
 
-  const label = props.variant ? props.variant.name : "Adicionar variante";
   return (
     <details className="k-record-editor" open={!props.variant}>
-      <summary>
-        <span>
-          <strong>{label}</strong>
-          {props.variant ? <small>{props.variant.sku ?? "Sem SKU"} · estoque {props.variant.stockQuantity}</small> : <small>Preço, SKU e atributos próprios</small>}
-        </span>
-        {props.variant ? <span className={props.variant.active ? "k-status-pill k-status-pill--active" : "k-status-pill"}>{props.variant.active ? "Ativa" : "Inativa"}</span> : null}
-      </summary>
+      <VariantSummary variant={props.variant} />
       <form className="k-record-editor__form" onSubmit={(event) => { void submit(event); }}>
         <VariantFields draft={draft} setField={setField} />
         <div className="k-record-editor__footer">
-          <label className="k-check">
-            <input type="checkbox" checked={draft.active} onChange={(event) => { setField("active", event.target.checked); }} />
-            Variante ativa
-          </label>
+          <label className="k-check"><input type="checkbox" checked={draft.active} onChange={(event) => { setField("active", event.target.checked); }} />Variante ativa</label>
           {status ? <span className="k-status" role="status">{status}</span> : null}
-          <button className="k-button" type="submit" disabled={saving}>
-            {saving ? "Salvando…" : props.variant ? "Salvar variante" : "Adicionar variante"}
-          </button>
+          <button className="k-button" type="submit" disabled={saving}>{saving ? "Salvando…" : props.variant ? "Salvar variante" : "Adicionar variante"}</button>
         </div>
       </form>
     </details>

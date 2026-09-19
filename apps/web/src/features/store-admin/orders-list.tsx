@@ -148,9 +148,18 @@ function OrdersPagination(props: Readonly<{
   );
 }
 
-export function OrdersList({ initialPage }: Readonly<{
-  initialPage: OrderPage;
-}>): React.JSX.Element {
+function useOrdersList(initialPage: OrderPage): Readonly<{
+  data: OrderPage;
+  search: string;
+  status: "" | OrderStatus;
+  date: string;
+  loading: boolean;
+  error: string;
+  setSearch: (value: string) => void;
+  setStatus: (value: "" | OrderStatus) => void;
+  setDate: (value: string) => void;
+  load: LoadPage;
+}> {
   const [data, setData] = useState(initialPage);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"" | OrderStatus>("");
@@ -184,7 +193,23 @@ export function OrdersList({ initialPage }: Readonly<{
     }
   }
 
-  const filters = { search, status, date, loading, setSearch, setStatus, setDate, load };
+  return { data, search, status, date, loading, error, setSearch, setStatus, setDate, load };
+}
+
+export function OrdersList({ initialPage }: Readonly<{
+  initialPage: OrderPage;
+}>): React.JSX.Element {
+  const state = useOrdersList(initialPage);
+  const filters = {
+    search: state.search,
+    status: state.status,
+    date: state.date,
+    loading: state.loading,
+    setSearch: state.setSearch,
+    setStatus: state.setStatus,
+    setDate: state.setDate,
+    load: state.load,
+  };
   return (
     <section className="k-workspace-section">
       <header className="k-section-head">
@@ -193,24 +218,24 @@ export function OrdersList({ initialPage }: Readonly<{
           <h2>Pedidos</h2>
           <p>Acompanhe os pedidos da loja e filtre o que precisa de ação.</p>
         </div>
-        <span className="k-section-count">{data.total} registro(s)</span>
+        <span className="k-section-count">{state.data.total} registro(s)</span>
       </header>
       <OrdersToolbar {...filters} />
-      {loading ? <div className="k-inline-state">Atualizando pedidos…</div> : null}
-      {error ? (
+      {state.loading ? <div className="k-inline-state">Atualizando pedidos…</div> : null}
+      {state.error ? (
         <div className="k-inline-state k-inline-state--error">
-          <span>{error}</span>
-          <button className="k-text-action" type="button" onClick={() => { void load(data.page); }}>Tentar novamente</button>
+          <span>{state.error}</span>
+          <button className="k-text-action" type="button" onClick={() => { void state.load(state.data.page); }}>Tentar novamente</button>
         </div>
       ) : null}
-      {!error && !loading && data.items.length === 0 ? (
+      {!state.error && !state.loading && state.data.items.length === 0 ? (
         <div className="k-inline-state">
           <strong>Nenhum pedido encontrado</strong>
           <span>Ajuste os filtros para consultar outro período.</span>
         </div>
       ) : null}
-      {!error && data.items.length > 0 ? <OrdersTable data={data} /> : null}
-      {!error && data.total > 0 ? <OrdersPagination data={data} loading={loading} load={load} /> : null}
+      {!state.error && state.data.items.length > 0 ? <OrdersTable data={state.data} /> : null}
+      {!state.error && state.data.total > 0 ? <OrdersPagination data={state.data} loading={state.loading} load={state.load} /> : null}
     </section>
   );
 }
