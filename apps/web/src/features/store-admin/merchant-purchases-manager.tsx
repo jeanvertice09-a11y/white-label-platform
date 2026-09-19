@@ -13,6 +13,11 @@ import { formatCurrency, formatDate, messageFrom, parseMoneyToCents, today } fro
 
 type DraftItem = { key: string; productId: string; variantId: string | null; label: string; quantity: number; unitCost: string };
 type InventoryOption = InventoryPage["items"][number];
+type MerchantPurchasesManagerProps = Readonly<{
+  initial: Page<Purchase>;
+  suppliers: Supplier[];
+  inventory: InventoryPage;
+}>;
 const PAGE_SIZE = 25;
 
 function PurchaseItemsTable({ items, setItems }: Readonly<{ items: DraftItem[]; setItems: (items: DraftItem[]) => void }>): React.JSX.Element | null {
@@ -80,11 +85,15 @@ function PurchaseListSection(props: Readonly<{
   );
 }
 
-export function MerchantPurchasesManager(props: Readonly<{
-  initial: Page<Purchase>;
-  suppliers: Supplier[];
-  inventory: InventoryPage;
-}>): React.JSX.Element {
+function calculateTotal(subtotal: number, discount: string, surcharge: string): number {
+  try {
+    return subtotal - parseMoneyToCents(discount) + parseMoneyToCents(surcharge);
+  } catch {
+    return subtotal;
+  }
+}
+
+function usePurchaseManagerState(props: MerchantPurchasesManagerProps) {
   const [data, setData] = useState(props.initial);
   const [inventory, setInventory] = useState(props.inventory);
   const [inventorySearch, setInventorySearch] = useState("");
@@ -98,95 +107,122 @@ export function MerchantPurchasesManager(props: Readonly<{
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const options = inventory.items.filter((item) => item.trackInventory);
   const subtotal = useMemo(() => items.reduce((sum, item) => {
     try { return sum + item.quantity * parseMoneyToCents(item.unitCost); } catch { return sum; }
   }, 0), [items]);
-  let total = subtotal;
-  try { total = subtotal - parseMoneyToCents(discount) + parseMoneyToCents(surcharge); } catch { /* validated on submit */ }
+  const total = calculateTotal(subtotal, discount, surcharge);
+  return {
+    data, setData, inventorySearch, setInventorySearch, selectedKey, setSelectedKey,
+    items, setItems, supplierId, setSupplierId, purchasedAt, setPurchasedAt,
+    discount, setDiscount, surcharge, setSurcharge, notes, setNotes,
+    loading, setLoading, error, setError, success, setSuccess, options, total, setInventory,
+  };
+}
 
-  async function refreshPurchases(page = 1): Promise<void> {
-    setData(await listMerchantPurchases({ data: { page, pageSize: PAGE_SIZE } }));
+type PurchaseManagerState = ReturnType<typeof usePurchaseManagerState>;
+
+async function refreshPurchases(state: PurchaseManagerState, page = 1): Promise<void> {
+  state.setData(await listMerchantPurchases({ data: { page, pageSize: PAGE_SIZE } }));
+}
+
+async function searchInventory(state: PurchaseManagerState): Promise<void> {
+  state.setLoading(true); state.setError("");
+  try {
+    state.setInventory(await listMerchantInventory({ data: { page: 1, pageSize: 100, search: state.inventorySearch.trim() || undefined } }));
+    state.setSelectedKey("");
+  } catch (cause) {
+    state.setError(messageFrom(cause, "Não foi possível buscar produtos."));
+  } finally {
+    state.setLoading(false);
   }
+}
 
-  async function searchInventory(): Promise<void> {
-    setLoading(true); setError("");
-    try {
-      setInventory(await listMerchantInventory({ data: { page: 1, pageSize: 100, search: inventorySearch.trim() || undefined } }));
-      setSelectedKey("");
-    } catch (cause) { setError(messageFrom(cause, "Não foi possível buscar produtos.")); }
-    finally { setLoading(false); }
+function addItem(state: PurchaseManagerState): void {
+  const selected = state.options.find((item) => `${item.productId}:${item.variantId ?? ""}` === state.selectedKey);
+  if (!selected || state.items.some((item) => item.key === state.selectedKey)) return;
+  state.setItems([...state.items, {
+    key: state.selectedKey,
+    productId: selected.productId,
+    variantId: selected.variantId,
+    label: `${selected.productName}${selected.variantName ? ` · ${selected.variantName}` : ""}${selected.sku ? ` · ${selected.sku}` : ""}`,
+    quantity: 1,
+    unitCost: "0,00",
+  }]);
+  state.setSelectedKey("");
+}
+
+function resetPurchaseForm(state: PurchaseManagerState): void {
+  state.setItems([]);
+  state.setSupplierId("");
+  state.setDiscount("0,00");
+  state.setSurcharge("0,00");
+  state.setNotes("");
+  state.setPurchasedAt(today());
+}
+
+async function submitPurchase(event: SyntheticEvent<HTMLFormElement>, state: PurchaseManagerState): Promise<void> {
+  event.preventDefault(); state.setLoading(true); state.setError(""); state.setSuccess("");
+  try {
+    if (!state.items.length) throw new Error("Adicione pelo menos um item à compra.");
+    await createMerchantPurchase({ data: {
+      supplierId: state.supplierId || null,
+      purchasedAt: state.purchasedAt,
+      discountCents: parseMoneyToCents(state.discount),
+      surchargeCents: parseMoneyToCents(state.surcharge),
+      notes: state.notes.trim() || null,
+      items: state.items.map((item) => ({ productId: item.productId, variantId: item.variantId, quantity: item.quantity, unitCostCents: parseMoneyToCents(item.unitCost) })),
+    } });
+    resetPurchaseForm(state);
+    state.setSuccess("Compra salva como rascunho. Receba-a quando a mercadoria entrar no estoque.");
+    await refreshPurchases(state, 1);
+  } catch (cause) {
+    state.setError(messageFrom(cause, "Não foi possível salvar a compra."));
+  } finally {
+    state.setLoading(false);
   }
+}
 
-  function addItem(): void {
-    const selected = options.find((item) => `${item.productId}:${item.variantId ?? ""}` === selectedKey);
-    if (!selected || items.some((item) => item.key === selectedKey)) return;
-    setItems([...items, {
-      key: selectedKey,
-      productId: selected.productId,
-      variantId: selected.variantId,
-      label: `${selected.productName}${selected.variantName ? ` · ${selected.variantName}` : ""}${selected.sku ? ` · ${selected.sku}` : ""}`,
-      quantity: 1,
-      unitCost: "0,00",
-    }]);
-    setSelectedKey("");
+async function changePurchaseStatus(purchase: Purchase, action: "receive" | "cancel", state: PurchaseManagerState): Promise<void> {
+  state.setLoading(true); state.setError(""); state.setSuccess("");
+  try {
+    if (action === "receive") {
+      await receiveMerchantPurchase({ data: { purchaseId: purchase.id } });
+      state.setSuccess("Compra recebida e estoque movimentado uma única vez.");
+    } else {
+      await cancelMerchantPurchase({ data: { purchaseId: purchase.id } });
+      state.setSuccess("Compra cancelada.");
+    }
+    await Promise.all([refreshPurchases(state, state.data.page), searchInventory(state)]);
+  } catch (cause) {
+    state.setError(messageFrom(cause, "Não foi possível alterar a compra."));
+  } finally {
+    state.setLoading(false);
   }
+}
 
-  async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault(); setLoading(true); setError(""); setSuccess("");
-    try {
-      if (!items.length) throw new Error("Adicione pelo menos um item à compra.");
-      await createMerchantPurchase({ data: {
-        supplierId: supplierId || null,
-        purchasedAt,
-        discountCents: parseMoneyToCents(discount),
-        surchargeCents: parseMoneyToCents(surcharge),
-        notes: notes.trim() || null,
-        items: items.map((item) => ({ productId: item.productId, variantId: item.variantId, quantity: item.quantity, unitCostCents: parseMoneyToCents(item.unitCost) })),
-      } });
-      setItems([]); setSupplierId(""); setDiscount("0,00"); setSurcharge("0,00"); setNotes(""); setPurchasedAt(today());
-      setSuccess("Compra salva como rascunho. Receba-a quando a mercadoria entrar no estoque.");
-      await refreshPurchases(1);
-    } catch (cause) { setError(messageFrom(cause, "Não foi possível salvar a compra.")); }
-    finally { setLoading(false); }
-  }
-
-  async function changeStatus(purchase: Purchase, action: "receive" | "cancel"): Promise<void> {
-    setLoading(true); setError(""); setSuccess("");
-    try {
-      if (action === "receive") {
-        await receiveMerchantPurchase({ data: { purchaseId: purchase.id } });
-        setSuccess("Compra recebida e estoque movimentado uma única vez.");
-      } else {
-        await cancelMerchantPurchase({ data: { purchaseId: purchase.id } });
-        setSuccess("Compra cancelada.");
-      }
-      await Promise.all([refreshPurchases(data.page), searchInventory()]);
-    } catch (cause) { setError(messageFrom(cause, "Não foi possível alterar a compra.")); }
-    finally { setLoading(false); }
-  }
-
+export function MerchantPurchasesManager(props: MerchantPurchasesManagerProps): React.JSX.Element {
+  const state = usePurchaseManagerState(props);
   return <div className="k-stack">
     <PurchaseForm
       suppliers={props.suppliers}
-      purchasedAt={purchasedAt} setPurchasedAt={setPurchasedAt}
-      supplierId={supplierId} setSupplierId={setSupplierId}
-      inventorySearch={inventorySearch} setInventorySearch={setInventorySearch}
-      onSearchInventory={() => { void searchInventory(); }} loading={loading}
-      options={options}
-      selectedKey={selectedKey} setSelectedKey={setSelectedKey}
-      onAddItem={addItem}
-      items={items} setItems={setItems}
-      discount={discount} setDiscount={setDiscount}
-      surcharge={surcharge} setSurcharge={setSurcharge}
-      notes={notes} setNotes={setNotes}
-      total={total}
-      onSubmit={(event) => { void submit(event); }}
+      purchasedAt={state.purchasedAt} setPurchasedAt={state.setPurchasedAt}
+      supplierId={state.supplierId} setSupplierId={state.setSupplierId}
+      inventorySearch={state.inventorySearch} setInventorySearch={state.setInventorySearch}
+      onSearchInventory={() => { void searchInventory(state); }} loading={state.loading}
+      options={state.options}
+      selectedKey={state.selectedKey} setSelectedKey={state.setSelectedKey}
+      onAddItem={() => { addItem(state); }}
+      items={state.items} setItems={state.setItems}
+      discount={state.discount} setDiscount={state.setDiscount}
+      surcharge={state.surcharge} setSurcharge={state.setSurcharge}
+      notes={state.notes} setNotes={state.setNotes}
+      total={state.total}
+      onSubmit={(event) => { void submitPurchase(event, state); }}
     />
     <PurchaseListSection
-      data={data} error={error} success={success} loading={loading}
-      onChangeStatus={(purchase, action) => { void changeStatus(purchase, action); }}
+      data={state.data} error={state.error} success={state.success} loading={state.loading}
+      onChangeStatus={(purchase, action) => { void changePurchaseStatus(purchase, action, state); }}
     />
   </div>;
 }
