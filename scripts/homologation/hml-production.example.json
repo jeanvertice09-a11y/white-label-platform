@@ -1,0 +1,103 @@
+{
+  "platformPlanSlug": "REPLACE_WITH_EXPLICIT_HML_PLATFORM_PLAN_SLUG",
+  "platformBillingAmountCents": {
+    "aurora": null,
+    "nexo": null
+  },
+  "storePlans": {
+    "lume": {
+      "templateCode": "monthly_entry",
+      "slug": "plano-1-hml",
+      "name": "Plano 1 HML",
+      "priceCents": null,
+      "billingInterval": "monthly",
+      "trialEnabled": false,
+      "trialDays": 0
+    },
+    "botanica": {
+      "templateCode": "monthly_intermediate",
+      "slug": "plano-2-hml",
+      "name": "Plano 2 HML",
+      "priceCents": null,
+      "billingInterval": "monthly",
+      "trialEnabled": true,
+      "trialDays": null
+    },
+    "passo": {
+      "templateCode": "monthly_complete",
+      "slug": "plano-3-hml",
+      "name": "Plano 3 HML",
+      "priceCents": null,
+      "billingInterval": "monthly",
+      "trialEnabled": false,
+      "trialDays": 0
+    },
+    "casa": {
+      "templateCode": "complete",
+      "slug": "completo-hml",
+      "name": "Completo HML",
+      "priceCents": null,
+      "billingInterval": "monthly",
+      "trialEnabled": false,
+      "trialDays": 0
+    }
+  },
+  "tenantOwners": {
+    "aurora": "REPLACE_WITH_REAL_AUTH_UUID",
+    "nexo": "REPLACE_WITH_REAL_AUTH_UUID"
+  },
+  "storeOwners": {
+    "lume": "REPLACE_WITH_REAL_AUTH_UUID",
+    "botanica": "REPLACE_WITH_REAL_AUTH_UUID",
+    "passo": "REPLACE_WITH_REAL_AUTH_UUID",
+    "casa": "REPLACE_WITH_REAL_AUTH_UUID"
+  },
+  "tenantOwnerEmails": {
+    "aurora": "hml.aurora@kataluu.com.br",
+    "nexo": "hml.nexo@kataluu.com.br"
+  },
+  "storeOwnerEmails": {
+    "lume": "hml.lume@kataluu.com.br",
+    "botanica": "hml.botanica@kataluu.com.br",
+    "passo": "hml.passo@kataluu.com.br",
+    "casa": "hml.casa@kataluu.com.br"
+  },
+  "tenantLogoUrls": {
+    "aurora": "https://media.kataluu.com.br/hml/tenant-logos/aurora-commerce/logo.webp",
+    "nexo": "https://media.kataluu.com.br/hml/tenant-logos/nexo-varejo/logo.webp"
+  },
+  "domains": {
+    "aurora": {
+      "tenantSite": "aurora-hml.kataluu.com.br",
+      "tenantPanel": "painel-aurora-hml.kataluu.com.br",
+      "stores": {
+        "lume": {
+          "admin": "gestao-lume-hml.kataluu.com.br",
+          "catalog": "lume-hml.kataluu.com.br"
+        },
+        "botanica": {
+          "admin": "gestao-botanica-hml.kataluu.com.br",
+          "catalog": "botanica-hml.kataluu.com.br"
+        }
+      }
+    },
+    "nexo": {
+      "tenantSite": "nexo-hml.kataluu.com.br",
+      "tenantPanel": "painel-nexo-hml.kataluu.com.br",
+      "stores": {
+        "passo": {
+          "admin": "gestao-passo-hml.kataluu.com.br",
+          "catalog": "passo-hml.kataluu.com.br"
+        },
+        "casa": {
+          "admin": "gestao-casa-hml.kataluu.com.br",
+          "catalog": "casa-hml.kataluu.com.br"
+        }
+      }
+    }
+  },
+  "mediaOrigin": "https://media.kataluu.com.br",
+  "assetManifestFile": "hml-assets.json",
+  "resolvedAssets": {},
+  "anchorIso": "2026-09-19T12:00:00.000Z"
+}
