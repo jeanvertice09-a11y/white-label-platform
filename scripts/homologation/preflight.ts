@@ -1,6 +1,6 @@
 import { PLATFORM_GATEWAY_ID } from "./cleanup.ts";
 import { DEMO_STORES, DEMO_TENANTS } from "./fixtures/data.ts";
-import type { DemoStore, HomologationRuntimeConfig, SqlExecutor, StoreKey } from "./model.ts";
+import type { DemoStore, HomologationMediaMode, HomologationRuntimeConfig, SqlExecutor, StoreKey } from "./model.ts";
 import { requireStoreDomain, stableUuid, tenantPlanIdFor } from "./model.ts";
 import { expectedAssets, requiredFeatureKeysForStore, validateRuntimeConfig } from "./plan.ts";
 
@@ -16,6 +16,10 @@ export interface PreflightResult {
   platformPlanId: string;
   templateIds: Record<StoreKey, string>;
   entitlementCounts: Record<StoreKey, number>;
+}
+
+export interface HomologationPreflightOptions {
+  mediaMode?: HomologationMediaMode;
 }
 
 async function verifyPlatformPlan(sql: SqlExecutor, slug: string): Promise<string> {
@@ -184,9 +188,16 @@ async function verifyAuthUsers(sql: SqlExecutor, config: HomologationRuntimeConf
   await verifyAuthMembershipScope(sql, expected);
 }
 
-export async function runHomologationPreflight(sql: SqlExecutor, config: HomologationRuntimeConfig): Promise<PreflightResult> {
-  validateRuntimeConfig(config);
-  if (expectedAssets().length !== Object.keys(config.resolvedAssets).length) throw new Error("preflight: manifesto de assets incompleto");
+export async function runHomologationPreflight(
+  sql: SqlExecutor,
+  config: HomologationRuntimeConfig,
+  options: HomologationPreflightOptions = {},
+): Promise<PreflightResult> {
+  const mediaMode = options.mediaMode ?? "required";
+  validateRuntimeConfig(config, { mediaMode });
+  if (mediaMode === "required" && expectedAssets().length !== Object.keys(config.resolvedAssets).length) {
+    throw new Error("preflight: manifesto de assets incompleto");
+  }
   const platformPlanId = await verifyPlatformPlan(sql, config.platformPlanSlug);
   const templateIds = {} as Record<StoreKey, string>;
   const entitlementCounts = {} as Record<StoreKey, number>;

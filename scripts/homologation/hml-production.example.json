@@ -1,45 +1,45 @@
 {
-  "platformPlanSlug": "REPLACE_WITH_EXPLICIT_HML_PLATFORM_PLAN_SLUG",
+  "platformPlanSlug": "hml-white-label",
   "platformBillingAmountCents": {
-    "aurora": null,
-    "nexo": null
+    "aurora": 19900,
+    "nexo": 19900
   },
   "storePlans": {
     "lume": {
       "templateCode": "monthly_entry",
       "slug": "plano-1-hml",
       "name": "Plano 1 HML",
-      "priceCents": null,
+      "priceCents": 2990,
       "billingInterval": "monthly",
-      "trialEnabled": false,
-      "trialDays": 0
+      "trialEnabled": true,
+      "trialDays": 7
     },
     "botanica": {
       "templateCode": "monthly_intermediate",
       "slug": "plano-2-hml",
       "name": "Plano 2 HML",
-      "priceCents": null,
+      "priceCents": 5990,
       "billingInterval": "monthly",
       "trialEnabled": true,
-      "trialDays": null
+      "trialDays": 14
     },
     "passo": {
       "templateCode": "monthly_complete",
       "slug": "plano-3-hml",
       "name": "Plano 3 HML",
-      "priceCents": null,
+      "priceCents": 9990,
       "billingInterval": "monthly",
-      "trialEnabled": false,
-      "trialDays": 0
+      "trialEnabled": true,
+      "trialDays": 14
     },
     "casa": {
       "templateCode": "complete",
       "slug": "completo-hml",
       "name": "Completo HML",
-      "priceCents": null,
+      "priceCents": 14990,
       "billingInterval": "monthly",
-      "trialEnabled": false,
-      "trialDays": 0
+      "trialEnabled": true,
+      "trialDays": 30
     }
   },
   "tenantOwners": {

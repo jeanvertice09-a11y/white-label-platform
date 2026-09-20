@@ -27,8 +27,10 @@
     "homologation:plan": "bun scripts/homologation/cli.ts plan",
     "homologation:assets": "bun scripts/homologation/cli.ts assets",
     "homologation:preflight": "bun scripts/homologation/cli.ts preflight",
+    "homologation:preflight:functional": "bun scripts/homologation/cli.ts preflight",
     "homologation:preflight:production": "bun scripts/homologation/cli.ts preflight-production",
     "homologation:apply": "bun scripts/homologation/cli.ts apply",
+    "homologation:apply:functional": "bun scripts/homologation/cli.ts apply-functional",
     "homologation:cleanup": "bun scripts/homologation/cli.ts cleanup"
   },
   "devDependencies": {
