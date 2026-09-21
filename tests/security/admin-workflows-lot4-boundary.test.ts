@@ -34,7 +34,7 @@ describe("admin workflows lot 4 security boundary", () => {
     expect(tasks).not.toContain("delete from public.merchant_tasks");
     expect(functions).toContain("from public.store_members");
     expect(functions).toContain("tenant_id=$1::uuid and store_id=$2::uuid and user_id=$3::uuid");
-    expect(functions.match(/await assertTaskAssignee\(current,/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(functions.match(/await assertTaskAssignee\(current\.sql, current\.scope,/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   test("telas não enviam tenantId, storeId ou role como autoridade", () => {
