@@ -1,0 +1,17 @@
+.control-nav a[data-active="true"] {
+  background: #eef1f5;
+  color: var(--console-text-strong);
+  box-shadow: inset 2px 0 0 var(--console-primary);
+}
+.control-nav a[data-active="true"] svg { color: var(--console-primary); }
+.control-nav a:first-child[data-active="true"] {
+  background: #eef1f5;
+  color: var(--console-text-strong);
+  box-shadow: inset 2px 0 0 var(--console-primary);
+}
+.control-content > .console-route-state {
+  min-height: min(520px, calc(100vh - 140px));
+}
+@media (max-width: 979px) {
+  .control-nav { padding-bottom: 24px; }
+}

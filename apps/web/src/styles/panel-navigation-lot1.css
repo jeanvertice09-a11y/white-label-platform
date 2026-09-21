@@ -22,17 +22,7 @@
 #finance,
 #purchases,
 #suppliers,
-#tasks,
-#overview,
-#tenant-billing,
-#merchant-management,
-#plan-management,
-#plan-resources,
-#branding,
-#domain-management,
-#gateway-management,
-#access,
-#audit {
+#tasks {
   scroll-margin-top: 24px;
 }
 
