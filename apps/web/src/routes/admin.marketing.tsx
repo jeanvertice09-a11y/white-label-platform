@@ -1,35 +1,27 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
-import { CampaignManager } from "../features/store-admin/campaign-manager.tsx";
-import { CouponManager } from "../features/store-admin/coupon-manager.tsx";
-import {
-  listMerchantCampaigns,
-  listMerchantCoupons,
-} from "../lib/server/operations-marketing.functions.ts";
 
 export const Route = createFileRoute("/admin/marketing")({
-  loader: async () => {
-    const [coupons, campaigns] = await Promise.all([
-      listMerchantCoupons(),
-      listMerchantCampaigns({
-        data: { page: 1, pageSize: 20 },
-      }),
-    ]);
-    return { coupons, campaigns };
-  },
-  component: MarketingPage,
+  component: MarketingRoutePage,
 });
 
-function MarketingPage(): React.JSX.Element {
-  const { coupons, campaigns } = Route.useLoaderData();
-  return (
-    <div className="k-page">
-      <PageHead
-        title="Marketing"
-        description="Crie promoções com cupons e prepare campanhas para sua base de clientes."
-      />
-      <div id="coupons"><CouponManager coupons={coupons} /></div>
-      <div id="campaigns"><CampaignManager initialPage={campaigns} /></div>
-    </div>
-  );
+function MarketingRoutePage(): React.JSX.Element {
+  return <div className="k-page">
+    <PageHead
+      title="Marketing"
+      description="Acesse cupons e campanhas em páginas próprias do painel."
+    />
+    <section className="k-workspace-section">
+      <div className="k-section-head">
+        <div>
+          <h2>Ferramentas de marketing</h2>
+          <p>Gerencie promoções e comunicação sem depender de âncoras na URL.</p>
+        </div>
+      </div>
+      <div className="k-actions">
+        <Link className="k-button" to="/admin/coupons">Cupons</Link>
+        <Link className="k-button" to="/admin/campaigns">Campanhas</Link>
+      </div>
+    </section>
+  </div>;
 }

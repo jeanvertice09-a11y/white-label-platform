@@ -19,14 +19,20 @@ describe("merchant operations entitlement boundary", () => {
     expect(server).toContain('if (data.purchaseId) features.push("purchases");');
   });
 
-  test("rota só carrega áreas habilitadas e preserva estoque como dependência da compra", () => {
-    const route = source("apps/web/src/routes/admin.operations.tsx");
-    const page = source("apps/web/src/features/store-admin/merchant-operations-page.tsx");
-    expect(route).toContain("const access = await getMerchantOperationsAccess();");
-    expect(route).toContain("access.suppliers ?");
-    expect(route).toContain("access.purchases ?");
-    expect(route).toContain("access.finance ?");
-    expect(route).toContain("access.purchases && access.inventory ?");
-    expect(page).toContain("inventoryEnabled={props.access.inventory}");
+  test("rotas reais carregam somente as áreas habilitadas e preservam dependências", () => {
+    const suppliers = source("apps/web/src/routes/admin.suppliers.tsx");
+    const purchases = source("apps/web/src/routes/admin.purchases.tsx");
+    const finance = source("apps/web/src/routes/admin.finance.tsx");
+    const tasks = source("apps/web/src/routes/admin.tasks.tsx");
+
+    expect(suppliers).toContain("const access = await getMerchantOperationsAccess();");
+    expect(suppliers).toContain("access.suppliers");
+    expect(purchases).toContain("if (!access.purchases)");
+    expect(purchases).toContain("access.suppliers");
+    expect(purchases).toContain("access.inventory");
+    expect(purchases).toContain("inventoryEnabled={data.access.inventory}");
+    expect(finance).toContain("if (!access.finance)");
+    expect(finance).toContain("listMerchantFinancialCategories()");
+    expect(tasks).toContain("access.tasks ? await listMerchantTasks() : []");
   });
 });

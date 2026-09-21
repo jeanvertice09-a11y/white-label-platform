@@ -6,7 +6,6 @@ import "../../styles/panel-navigation-lot1.css";
 
 interface NavItem {
   to: string;
-  hash?: string;
   label: string;
   exact: boolean;
   icon: DashboardIconName;
@@ -42,22 +41,22 @@ const navigation: readonly NavGroup[] = [
   {
     label: "Marketing",
     items: [
-      { to: "/admin/marketing", hash: "coupons", label: "Cupons", exact: true, icon: "marketing" },
-      { to: "/admin/marketing", hash: "campaigns", label: "Campanhas", exact: true, icon: "activity" },
+      { to: "/admin/coupons", label: "Cupons", exact: true, icon: "marketing" },
+      { to: "/admin/campaigns", label: "Campanhas", exact: true, icon: "activity" },
     ],
   },
   {
     label: "Financeiro",
     items: [
-      { to: "/admin/operations", hash: "finance", label: "Visão financeira", exact: true, icon: "revenue" },
-      { to: "/admin/operations", hash: "purchases", label: "Compras", exact: true, icon: "orders" },
-      { to: "/admin/operations", hash: "suppliers", label: "Fornecedores", exact: true, icon: "store" },
+      { to: "/admin/finance", label: "Visão financeira", exact: true, icon: "revenue" },
+      { to: "/admin/purchases", label: "Compras", exact: true, icon: "orders" },
+      { to: "/admin/suppliers", label: "Fornecedores", exact: true, icon: "store" },
     ],
   },
   {
     label: "Organização",
     items: [
-      { to: "/admin/operations", hash: "tasks", label: "Tarefas", exact: true, icon: "check" },
+      { to: "/admin/tasks", label: "Tarefas", exact: true, icon: "check" },
     ],
   },
   {
@@ -101,10 +100,9 @@ function AdminSidebar(props: Readonly<{ open: boolean; onClose: () => void }>): 
               <span className="k-admin__nav-label">{group.label}</span>
               {group.items.map((item) => (
                 <Link
-                  key={`${item.to}#${item.hash ?? ""}`}
+                  key={item.to}
                   to={item.to}
-                  hash={item.hash}
-                  activeOptions={{ exact: item.exact, includeHash: Boolean(item.hash) }}
+                  activeOptions={{ exact: item.exact }}
                   activeProps={{ "data-status": "active" }}
                   onClick={props.onClose}
                 >
