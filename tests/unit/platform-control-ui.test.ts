@@ -20,16 +20,27 @@ describe("platform/control UI boundary", () => {
     }
   });
 
-  test("control mantém todas as áreas operacionais dentro do mesmo shell", () => {
-    const raw = source("apps/web/src/routes/control.tsx");
-    const open = raw.indexOf("<ControlDashboard");
-    const close = raw.indexOf("</ControlDashboard>");
-    expect(open).toBeGreaterThanOrEqual(0);
-    expect(close).toBeGreaterThan(open);
-    for (const component of ["<ControlTenantBilling", "<ControlMerchantsManager", "<ControlPlanManager", "<ControlDomainManager", "<ControlGatewayManager"]) {
-      const position = raw.indexOf(component);
-      expect(position).toBeGreaterThan(open);
-      expect(position).toBeLessThan(close);
+  test("control mantém todas as áreas operacionais sob o mesmo shell com rotas reais", () => {
+    const parent = source("apps/web/src/routes/control.tsx");
+    const shell = source("apps/web/src/features/control/control-shell.tsx");
+    expect(parent).toContain("<ControlShell");
+    expect(shell).toContain("<Outlet />");
+    expect(parent).not.toContain("<ControlDashboard");
+
+    const routes = [
+      ["apps/web/src/routes/control.index.tsx", 'createFileRoute("/control/")'],
+      ["apps/web/src/routes/control.stores.tsx", 'createFileRoute("/control/stores")'],
+      ["apps/web/src/routes/control.billing.tsx", 'createFileRoute("/control/billing")'],
+      ["apps/web/src/routes/control.plans.tsx", 'createFileRoute("/control/plans")'],
+      ["apps/web/src/routes/control.branding.tsx", 'createFileRoute("/control/branding")'],
+      ["apps/web/src/routes/control.domains.tsx", 'createFileRoute("/control/domains")'],
+      ["apps/web/src/routes/control.payments.tsx", 'createFileRoute("/control/payments")'],
+      ["apps/web/src/routes/control.team.tsx", 'createFileRoute("/control/team")'],
+      ["apps/web/src/routes/control.audit.tsx", 'createFileRoute("/control/audit")'],
+    ] as const;
+
+    for (const [path, contract] of routes) {
+      expect(source(path)).toContain(contract);
     }
   });
 
@@ -46,7 +57,7 @@ describe("platform/control UI boundary", () => {
 
   test("shells possuem atalho de teclado para o conteúdo principal", () => {
     expect(source("apps/web/src/components/master/MasterShell.tsx")).toContain("console-skip-link");
-    expect(source("apps/web/src/features/control/control-dashboard.tsx")).toContain("console-skip-link");
+    expect(source("apps/web/src/features/control/control-shell.tsx")).toContain("console-skip-link");
   });
 
   test("rotas administrativas possuem pending estruturado e erro contextual com retry", () => {
