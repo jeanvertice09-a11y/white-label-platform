@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
+import { statusLabel } from "../lib/ui-labels.ts";
 import {
   getMerchantCatalogOverview,
   getMerchantStorefrontStatus,
@@ -42,9 +43,9 @@ function StorePreview(props: Readonly<{
   return (
     <aside className="k-store-configurator__preview">
       <header>
-        <span className="k-section-kicker">Prévia pública</span>
+        <span className="k-section-kicker">Loja pública</span>
         <h2>{domain?.hostname ?? "Domínio ainda não configurado"}</h2>
-        <p>Visão contextual da presença pública da loja.</p>
+        <p>Confira a situação atual da presença pública da sua loja.</p>
       </header>
       <div className="k-store-browser">
         <div className="k-store-browser__chrome">
@@ -53,8 +54,8 @@ function StorePreview(props: Readonly<{
         </div>
         <div className="k-store-browser__canvas">
           <span className="k-store-browser__label">Sua loja</span>
-          <strong>{domain?.previewUrl ? "Storefront disponível" : "Aguardando domínio ativo"}</strong>
-          <p>O storefront real da Fase 19 foi preservado; esta é apenas uma referência administrativa.</p>
+          <strong>{domain?.previewUrl ? "Loja pública disponível" : "Aguardando domínio ativo"}</strong>
+          <p>Esta prévia administrativa mostra apenas a disponibilidade da loja pública.</p>
         </div>
       </div>
       {domain?.previewUrl ? (
@@ -63,13 +64,13 @@ function StorePreview(props: Readonly<{
         </a>
       ) : (
         <p className="k-inline-state">
-          A prévia pública é liberada quando o domínio store_catalog estiver ativo e verificado.
+          A loja pública fica disponível quando o domínio do catálogo estiver ativo e verificado.
         </p>
       )}
       <dl className="k-detail-list">
-        <div><dt>Loja</dt><dd>{props.store.storeStatus}</dd></div>
-        <div><dt>White Label</dt><dd>{props.store.tenantStatus}</dd></div>
-        {domain ? <div><dt>Domínio</dt><dd>{domain.status}</dd></div> : null}
+        <div><dt>Loja</dt><dd>{statusLabel(props.store.storeStatus)}</dd></div>
+        <div><dt>White Label</dt><dd>{statusLabel(props.store.tenantStatus)}</dd></div>
+        {domain ? <div><dt>Domínio</dt><dd>{statusLabel(domain.status)}</dd></div> : null}
       </dl>
     </aside>
   );
@@ -81,7 +82,7 @@ function StorePage(): React.JSX.Element {
     <div className="k-page">
       <PageHead
         title="Minha loja"
-        description="Configure a experiência pública e acompanhe o resultado no mesmo espaço."
+        description="Configure a experiência pública e acompanhe a disponibilidade da sua loja."
       />
       <div className="k-store-configurator">
         <main className="k-store-configurator__settings">
@@ -95,8 +96,8 @@ function StorePage(): React.JSX.Element {
           <div className="k-config-list">
             <ConfigLink
               to="/admin/store/appearance"
-              title="Identidade e aparência"
-              description={`Layout ${data.catalog.settings.layout}, cores e tipografia.`}
+              title="Aparência"
+              description={`Layout ${data.catalog.settings.layout === "modern" ? "Moderno" : "Clássico"}, cores e tipografia.`}
             />
             <ConfigLink
               to="/admin/store/banners"
@@ -105,8 +106,8 @@ function StorePage(): React.JSX.Element {
             />
             <ConfigLink
               to="/admin/store/catalog"
-              title="Catálogo, checkout e SEO"
-              description={`${String(data.catalog.products.total)} produto(s), busca, categorias, WhatsApp e metadados.`}
+              title="Catálogo e checkout"
+              description={`${String(data.catalog.products.total)} produto(s), busca, categorias, WhatsApp e informações para buscadores.`}
             />
           </div>
         </main>
