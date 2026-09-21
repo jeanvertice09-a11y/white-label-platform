@@ -28,6 +28,13 @@ export interface VariantMutationInput {
   position: number;
 }
 
+export interface ProductImageMutationInput {
+  productId: string;
+  objectKey: string;
+  altText: string | null;
+  position: number;
+}
+
 export interface CategoryMutationInput {
   name: string;
   slug: string;

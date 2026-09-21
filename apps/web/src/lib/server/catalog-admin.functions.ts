@@ -16,21 +16,25 @@ const nullableText = z.string().trim().max(5000).nullable();
 const nullableShortText = z.string().trim().max(180).nullable();
 const cents = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const position = z.number().int().min(0).max(1_000_000);
+const uuid = z.string().uuid();
 
 const productSchema = z.object({
   name: z.string().trim().min(1).max(160), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(180),
-  description: nullableText, sku: nullableShortText, categoryId: z.string().uuid().nullable(), priceCents: cents,
+  description: nullableText, sku: nullableShortText, categoryId: uuid.nullable(), priceCents: cents,
   compareAtPriceCents: cents.nullable(), costCents: cents.nullable(), active: z.boolean(), trackInventory: z.boolean(),
   stockQuantity: z.number().int().min(0).max(2_147_483_647), position,
 });
 const variantSchema = z.object({
-  productId: z.string().uuid(), name: z.string().trim().min(1).max(160), sku: nullableShortText,
+  productId: uuid, name: z.string().trim().min(1).max(160), sku: nullableShortText,
   attributes: z.record(z.string().max(80), z.string().max(120)), priceCents: cents, compareAtPriceCents: cents.nullable(),
   costCents: cents.nullable(), active: z.boolean(), stockQuantity: z.number().int().min(0).max(2_147_483_647), position,
 });
+const productImageSchema = z.object({
+  productId: uuid, objectKey: z.string().trim().min(1).max(1024), altText: z.string().trim().max(240).nullable(), position,
+});
 const categorySchema = z.object({
   name: z.string().trim().min(1).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(180),
-  description: z.string().trim().max(1000).nullable(), parentId: z.string().uuid().nullable(), active: z.boolean(), position,
+  description: z.string().trim().max(1000).nullable(), parentId: uuid.nullable(), active: z.boolean(), position,
 });
 const bannerSchema = z.object({
   title: z.string().trim().max(160).nullable(), altText: z.string().trim().max(240).nullable(),
@@ -44,7 +48,8 @@ const settingsSchema = z.object({
   whatsappMessage: z.string().trim().min(1).max(500), checkoutMode: z.enum(["whatsapp", "online", "both"]),
   seoTitle: z.string().trim().max(120).nullable(), seoDescription: z.string().trim().max(320).nullable(),
 });
-const withId = <T extends z.ZodTypeAny>(schema: T) => z.object({ id: z.string().uuid(), input: schema });
+const withId = <T extends z.ZodTypeAny>(schema: T) => z.object({ id: uuid, input: schema });
+const imageId = z.object({ productId: uuid, id: uuid });
 
 function normalizeVariantInput(input: z.infer<typeof variantSchema>): VariantMutationInput {
   const attributes: Record<string, string> = {};
@@ -64,17 +69,11 @@ async function adminContext() {
 }
 
 async function auditConfiguration(
-  sql: ReturnType<typeof createAdminSqlExecutor>,
-  scope: CatalogScope,
-  userId: string | null,
-  action: string,
-  resourceType: string,
-  resourceId: string,
-  metadata: Record<string, unknown>,
+  sql: ReturnType<typeof createAdminSqlExecutor>, scope: CatalogScope, userId: string | null,
+  action: string, resourceType: string, resourceId: string, metadata: Record<string, unknown>,
 ): Promise<void> {
   await sql.query(
-    `insert into public.audit_logs
-      (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+    `insert into public.audit_logs (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
      values ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::jsonb) returning id`,
     [userId, scope.tenantId, scope.storeId, action, resourceType, resourceId, JSON.stringify(metadata)],
   );
@@ -95,6 +94,31 @@ export const createMerchantVariant = createServerFn({ method: "POST" }).validato
 export const updateMerchantVariant = createServerFn({ method: "POST" }).validator(withId(variantSchema)).handler(async ({ data }) => {
   const context = await adminContext(); await assertVariantMutationEntitlements(context.sql, context.scope);
   return context.repository.updateVariant(context.scope, data.id, normalizeVariantInput(data.input));
+});
+export const createMerchantProductImage = createServerFn({ method: "POST" }).validator(productImageSchema).handler(async ({ data }) => {
+  const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
+  const image = await context.repository.createProductImage(context.scope, data);
+  await auditConfiguration(context.sql, context.scope, context.userId, "product.image.associated", "product_image", image.id, { product_id: image.productId, position: image.position });
+  return image;
+});
+export const updateMerchantProductImage = createServerFn({ method: "POST" }).validator(withId(productImageSchema)).handler(async ({ data }) => {
+  const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
+  const image = await context.repository.updateProductImage(context.scope, data.id, data.input);
+  if (image) await auditConfiguration(context.sql, context.scope, context.userId, "product.image.updated", "product_image", image.id, { product_id: image.productId, position: image.position });
+  return image;
+});
+export const setMerchantPrimaryProductImage = createServerFn({ method: "POST" }).validator(imageId).handler(async ({ data }) => {
+  const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
+  const images = await context.repository.setPrimaryProductImage(context.scope, data.productId, data.id);
+  await auditConfiguration(context.sql, context.scope, context.userId, "product.image.primary", "product_image", data.id, { product_id: data.productId });
+  return images;
+});
+export const removeMerchantProductImage = createServerFn({ method: "POST" }).validator(imageId).handler(async ({ data }) => {
+  const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
+  const removed = await context.repository.removeProductImage(context.scope, data.productId, data.id);
+  if (!removed) throw new Error("Imagem não encontrada neste produto");
+  await auditConfiguration(context.sql, context.scope, context.userId, "product.image.detached", "product_image", data.id, { product_id: data.productId, physical_object_deleted: false });
+  return { removed: true };
 });
 export const createMerchantCategory = createServerFn({ method: "POST" }).validator(categorySchema).handler(async ({ data }) => {
   const context = await adminContext(); return context.repository.createCategory(context.scope, data);

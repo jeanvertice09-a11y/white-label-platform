@@ -2,6 +2,7 @@ import type {
   BannerMutationInput,
   CatalogSettingsMutationInput,
   CategoryMutationInput,
+  ProductImageMutationInput,
   ProductMutationInput,
   VariantMutationInput,
 } from "./admin-types.ts";
@@ -10,6 +11,7 @@ import type {
   CatalogSettings,
   Category,
   Product,
+  ProductImage,
   ProductVariant,
   StoreBanner,
 } from "./types.ts";
@@ -18,25 +20,14 @@ export interface CatalogAdminRepository {
   createProduct(scope: CatalogScope, input: ProductMutationInput): Promise<Product>;
   updateProduct(scope: CatalogScope, id: string, input: ProductMutationInput): Promise<Product | null>;
   createVariant(scope: CatalogScope, input: VariantMutationInput): Promise<ProductVariant>;
-  updateVariant(
-    scope: CatalogScope,
-    id: string,
-    input: VariantMutationInput,
-  ): Promise<ProductVariant | null>;
+  updateVariant(scope: CatalogScope, id: string, input: VariantMutationInput): Promise<ProductVariant | null>;
+  createProductImage(scope: CatalogScope, input: ProductImageMutationInput): Promise<ProductImage>;
+  updateProductImage(scope: CatalogScope, id: string, input: ProductImageMutationInput): Promise<ProductImage | null>;
+  setPrimaryProductImage(scope: CatalogScope, productId: string, id: string): Promise<ProductImage[]>;
+  removeProductImage(scope: CatalogScope, productId: string, id: string): Promise<boolean>;
   createCategory(scope: CatalogScope, input: CategoryMutationInput): Promise<Category>;
-  updateCategory(
-    scope: CatalogScope,
-    id: string,
-    input: CategoryMutationInput,
-  ): Promise<Category | null>;
+  updateCategory(scope: CatalogScope, id: string, input: CategoryMutationInput): Promise<Category | null>;
   createBanner(scope: CatalogScope, input: BannerMutationInput): Promise<StoreBanner>;
-  updateBanner(
-    scope: CatalogScope,
-    id: string,
-    input: BannerMutationInput,
-  ): Promise<StoreBanner | null>;
-  updateSettings(
-    scope: CatalogScope,
-    input: CatalogSettingsMutationInput,
-  ): Promise<CatalogSettings>;
+  updateBanner(scope: CatalogScope, id: string, input: BannerMutationInput): Promise<StoreBanner | null>;
+  updateSettings(scope: CatalogScope, input: CatalogSettingsMutationInput): Promise<CatalogSettings>;
 }
