@@ -31,6 +31,14 @@ export { CatalogPricingError, resolvePurchasableSelection } from "./pricing.ts";
 export type { PurchasableSelection } from "./pricing.ts";
 export { createCart, addCartItem, setCartItemQuantity, removeCartItem, clearCart, cartTotalCents } from "./cart.ts";
 export type { CartItem, CartState } from "./cart.ts";
+export { cartStorageKey, serializeCart, restoreCart } from "./cart-storage.ts";
+export {
+  DEFAULT_CATALOG_BEHAVIOR,
+  getCatalogBehavior,
+  setCatalogBehaviorFlag,
+  isCatalogCheckoutEnabled,
+} from "./behavior.ts";
+export type { CatalogBehavior, CatalogBehaviorFlag } from "./behavior.ts";
 export { buildWhatsappMessage, buildWhatsappCheckoutUrl } from "./whatsapp.ts";
 export { assertCatalogSettings, assertProductInput, assertVariantInput, assertCategoryInput } from "./validation.ts";
 export { PUBLIC_MEDIA_ORIGIN, getCatalogPublicMediaUrl } from "./storage.ts";

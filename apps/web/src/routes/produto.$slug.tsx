@@ -2,10 +2,12 @@ import { useState } from "react";
 import type { CSSProperties } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { CatalogSettings, Category, Product, StorefrontStore } from "@white-label/catalog";
-import { addCartItem, createCart } from "@white-label/catalog";
+import { addCartItem, getCatalogBehavior } from "@white-label/catalog";
 import { CartPanel } from "../features/storefront/cart-panel.tsx";
+import { ProductCard } from "../features/storefront/product-card.tsx";
 import { ProductDetail } from "../features/storefront/product-detail.tsx";
 import { storefrontTheme } from "../features/storefront/storefront-theme.ts";
+import { useStorefrontCart } from "../features/storefront/use-storefront-cart.ts";
 import { getPublicProductPage } from "../lib/server/catalog.functions.ts";
 
 interface ProductPageData {
@@ -13,6 +15,7 @@ interface ProductPageData {
   settings: CatalogSettings;
   categories: Category[];
   product: Product;
+  relatedProducts: Product[];
   canonicalUrl: string;
 }
 
@@ -21,10 +24,12 @@ export const Route = createFileRoute("/produto/$slug")({
   loader: ({ params }) => getPublicProductPage({ data: { slug: (params as unknown as { slug: string }).slug } }),
   head: ({ loaderData }) => {
     const data = loaderData as unknown as ProductPageData | undefined;
+    const behavior = data ? getCatalogBehavior(data.settings) : null;
+    const fallbackDescription = data?.settings.seoDescription ?? `Produto de ${data?.store.name ?? "loja"}`;
     return {
       meta: [
         { title: data ? `${data.product.name} · ${data.store.name}` : "Produto" },
-        { name: "description", content: data?.product.description ?? `Produto de ${data?.store.name ?? "loja"}` },
+        { name: "description", content: behavior?.showDescription ? data?.product.description ?? fallbackDescription : fallbackDescription },
       ],
       links: data?.canonicalUrl ? [{ rel: "canonical", href: data.canonicalUrl }] : [],
     };
@@ -36,17 +41,22 @@ export const Route = createFileRoute("/produto/$slug")({
 
 function PublicProductPage(): React.JSX.Element {
   const data = Route.useLoaderData() as unknown as ProductPageData;
-  const [cart, setCart] = useState(() => createCart(data.store));
+  const behavior = getCatalogBehavior(data.settings);
+  const cartEnabled = behavior.cartEnabled && behavior.showBuyButton && !behavior.catalogOnly;
+  const [cart, setCart] = useStorefrontCart(data.store, cartEnabled, behavior.persistCart, behavior.quantityEnabled);
   const [cartOpen, setCartOpen] = useState(false);
   const category = data.categories.find((item) => item.id === data.product.categoryId);
   const theme = {
-    "--sf-primary": data.settings.primaryColor,
-    "--sf-accent": data.settings.accentColor,
+    "--sf-primary": data.settings.primaryColor, "--sf-accent": data.settings.accentColor,
     "--sf-bg": data.settings.backgroundColor,
     "--sf-font": data.settings.fontFamily === "serif" ? "Georgia,serif" : "Inter,system-ui,sans-serif",
   } as CSSProperties;
-  const whatsappEnabled = data.settings.checkoutMode !== "online" && Boolean(data.settings.whatsappPhone);
+  const whatsappEnabled = behavior.showWhatsapp && cartEnabled && data.settings.checkoutMode !== "online" && Boolean(data.settings.whatsappPhone);
   const itemCount = cart.items.reduce((total, item) => total + item.quantity, 0);
-
-  return <div className="sf" style={theme}><style>{storefrontTheme}</style><header className="sf__header"><div className="sf__header-inner"><a className="sf__logo" href="/">{data.store.name}</a><nav className="sf__nav"><a href="/">Produtos</a></nav><button className="sf__cart-button" type="button" onClick={() => { setCartOpen(true); }}><span>Carrinho</span><strong>{itemCount}</strong></button></div></header><ProductDetail product={data.product} categoryName={category?.name ?? null} showPrice={data.settings.showPrice} showStock={data.settings.showStock} mode="page" onAdd={(product, variantId, quantity) => { setCart((current) => addCartItem(current, product, variantId, quantity)); setCartOpen(true); }} />{cartOpen ? <CartPanel cart={cart} whatsappEnabled={whatsappEnabled} onChange={setCart} onClose={() => { setCartOpen(false); }} /> : null}</div>;
+  return <div className="sf" style={theme}><style>{storefrontTheme}</style>
+    <header className="sf__header"><div className="sf__header-inner"><a className="sf__logo" href="/">{data.store.name}</a><nav className="sf__nav"><a href="/">Produtos</a></nav>{cartEnabled ? <button className="sf__cart-button" type="button" onClick={() => { setCartOpen(true); }}><span>Carrinho</span><strong>{itemCount}</strong></button> : null}</div></header>
+    <main className="sf__main"><ProductDetail product={data.product} categoryName={category?.name ?? null} showPrice={data.settings.showPrice} showStock={data.settings.showStock} showDescription={behavior.showDescription} showSku={behavior.showSku} showBuyButton={behavior.showBuyButton && behavior.cartEnabled} quantityEnabled={behavior.quantityEnabled} catalogOnly={behavior.catalogOnly} showShare={behavior.showShare} shareUrl={data.canonicalUrl} mode="page" onAdd={(product, variantId, quantity) => { if (!cartEnabled) return; setCart((current) => addCartItem(current, product, variantId, quantity)); setCartOpen(true); }} />
+      {behavior.showRelated && data.relatedProducts.length ? <section className="sf__products" aria-labelledby="sf-related-title"><div className="sf__section-head"><div><span className="sf__eyebrow">Você também pode gostar</span><h2 id="sf-related-title">Produtos relacionados</h2></div></div><div className="sf__grid">{data.relatedProducts.map((product) => <ProductCard key={product.id} product={product} categoryName={category?.name ?? null} showPrice={data.settings.showPrice} />)}</div></section> : null}
+    </main>{cartOpen && cartEnabled ? <CartPanel cart={cart} whatsappEnabled={whatsappEnabled} showPrice={data.settings.showPrice} quantityEnabled={behavior.quantityEnabled} onChange={setCart} onClose={() => { setCartOpen(false); }} /> : null}
+  </div>;
 }

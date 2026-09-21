@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { CatalogPage, Category, StorefrontSnapshot } from "@white-label/catalog";
-import { createCart, getCatalogPublicMediaUrl } from "@white-label/catalog";
+import { getCatalogBehavior, getCatalogPublicMediaUrl } from "@white-label/catalog";
 import { listPublicCatalogProducts } from "../../lib/server/catalog.functions.ts";
 import { storefrontCategoryPath } from "../../lib/storefront-paths.ts";
 import { CartPanel } from "./cart-panel.tsx";
 import { ProductCard } from "./product-card.tsx";
+import { ShareActions } from "./share-actions.tsx";
 import { storefrontTheme } from "./storefront-theme.ts";
+import { useStorefrontCart } from "./use-storefront-cart.ts";
 
 type Sort = "position" | "name" | "price_asc" | "price_desc";
 
@@ -19,35 +21,24 @@ function categoryName(categories: Category[], categoryId: string | null): string
 }
 
 function useListing(data: StorefrontSnapshot, initialCategoryId: string) {
-  const [search, setSearch] = useState("");
-  const [categoryId] = useState(initialCategoryId);
-  const [sort, setSort] = useState<Sort>("position");
-  const [page, setPage] = useState(data.products);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const firstLoad = useRef(true);
-
+  const [search, setSearch] = useState(""); const [categoryId] = useState(initialCategoryId); const [sort, setSort] = useState<Sort>("position");
+  const [page, setPage] = useState(data.products); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const firstLoad = useRef(true);
   useEffect(() => {
     if (firstLoad.current) { firstLoad.current = false; return; }
     let active = true;
     const timer = window.setTimeout(() => {
       setLoading(true); setError("");
-      void listPublicCatalogProducts({ data: {
-        page: page.page, pageSize: 12, search: search.trim() || undefined,
-        categoryId: categoryId || undefined, sort,
-      } }).then((next) => { if (active) setPage(next); })
-        .catch(() => { if (active) setError("Tente novamente."); })
-        .finally(() => { if (active) setLoading(false); });
+      void listPublicCatalogProducts({ data: { page: page.page, pageSize: 12, search: search.trim() || undefined, categoryId: categoryId || undefined, sort } })
+        .then((next) => { if (active) setPage(next); }).catch(() => { if (active) setError("Tente novamente."); }).finally(() => { if (active) setLoading(false); });
     }, search ? 250 : 0);
     return () => { active = false; window.clearTimeout(timer); };
   }, [search, categoryId, sort, page.page]);
-
   function reset(update: () => void): void { setPage((current) => ({ ...current, page: 1 })); update(); }
   return { search, categoryId, sort, page, loading, error, setPage, setSearch, setSort, reset };
 }
 
-function StoreHeader(props: Readonly<{ data: StorefrontSnapshot; itemCount: number; onCart: () => void }>): React.JSX.Element {
-  return <header className="sf__header"><div className="sf__header-inner"><a className="sf__logo" href="/">{props.data.store.name}</a><nav className="sf__nav" aria-label="Navegação da loja">{props.data.settings.showCategories ? <a href="#categorias">Categorias</a> : null}<a href="#produtos">Produtos</a></nav><button className="sf__cart-button" type="button" onClick={props.onCart} aria-label={`Abrir carrinho com ${String(props.itemCount)} item(ns)`}><span>Carrinho</span><strong>{props.itemCount}</strong></button></div></header>;
+function StoreHeader(props: Readonly<{ data: StorefrontSnapshot; itemCount: number; cartEnabled: boolean; onCart: () => void }>): React.JSX.Element {
+  return <header className="sf__header"><div className="sf__header-inner"><a className="sf__logo" href="/">{props.data.store.name}</a><nav className="sf__nav" aria-label="Navegação da loja">{props.data.settings.showCategories ? <a href="#categorias">Categorias</a> : null}<a href="#produtos">Produtos</a></nav>{props.cartEnabled ? <button className="sf__cart-button" type="button" onClick={props.onCart} aria-label={`Abrir carrinho com ${String(props.itemCount)} item(ns)`}><span>Carrinho</span><strong>{props.itemCount}</strong></button> : null}</div></header>;
 }
 
 function Categories(props: Readonly<{ categories: Category[]; activeId: string }>): React.JSX.Element | null {
@@ -73,13 +64,10 @@ function Products(props: Readonly<{ data: StorefrontSnapshot; page: CatalogPage;
 }
 
 export function StorefrontView(props: Readonly<{ data: StorefrontSnapshot; initialCategoryId?: string; pageTitle?: string }>): React.JSX.Element {
-  const { data } = props;
-  const listing = useListing(data, props.initialCategoryId ?? "");
-  const [cart, setCart] = useState(() => createCart(data.store));
-  const [cartOpen, setCartOpen] = useState(false);
+  const { data } = props; const listing = useListing(data, props.initialCategoryId ?? ""); const behavior = getCatalogBehavior(data.settings);
+  const cartEnabled = behavior.cartEnabled && behavior.showBuyButton && !behavior.catalogOnly;
+  const [cart, setCart] = useStorefrontCart(data.store, cartEnabled, behavior.persistCart, behavior.quantityEnabled); const [cartOpen, setCartOpen] = useState(false);
   const theme = { "--sf-primary":data.settings.primaryColor,"--sf-accent":data.settings.accentColor,"--sf-bg":data.settings.backgroundColor,"--sf-font":data.settings.fontFamily === "serif" ? "Georgia,serif" : "Inter,system-ui,sans-serif" } as CSSProperties;
-  const banner = data.banners.at(0);
-  const whatsappEnabled = data.settings.checkoutMode !== "online" && Boolean(data.settings.whatsappPhone);
-  const itemCount = cart.items.reduce((total, item) => total + item.quantity, 0);
-  return <div className={`sf sf--${data.settings.layout}`} style={theme}><style>{storefrontTheme}</style><StoreHeader data={data} itemCount={itemCount} onCart={() => { setCartOpen(true); }} /><main className="sf__main">{banner ? <a className="sf__banner" href={banner.href ?? undefined}><img src={getCatalogPublicMediaUrl(banner,banner.imageObjectKey)} alt={banner.altText ?? banner.title ?? data.store.name} /></a> : null}<section className="sf__intro"><span className="sf__eyebrow">{props.pageTitle ? "Categoria" : "Loja online"}</span><h1>{props.pageTitle ?? data.store.name}</h1>{!props.pageTitle && data.settings.labels["subtitle"] ? <p>{data.settings.labels["subtitle"]}</p> : null}</section>{data.settings.showCategories ? <Categories categories={data.categories} activeId={listing.categoryId} /> : null}<section className="sf__products" id="produtos" aria-labelledby="sf-products-title"><div className="sf__section-head"><div><span className="sf__eyebrow">Catálogo</span><h2 id="sf-products-title">{props.pageTitle ? `Produtos em ${props.pageTitle}` : "Produtos"}</h2><p>{listing.page.total} item(ns) encontrado(s)</p></div></div><Toolbar data={data} search={listing.search} sort={listing.sort} onSearch={(value) => { listing.reset(() => { listing.setSearch(value); }); }} onSort={(value) => { listing.reset(() => { listing.setSort(value); }); }} /><Products data={data} page={listing.page} loading={listing.loading} error={listing.error} /><Pagination page={listing.page} loading={listing.loading} onPage={(next) => { listing.setPage((current) => ({ ...current, page: next })); }} /></section></main><footer className="sf__footer"><strong>{data.store.name}</strong><span>Catálogo e pedidos online</span></footer>{cartOpen ? <CartPanel cart={cart} whatsappEnabled={whatsappEnabled} onChange={setCart} onClose={() => { setCartOpen(false); }} /> : null}</div>;
+  const banner = data.banners.at(0); const whatsappEnabled = behavior.showWhatsapp && cartEnabled && data.settings.checkoutMode !== "online" && Boolean(data.settings.whatsappPhone); const itemCount = cart.items.reduce((total, item) => total + item.quantity, 0);
+  return <div className={`sf sf--${data.settings.layout}`} style={theme}><style>{storefrontTheme}</style><StoreHeader data={data} itemCount={itemCount} cartEnabled={cartEnabled} onCart={() => { setCartOpen(true); }} /><main className="sf__main">{banner ? <a className="sf__banner" href={banner.href ?? undefined}><img src={getCatalogPublicMediaUrl(banner,banner.imageObjectKey)} alt={banner.altText ?? banner.title ?? data.store.name} /></a> : null}<section className="sf__intro"><span className="sf__eyebrow">{props.pageTitle ? "Categoria" : "Loja online"}</span><h1>{props.pageTitle ?? data.store.name}</h1>{!props.pageTitle && data.settings.labels["subtitle"] ? <p>{data.settings.labels["subtitle"]}</p> : null}{behavior.showShare ? <ShareActions title={props.pageTitle ?? data.store.name} /> : null}{behavior.catalogOnly ? <p className="sf__meta">Catálogo em modo vitrine.</p> : null}</section>{data.settings.showCategories ? <Categories categories={data.categories} activeId={listing.categoryId} /> : null}<section className="sf__products" id="produtos" aria-labelledby="sf-products-title"><div className="sf__section-head"><div><span className="sf__eyebrow">Catálogo</span><h2 id="sf-products-title">{props.pageTitle ? `Produtos em ${props.pageTitle}` : "Produtos"}</h2><p>{listing.page.total} item(ns) encontrado(s)</p></div></div><Toolbar data={data} search={listing.search} sort={listing.sort} onSearch={(value) => { listing.reset(() => { listing.setSearch(value); }); }} onSort={(value) => { listing.reset(() => { listing.setSort(value); }); }} /><Products data={data} page={listing.page} loading={listing.loading} error={listing.error} /><Pagination page={listing.page} loading={listing.loading} onPage={(next) => { listing.setPage((current) => ({ ...current, page: next })); }} /></section></main><footer className="sf__footer"><strong>{data.store.name}</strong><span>Catálogo e pedidos online</span></footer>{cartOpen && cartEnabled ? <CartPanel cart={cart} whatsappEnabled={whatsappEnabled} showPrice={data.settings.showPrice} quantityEnabled={behavior.quantityEnabled} onChange={setCart} onClose={() => { setCartOpen(false); }} /> : null}</div>;
 }
