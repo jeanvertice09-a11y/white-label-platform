@@ -1,5 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { assertAllowedCustomHostname, normalizeDomainRegistrationInput, type DomainType } from "@white-label/domains";
+import {
+  assertAllowedCustomHostname,
+  isManagedKataluuHostname,
+  normalizeDomainRegistrationInput,
+  type DomainType,
+  type ManagedDomainProvisioner,
+} from "@white-label/domains";
 import type { ControlSql } from "./control-merchants.shared.server.ts";
 import { assertStoreCustomDomainEntitlement } from "./domain-entitlements.server.ts";
 import type { ControlDomainInput, ControlDomainUpdateInput } from "./control-domains.types.ts";
@@ -42,16 +48,29 @@ async function assertHostnameFree(
   if (rows[0]?.["taken"] === true) throw new Error("Hostname já está cadastrado.");
 }
 
+async function ensureManagedHostname(
+  hostname: string,
+  provisioner: ManagedDomainProvisioner | null,
+): Promise<void> {
+  if (!isManagedKataluuHostname(hostname)) return;
+  if (!provisioner) {
+    throw new Error("Provisionamento de domínio Kataluu indisponível no servidor.");
+  }
+  await provisioner.ensureProjectDomain(hostname);
+}
+
 export async function createControlDomain(
   sql: ControlSql,
   tenantId: string,
   actorUserId: string,
   input: ControlDomainInput,
+  provisioner: ManagedDomainProvisioner | null = null,
 ) {
   assertScope(input.type, input.storeId);
   await assertCommercialDomainAccess(sql, tenantId, input.type, input.storeId);
   const hostname = assertAllowedCustomHostname(normalizeDomainRegistrationInput(input.hostname));
   await assertHostnameFree(sql, hostname, null);
+  await ensureManagedHostname(hostname, provisioner);
   const token = challengeToken();
   const rows = await sql.query(
     `with target as (
@@ -79,11 +98,13 @@ export async function updateControlDomain(
   tenantId: string,
   actorUserId: string,
   input: ControlDomainUpdateInput,
+  provisioner: ManagedDomainProvisioner | null = null,
 ): Promise<{ ok: true }> {
   assertScope(input.type, input.storeId);
   await assertCommercialDomainAccess(sql, tenantId, input.type, input.storeId);
   const hostname = assertAllowedCustomHostname(normalizeDomainRegistrationInput(input.hostname));
   await assertHostnameFree(sql, hostname, input.domainId);
+  await ensureManagedHostname(hostname, provisioner);
   const token = challengeToken();
   const rows = await sql.query(
     `with valid_scope as (
@@ -114,19 +135,22 @@ export async function setControlDomainStatus(
   actorUserId: string,
   domainId: string,
   status: "pending" | "suspended",
+  provisioner: ManagedDomainProvisioner | null = null,
 ) {
   if (status === "pending") {
     const domain = await sql.query(
-      `select store_id::text,type from public.domains
+      `select store_id::text,type,hostname from public.domains
        where tenant_id=$1::uuid and id=$2::uuid limit 1`,
       [tenantId, domainId],
     );
     const row = domain.at(0);
     const storeId = row && typeof row["store_id"] === "string" ? row["store_id"] : null;
     const type = row ? row["type"] : undefined;
+    const hostname = row && typeof row["hostname"] === "string" ? row["hostname"] : null;
     if (storeId && (type === "store_admin" || type === "store_catalog")) {
       await assertStoreCustomDomainEntitlement(sql, tenantId, storeId);
     }
+    if (hostname) await ensureManagedHostname(hostname, provisioner);
   }
   const token = challengeToken();
   const rows = await sql.query(

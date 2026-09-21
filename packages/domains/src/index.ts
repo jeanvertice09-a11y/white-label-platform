@@ -7,3 +7,13 @@ export { DomainResolver, InMemoryDomainCache, UNTRUSTED_TENANT_HEADERS } from ".
 export type { DomainRecord, DomainStore, DomainCache, DomainStatus, DomainType, ResolvedDomain } from "./resolver.ts";
 export { PostgresDomainStore } from "./postgres.ts";
 export type { SqlExecutor } from "./postgres.ts";
+export {
+  KATALUU_MANAGED_DOMAIN_ROOT,
+  isManagedKataluuHostname,
+  normalizeManagedKataluuHostname,
+} from "./provisioning.ts";
+export type {
+  EnsureProjectDomainResult,
+  ManagedDomainProvisioner,
+  ProjectDomainState,
+} from "./provisioning.ts";
