@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { ProductForm } from "../features/store-admin/product-form.tsx";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
+import { ProductImageManager } from "../features/store-admin/product-image-manager.tsx";
 import { VariantEditor } from "../features/store-admin/variant-editor.tsx";
-import {
-  getMerchantProduct,
-  listMerchantCategories,
-} from "../lib/server/catalog.functions.ts";
+import { getMerchantProduct, listMerchantCategories } from "../lib/server/catalog.functions.ts";
 
 export const Route = createFileRoute("/admin/products/$id")({
   loader: async ({ params }) => {
@@ -16,6 +15,8 @@ export const Route = createFileRoute("/admin/products/$id")({
     if (!product) throw new Error("Produto não encontrado nesta loja");
     return { product, categories };
   },
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
   component: EditProductPage,
 });
 
@@ -30,20 +31,7 @@ function EditProductPage(): React.JSX.Element {
       />
       <ProductForm product={data.product} categories={data.categories} />
       <VariantEditor productId={data.product.id} variants={data.product.variants} />
-      <section className="k-workspace-section">
-        <header className="k-section-head">
-          <div>
-            <span className="k-section-kicker">Mídia</span>
-            <h2>Imagens do produto</h2>
-            <p>
-              {data.product.images.length
-                ? `${String(data.product.images.length)} imagem(ns) associada(s) e disponível(is) no catálogo.`
-                : "Nenhuma imagem associada. O upload/storage administrativo completo permanece fora desta fase."}
-            </p>
-          </div>
-          <span className="k-section-count">{data.product.images.length} imagem(ns)</span>
-        </header>
-      </section>
+      <ProductImageManager product={data.product} />
     </div>
   );
 }

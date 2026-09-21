@@ -16,6 +16,7 @@ export type {
 export type {
   ProductMutationInput,
   VariantMutationInput,
+  ProductImageMutationInput,
   CategoryMutationInput,
   BannerMutationInput,
   CatalogSettingsMutationInput,
@@ -26,33 +27,14 @@ export {
   assertSameCatalogScope,
   assertCatalogQuery,
 } from "./scope.ts";
-export {
-  CatalogPricingError,
-  resolvePurchasableSelection,
-} from "./pricing.ts";
+export { CatalogPricingError, resolvePurchasableSelection } from "./pricing.ts";
 export type { PurchasableSelection } from "./pricing.ts";
-export {
-  createCart,
-  addCartItem,
-  setCartItemQuantity,
-  removeCartItem,
-  clearCart,
-  cartTotalCents,
-} from "./cart.ts";
+export { createCart, addCartItem, setCartItemQuantity, removeCartItem, clearCart, cartTotalCents } from "./cart.ts";
 export type { CartItem, CartState } from "./cart.ts";
 export { buildWhatsappMessage, buildWhatsappCheckoutUrl } from "./whatsapp.ts";
-export {
-  assertCatalogSettings,
-  assertProductInput,
-  assertVariantInput,
-  assertCategoryInput,
-} from "./validation.ts";
+export { assertCatalogSettings, assertProductInput, assertVariantInput, assertCategoryInput } from "./validation.ts";
 export { PUBLIC_MEDIA_ORIGIN, getCatalogPublicMediaUrl } from "./storage.ts";
-export {
-  StorefrontUnavailableError,
-  isStorefrontAvailable,
-  assertStorefrontAvailable,
-} from "./storefront.ts";
+export { StorefrontUnavailableError, isStorefrontAvailable, assertStorefrontAvailable } from "./storefront.ts";
 export { defaultCatalogSettings } from "./defaults.ts";
 export { createCatalogReadRepository } from "./postgres-read.ts";
 export { createCatalogAdminRepository } from "./postgres-admin.ts";

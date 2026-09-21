@@ -8,6 +8,7 @@ import type {
   MerchantScope,
   MerchantTask,
   MerchantTaskInput,
+  MerchantTaskStatus,
   Page,
   PageQuery,
   Purchase,
@@ -24,6 +25,7 @@ export interface MerchantOpsSqlExecutor {
 export interface MerchantOperationsRepository {
   listSuppliers(scope: MerchantScope, query: PageQuery): Promise<Page<Supplier>>;
   createSupplier(scope: MerchantScope, input: SupplierInput): Promise<Supplier>;
+  updateSupplier(scope: MerchantScope, supplierId: string, input: SupplierInput): Promise<Supplier>;
   updateSupplierStatus(scope: MerchantScope, supplierId: string, status: SupplierStatus): Promise<Supplier>;
   listPurchases(scope: MerchantScope, query: PageQuery): Promise<Page<Purchase>>;
   createPurchase(scope: MerchantScope, input: PurchaseInput, actorId: string): Promise<Purchase>;
@@ -38,5 +40,7 @@ export interface MerchantOperationsRepository {
   summarizeFinance(scope: MerchantScope, from: string, to: string): Promise<FinanceSummary>;
   listTasks(scope: MerchantScope): Promise<MerchantTask[]>;
   createTask(scope: MerchantScope, input: MerchantTaskInput, actorId: string): Promise<MerchantTask>;
+  updateTask(scope: MerchantScope, taskId: string, input: MerchantTaskInput): Promise<MerchantTask>;
+  setTaskStatus(scope: MerchantScope, taskId: string, status: MerchantTaskStatus): Promise<MerchantTask>;
   completeTask(scope: MerchantScope, taskId: string): Promise<MerchantTask>;
 }
