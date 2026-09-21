@@ -9,10 +9,10 @@ describe("operations dashboard current plan", () => {
     let queryText = "";
     let queryParams: unknown[] = [];
     const plan = await getCurrentStorePlan({
-      async query(sql, params) {
+      query(sql, params) {
         queryText = sql;
         queryParams = params;
-        return [{ name: "Plano 1", slug: "plano-1", status: "trialing" }];
+        return Promise.resolve([{ name: "Plano 1", slug: "plano-1", status: "trialing" }]);
       },
     }, TENANT_ID, STORE_ID);
 
@@ -26,7 +26,7 @@ describe("operations dashboard current plan", () => {
 
   test("returns null when the store has no subscription", async () => {
     const plan = await getCurrentStorePlan({
-      async query() { return []; },
+      query() { return Promise.resolve([]); },
     }, TENANT_ID, STORE_ID);
 
     expect(plan).toBeNull();
