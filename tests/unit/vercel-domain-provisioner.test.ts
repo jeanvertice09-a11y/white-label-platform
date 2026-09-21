@@ -21,12 +21,17 @@ function response(status: number, body: unknown, headers?: Record<string, string
 
 function sequenceFetch(items: Array<Response | Error>) {
   const calls: FetchCall[] = [];
-  const fn = (async (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
-    calls.push({ url: String(input), method: init?.method ?? "GET" });
+  const fn = ((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+    const url = typeof input === "string"
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+    calls.push({ url, method: init?.method ?? "GET" });
     const next = items.shift();
-    if (!next) throw new Error("mock sem resposta");
-    if (next instanceof Error) throw next;
-    return next;
+    if (!next) return Promise.reject(new Error("mock sem resposta"));
+    if (next instanceof Error) return Promise.reject(next);
+    return Promise.resolve(next);
   }) as typeof fetch;
   return { fn, calls };
 }

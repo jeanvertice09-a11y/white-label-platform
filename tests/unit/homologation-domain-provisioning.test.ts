@@ -14,37 +14,37 @@ describe("homologation Vercel-domain preflight", () => {
     const byHostname = new Map(expected.map((item) => [item.hostname, item]));
     const sqlCalls: string[] = [];
     const sql: SqlExecutor = {
-      async query(statement, params = []) {
+      query(statement, params = []) {
         sqlCalls.push(statement);
         const hostname = String(params[0]);
         const item = byHostname.get(hostname);
-        if (!item) return [];
-        return [{
+        if (!item) return Promise.resolve([]);
+        return Promise.resolve([{
           tenant_id: item.tenantId,
           store_id: item.storeId,
           type: item.type,
           status: "active",
           verified_at: "2026-09-19T12:00:00.000Z",
-        }];
+        }]);
       },
     };
 
     let reads = 0;
     let writes = 0;
     const provisioner: ManagedDomainProvisioner = {
-      async getProjectDomainState(hostname) {
+      getProjectDomainState(hostname) {
         reads += 1;
-        return { hostname, provisioned: hostname.includes("lume"), verified: true, projectId: "prj_test" };
+        return Promise.resolve({ hostname, provisioned: hostname.includes("lume"), verified: true, projectId: "prj_test" });
       },
-      async ensureProjectDomain(hostname) {
+      ensureProjectDomain(hostname) {
         writes += 1;
-        return {
+        return Promise.resolve({
           hostname,
           provisioned: true,
           verified: true,
           projectId: "prj_test",
           action: "created",
-        };
+        });
       },
     };
 

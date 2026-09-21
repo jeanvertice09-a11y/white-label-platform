@@ -132,7 +132,9 @@ export class VercelProjectDomainProvisioner implements ManagedDomainProvisioner 
     const url = new URL(`${VERCEL_API_ORIGIN}${path}`);
     if (teamId) url.searchParams.set("teamId", teamId);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timer = setTimeout(() => {
+      controller.abort();
+    }, this.timeoutMs);
     try {
       return await this.fetchImpl(url, {
         method,

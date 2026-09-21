@@ -9,7 +9,7 @@ import {
   updateControlDomain,
 } from "../../apps/web/src/lib/server/control-domains.write.server.ts";
 import type { Harness } from "./harness.ts";
-import { setupDatabase } from "./harness.ts";
+import { expectReject, setupDatabase } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
 
 let h: Harness;
@@ -73,7 +73,7 @@ describe("managed Kataluu domain provisioning boundary", () => {
       { hostname: "foreign-before.example.test", type: "tenant_panel", storeId: null },
     );
     const calls: string[] = [];
-    await expect(
+    await expectReject(
       updateControlDomain(
         h.db,
         ids.tenantA,
@@ -86,7 +86,8 @@ describe("managed Kataluu domain provisioning boundary", () => {
         },
         fakeProvisioner(calls),
       ),
-    ).rejects.toThrow("Domínio não encontrado");
+      "IDOR managed provisioning",
+    );
     expect(calls).toHaveLength(0);
   });
 });

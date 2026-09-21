@@ -7,7 +7,7 @@ function sourceFiles(root: string): string[] {
   for (const name of readdirSync(root)) {
     const path = join(root, name);
     if (statSync(path).isDirectory()) {
-      if (path.includes(`${join("lib", "server")}`)) continue;
+      if (path.includes(join("lib", "server"))) continue;
       out.push(...sourceFiles(path));
     } else if (/\.(?:ts|tsx|js|jsx)$/.test(name)) {
       out.push(path);
