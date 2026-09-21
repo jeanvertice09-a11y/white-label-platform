@@ -150,6 +150,7 @@ export function PageHead(props: Readonly<{ title: string; description: string; a
   return (
     <header className="k-page__head">
       <div className="k-page__head-copy">
+        <span className="k-section-kicker">Painel da loja / {props.title}</span>
         <h1>{props.title}</h1>
         <p>{props.description}</p>
       </div>
