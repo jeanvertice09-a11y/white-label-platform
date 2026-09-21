@@ -30,6 +30,9 @@ export interface Supplier {
   address: string | null;
   notes: string | null;
   status: SupplierStatus;
+  receivedPurchases: number;
+  receivedTotalCents: number;
+  lastReceivedPurchaseAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -160,6 +163,24 @@ export interface FinanceSummary {
   competenceReceivableCents: number;
   competencePayableCents: number;
   managerialResultCents: number;
+}
+
+export interface MerchantOperationsReport {
+  from: string;
+  to: string;
+  completedOrders: number;
+  salesCents: number;
+  buyers: number;
+  customers: number;
+  activeProducts: number;
+  lowStockProducts: number;
+  receivedPurchases: number;
+  receivedPurchasesTotalCents: number;
+  suppliers: number;
+  activeSuppliers: number;
+  openTasks: number;
+  completedTasks: number;
+  finance: FinanceSummary;
 }
 
 export type MerchantTaskStatus = "open" | "done";

@@ -83,6 +83,9 @@ export function mapSupplier(row: Record<string, unknown>): Supplier {
     address: nullableText(row, "address"),
     notes: nullableText(row, "notes"),
     status: text(row, "status") as Supplier["status"],
+    receivedPurchases: integer(row, "received_purchases"),
+    receivedTotalCents: integer(row, "received_total_cents"),
+    lastReceivedPurchaseAt: nullableText(row, "last_received_purchase_at"),
     createdAt: timestampText(row, "created_at"),
     updatedAt: timestampText(row, "updated_at"),
   };
