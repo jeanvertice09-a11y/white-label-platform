@@ -38,6 +38,52 @@ function assertRange(from: string, to: string): void {
   }
 }
 
+const OPERATIONS_REPORT_SQL = `select
+  (select count(*) from public.orders o
+   where o.tenant_id=$1 and o.store_id=$2 and o.status='completed'
+     and o.payment_status not in ('failed','refunded','cancelled')
+     and coalesce(o.completed_at,o.updated_at)::date between $3::date and $4::date)::integer as completed_orders,
+  (select coalesce(sum(o.total_cents),0) from public.orders o
+   where o.tenant_id=$1 and o.store_id=$2 and o.status='completed'
+     and o.payment_status not in ('failed','refunded','cancelled')
+     and coalesce(o.completed_at,o.updated_at)::date between $3::date and $4::date)::bigint as sales_cents,
+  (select count(distinct o.customer_id) from public.orders o
+   where o.tenant_id=$1 and o.store_id=$2 and o.customer_id is not null and o.status='completed'
+     and o.payment_status not in ('failed','refunded','cancelled')
+     and coalesce(o.completed_at,o.updated_at)::date between $3::date and $4::date)::integer as buyers,
+  (select count(*) from public.customers c where c.tenant_id=$1 and c.store_id=$2)::integer as customers,
+  (select count(*) from public.products p where p.tenant_id=$1 and p.store_id=$2 and p.active=true)::integer as active_products,
+  (select count(distinct p.id) from public.products p
+   where p.tenant_id=$1 and p.store_id=$2 and p.active=true and p.track_inventory=true and (
+     exists (
+       select 1 from public.product_variants v
+       where v.tenant_id=p.tenant_id and v.store_id=p.store_id and v.product_id=p.id
+         and coalesce((select sum(sm.delta) from public.stock_movements sm
+           where sm.tenant_id=v.tenant_id and sm.store_id=v.store_id
+             and sm.product_id=v.product_id and sm.variant_id=v.id),0)<=5
+     ) or (
+       not exists (select 1 from public.product_variants v
+         where v.tenant_id=p.tenant_id and v.store_id=p.store_id and v.product_id=p.id)
+       and coalesce((select sum(sm.delta) from public.stock_movements sm
+         where sm.tenant_id=p.tenant_id and sm.store_id=p.store_id
+           and sm.product_id=p.id and sm.variant_id is null),0)<=5
+     )
+   ))::integer as low_stock_products,
+  (select count(*) from public.merchant_purchases p
+   where p.tenant_id=$1 and p.store_id=$2 and p.status='received'
+     and p.received_at::date between $3::date and $4::date)::integer as received_purchases,
+  (select coalesce(sum(p.total_cents),0) from public.merchant_purchases p
+   where p.tenant_id=$1 and p.store_id=$2 and p.status='received'
+     and p.received_at::date between $3::date and $4::date)::bigint as received_purchases_total_cents,
+  (select count(*) from public.merchant_suppliers s where s.tenant_id=$1 and s.store_id=$2)::integer as suppliers,
+  (select count(*) from public.merchant_suppliers s
+   where s.tenant_id=$1 and s.store_id=$2 and s.status='active')::integer as active_suppliers,
+  (select count(*) from public.merchant_tasks t
+   where t.tenant_id=$1 and t.store_id=$2 and t.status='open')::integer as open_tasks,
+  (select count(*) from public.merchant_tasks t
+   where t.tenant_id=$1 and t.store_id=$2 and t.status='done'
+     and t.completed_at::date between $3::date and $4::date)::integer as completed_tasks`;
+
 export async function loadMerchantOperationsReport(
   sql: MerchantOpsSqlExecutor,
   scope: MerchantScope,
@@ -46,61 +92,10 @@ export async function loadMerchantOperationsReport(
 ): Promise<MerchantOperationsReport> {
   assertRange(from, to);
   const [rows, finance] = await Promise.all([
-    sql.query(
-      `select
-         (select count(*) from public.orders o
-          where o.tenant_id=$1 and o.store_id=$2 and o.status='completed'
-            and o.payment_status not in ('failed','refunded','cancelled')
-            and coalesce(o.completed_at,o.updated_at)::date between $3::date and $4::date)::integer as completed_orders,
-         (select coalesce(sum(o.total_cents),0) from public.orders o
-          where o.tenant_id=$1 and o.store_id=$2 and o.status='completed'
-            and o.payment_status not in ('failed','refunded','cancelled')
-            and coalesce(o.completed_at,o.updated_at)::date between $3::date and $4::date)::bigint as sales_cents,
-         (select count(distinct o.customer_id) from public.orders o
-          where o.tenant_id=$1 and o.store_id=$2 and o.customer_id is not null and o.status='completed'
-            and o.payment_status not in ('failed','refunded','cancelled')
-            and coalesce(o.completed_at,o.updated_at)::date between $3::date and $4::date)::integer as buyers,
-         (select count(*) from public.customers c
-          where c.tenant_id=$1 and c.store_id=$2)::integer as customers,
-         (select count(*) from public.products p
-          where p.tenant_id=$1 and p.store_id=$2 and p.active=true)::integer as active_products,
-         (select count(distinct p.id) from public.products p
-          where p.tenant_id=$1 and p.store_id=$2 and p.active=true and p.track_inventory=true and (
-            exists (
-              select 1 from public.product_variants v
-              where v.tenant_id=p.tenant_id and v.store_id=p.store_id and v.product_id=p.id
-                and coalesce((select sum(sm.delta) from public.stock_movements sm
-                  where sm.tenant_id=v.tenant_id and sm.store_id=v.store_id
-                    and sm.product_id=v.product_id and sm.variant_id=v.id),0)<=5
-            ) or (
-              not exists (select 1 from public.product_variants v
-                where v.tenant_id=p.tenant_id and v.store_id=p.store_id and v.product_id=p.id)
-              and coalesce((select sum(sm.delta) from public.stock_movements sm
-                where sm.tenant_id=p.tenant_id and sm.store_id=p.store_id
-                  and sm.product_id=p.id and sm.variant_id is null),0)<=5
-            )
-          ))::integer as low_stock_products,
-         (select count(*) from public.merchant_purchases p
-          where p.tenant_id=$1 and p.store_id=$2 and p.status='received'
-            and p.received_at::date between $3::date and $4::date)::integer as received_purchases,
-         (select coalesce(sum(p.total_cents),0) from public.merchant_purchases p
-          where p.tenant_id=$1 and p.store_id=$2 and p.status='received'
-            and p.received_at::date between $3::date and $4::date)::bigint as received_purchases_total_cents,
-         (select count(*) from public.merchant_suppliers s
-          where s.tenant_id=$1 and s.store_id=$2)::integer as suppliers,
-         (select count(*) from public.merchant_suppliers s
-          where s.tenant_id=$1 and s.store_id=$2 and s.status='active')::integer as active_suppliers,
-         (select count(*) from public.merchant_tasks t
-          where t.tenant_id=$1 and t.store_id=$2 and t.status='open')::integer as open_tasks,
-         (select count(*) from public.merchant_tasks t
-          where t.tenant_id=$1 and t.store_id=$2 and t.status='done'
-            and t.completed_at::date between $3::date and $4::date)::integer as completed_tasks`,
-      [scope.tenantId, scope.storeId, from, to],
-    ),
+    sql.query(OPERATIONS_REPORT_SQL, [scope.tenantId, scope.storeId, from, to]),
     new PostgresMerchantOperationsRepository(sql).summarizeFinance(scope, from, to),
   ]);
   const row = rows[0];
-  if (!row) throw new Error("Relatório operacional indisponível");
   return {
     from,
     to,

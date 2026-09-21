@@ -13,11 +13,11 @@ function ReportGrid({ report }: Readonly<{ report: MerchantOperationsReport }>):
   return <div className="k-dashboard-strip" aria-label="Indicadores operacionais do período">
     <Metric label="Pedidos concluídos" value={report.completedOrders} />
     <Metric label="Vendas" value={formatMoney(report.salesCents)} />
-    <Metric label="Compradores" value={report.buyers} detail={`${report.customers} cliente(s) cadastrados`} />
-    <Metric label="Produtos ativos" value={report.activeProducts} detail={`${report.lowStockProducts} com estoque baixo`} />
+    <Metric label="Compradores" value={report.buyers} detail={`${String(report.customers)} cliente(s) cadastrados`} />
+    <Metric label="Produtos ativos" value={report.activeProducts} detail={`${String(report.lowStockProducts)} com estoque baixo`} />
     <Metric label="Compras recebidas" value={report.receivedPurchases} detail={formatMoney(report.receivedPurchasesTotalCents)} />
-    <Metric label="Fornecedores" value={report.suppliers} detail={`${report.activeSuppliers} ativos`} />
-    <Metric label="Tarefas abertas" value={report.openTasks} detail={`${report.completedTasks} concluídas no período`} />
+    <Metric label="Fornecedores" value={report.suppliers} detail={`${String(report.activeSuppliers)} ativos`} />
+    <Metric label="Tarefas abertas" value={report.openTasks} detail={`${String(report.completedTasks)} concluídas no período`} />
     <Metric label="Fluxo de caixa" value={formatMoney(report.finance.cashFlowCents)} detail={`${formatMoney(report.finance.receivedCents)} recebido · ${formatMoney(report.finance.paidCents)} pago`} />
   </div>;
 }
