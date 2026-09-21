@@ -1,0 +1,33 @@
+name: Homologation Domains Provision
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type KATALUU_HML_DOMAINS_V1 to provision HML domains in Vercel"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  domains-provision:
+    if: ${{ inputs.confirm == 'KATALUU_HML_DOMAINS_V1' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - name: Provision HML domains in Vercel
+        run: bun run homologation:domains:provision
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VERCEL_API_TOKEN: ${{ secrets.VERCEL_API_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          HOMOLOGATION_DOMAINS_PROVISION_CONFIRM: KATALUU_HML_DOMAINS_V1
