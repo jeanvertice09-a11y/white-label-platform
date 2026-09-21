@@ -5,6 +5,7 @@ import {
 import {
   VercelDomainProvisioningError,
   VercelProjectDomainProvisioner,
+  type VercelDomainErrorCode,
 } from "../../apps/web/src/lib/server/vercel-domain-provisioner.server.ts";
 
 interface FetchCall {
@@ -52,7 +53,10 @@ function provisioner(fetchImpl: typeof fetch, overrides: {
   });
 }
 
-async function expectErrorCode(promise: Promise<unknown>, code: string): Promise<VercelDomainProvisioningError> {
+async function expectErrorCode(
+  promise: Promise<unknown>,
+  code: VercelDomainErrorCode,
+): Promise<VercelDomainProvisioningError> {
   try {
     await promise;
   } catch (error) {
