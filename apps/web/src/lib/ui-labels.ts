@@ -1,6 +1,8 @@
 const STATUS_LABELS: Readonly<Record<string, string>> = {
   active: "Ativo",
   inactive: "Inativo",
+  enabled: "Habilitado",
+  disabled: "Desabilitado",
   pending: "Pendente",
   trial: "Em período de teste",
   trialing: "Em período de teste",
