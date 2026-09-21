@@ -33,6 +33,8 @@ describe("merchant operations entitlement boundary", () => {
     expect(purchases).toContain("inventoryEnabled={data.access.inventory}");
     expect(finance).toContain("if (!access.finance)");
     expect(finance).toContain("listMerchantFinancialCategories()");
-    expect(tasks).toContain("access.tasks ? await listMerchantTasks() : []");
+    expect(tasks).toContain("if (!access.tasks) return { enabled: false, tasks: [], assignees: [] };");
+    expect(tasks).toContain("listMerchantTasks()");
+    expect(tasks).toContain("listMerchantTaskAssignees()");
   });
 });
