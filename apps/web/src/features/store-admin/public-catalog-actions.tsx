@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-interface ShareCapableNavigator extends Navigator {
-  share?: (data?: ShareData) => Promise<void>;
-}
+type ShareCapableNavigator = Omit<Navigator, "share"> & {
+  share?: Navigator["share"];
+};
 
 export function PublicCatalogActions(props: Readonly<{ url: string; storeName: string }>): React.JSX.Element {
   const [status, setStatus] = useState("");
