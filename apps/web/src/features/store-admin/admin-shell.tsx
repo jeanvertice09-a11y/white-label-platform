@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardIcon, type DashboardIconName } from "../../components/dashboard/DashboardIcon.tsx";
+import "../../styles/panel-navigation-lot1.css";
 
 interface NavItem {
   to: string;
