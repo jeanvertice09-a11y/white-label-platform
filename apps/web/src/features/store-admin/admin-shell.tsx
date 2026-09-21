@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardIcon, type DashboardIconName } from "../../components/dashboard/DashboardIcon.tsx";
+import "../../styles/panel-navigation-lot1.css";
 
 interface NavItem {
   to: string;
+  hash?: string;
   label: string;
   exact: boolean;
   icon: DashboardIconName;
@@ -27,7 +29,6 @@ const navigation: readonly NavGroup[] = [
     items: [
       { to: "/admin/orders", label: "Pedidos", exact: false, icon: "orders" },
       { to: "/admin/customers", label: "Clientes", exact: false, icon: "customers" },
-      { to: "/admin/operations", label: "Operações", exact: false, icon: "revenue" },
     ],
   },
   {
@@ -36,7 +37,42 @@ const navigation: readonly NavGroup[] = [
       { to: "/admin/products", label: "Produtos", exact: false, icon: "products" },
       { to: "/admin/categories", label: "Categorias", exact: false, icon: "categories" },
       { to: "/admin/inventory", label: "Estoque", exact: false, icon: "inventory" },
-      { to: "/admin/marketing", label: "Marketing", exact: false, icon: "marketing" },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { to: "/admin/marketing", hash: "coupons", label: "Cupons", exact: true, icon: "marketing" },
+      { to: "/admin/marketing", hash: "campaigns", label: "Campanhas", exact: true, icon: "activity" },
+    ],
+  },
+  {
+    label: "Financeiro",
+    items: [
+      { to: "/admin/operations", hash: "finance", label: "Visão financeira", exact: true, icon: "revenue" },
+      { to: "/admin/operations", hash: "purchases", label: "Compras", exact: true, icon: "orders" },
+      { to: "/admin/operations", hash: "suppliers", label: "Fornecedores", exact: true, icon: "store" },
+    ],
+  },
+  {
+    label: "Organização",
+    items: [
+      { to: "/admin/operations", hash: "tasks", label: "Tarefas", exact: true, icon: "check" },
+    ],
+  },
+  {
+    label: "Minha loja",
+    items: [
+      { to: "/admin/store", label: "Informações da loja", exact: true, icon: "store" },
+      { to: "/admin/store/appearance", label: "Aparência", exact: true, icon: "palette" },
+      { to: "/admin/store/banners", label: "Banners", exact: true, icon: "marketing" },
+      { to: "/admin/store/catalog", label: "Catálogo e checkout", exact: true, icon: "settings" },
+    ],
+  },
+  {
+    label: "Conta",
+    items: [
+      { to: "/admin/settings", label: "Configurações", exact: true, icon: "settings" },
     ],
   },
 ];
@@ -65,9 +101,10 @@ function AdminSidebar(props: Readonly<{ open: boolean; onClose: () => void }>): 
               <span className="k-admin__nav-label">{group.label}</span>
               {group.items.map((item) => (
                 <Link
-                  key={item.to}
+                  key={`${item.to}#${item.hash ?? ""}`}
                   to={item.to}
-                  activeOptions={{ exact: item.exact }}
+                  hash={item.hash}
+                  activeOptions={{ exact: item.exact, includeHash: Boolean(item.hash) }}
                   activeProps={{ "data-status": "active" }}
                   onClick={props.onClose}
                 >
@@ -79,19 +116,7 @@ function AdminSidebar(props: Readonly<{ open: boolean; onClose: () => void }>): 
           ))}
         </nav>
 
-        <div className="k-admin__sidebar-context">
-          <span>Experiência da loja</span>
-          <Link to="/admin/store" onClick={props.onClose}>
-            <DashboardIcon name="store" />
-            <div><strong>Minha loja</strong><small>Aparência, catálogo e presença pública</small></div>
-          </Link>
-        </div>
-
         <div className="k-admin__sidebar-foot">
-          <Link to="/admin/settings" onClick={props.onClose}>
-            <DashboardIcon name="settings" />
-            <span>Configurações</span>
-          </Link>
           <div className="k-admin__account">
             <span className="k-admin__avatar" aria-hidden="true">L</span>
             <div><strong>Conta da loja</strong><small>Operação do lojista</small></div>
@@ -126,6 +151,7 @@ export function PageHead(props: Readonly<{ title: string; description: string; a
   return (
     <header className="k-page__head">
       <div className="k-page__head-copy">
+        <span className="k-section-kicker">Painel da loja / {props.title}</span>
         <h1>{props.title}</h1>
         <p>{props.description}</p>
       </div>

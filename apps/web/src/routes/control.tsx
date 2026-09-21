@@ -22,6 +22,7 @@ import "../styles/console-system.css";
 import "../styles/console-compat.css";
 import "../styles/console-pages.css";
 import "../styles/editorial-console.css";
+import "../styles/panel-navigation-lot1.css";
 
 export const Route = createFileRoute("/control")({
   loader: async () => {
@@ -53,9 +54,11 @@ function ControlPage(): React.JSX.Element {
           <header>
             <span>Planos comerciais</span>
             <h2>Oferta para lojistas</h2>
-            <p>Configure preço, periodicidade, trial, recursos e limites dentro das permissões definidas pela Kataluu.</p>
+            <p>Defina preço, periodicidade, período de teste, recursos e limites dentro do que a Kataluu disponibiliza.</p>
           </header>
-          <ControlPlanManager catalog={data.planCatalog} />
+          <div id="plan-resources">
+            <ControlPlanManager catalog={data.planCatalog} />
+          </div>
         </div>
       </section>
       <ControlBrandingManager initial={data.dashboard.tenant} />

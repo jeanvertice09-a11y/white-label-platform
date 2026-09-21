@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { useState } from "react";
 import { DashboardIcon } from "../dashboard/DashboardIcon.tsx";
 import { MasterSidebar } from "./Sidebar.tsx";
+import "../../styles/panel-navigation-lot1.css";
 
 export function MasterShell() {
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -12,6 +12,7 @@ export function MasterPageHeader(props: Readonly<{
   return (
     <header className="master-page-header">
       <div className="master-page-header__copy">
+        <span className="console-page-kicker">Kataluu / {props.title}</span>
         <h1>{props.title}</h1>
         <p>{props.description}</p>
       </div>

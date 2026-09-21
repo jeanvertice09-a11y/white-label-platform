@@ -1,0 +1,46 @@
+.k-admin__sidebar,
+.master-sidebar,
+.control-sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.k-admin__nav,
+.master-nav,
+.control-nav {
+  flex: 0 0 auto;
+}
+
+.k-admin__sidebar-foot,
+.master-sidebar__account,
+.control-sidebar__account {
+  flex: 0 0 auto;
+}
+
+#coupons,
+#campaigns,
+#finance,
+#purchases,
+#suppliers,
+#tasks,
+#overview,
+#tenant-billing,
+#merchant-management,
+#plan-management,
+#plan-resources,
+#branding,
+#domain-management,
+#gateway-management,
+#access,
+#audit {
+  scroll-margin-top: 24px;
+}
+
+@media (max-width: 979px) {
+  .k-admin__sidebar,
+  .master-sidebar,
+  .control-sidebar {
+    max-height: 100dvh;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+}
