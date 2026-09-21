@@ -1,50 +1,49 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import type { MasterWhiteLabelDetail, MasterWhiteLabelListResult } from "../lib/server/master-white-label.types.ts";
 import { MasterEmptyState, MasterPageHeader, MasterPanel } from "../components/master/ui.tsx";
 import { masterDate } from "../components/master/format.ts";
 import { MasterWhiteLabelCreateForm } from "../features/master/master-white-label-create-form.tsx";
-import { listMasterWhiteLabels } from "../lib/server/master-white-label.functions.ts";
-import type { MasterWhiteLabelListResult } from "../lib/server/master-white-label.types.ts";
+import { MasterWhiteLabelDetailView } from "../features/master/master-white-label-detail.tsx";
+import { listMasterWhiteLabels, getMasterWhiteLabel } from "../lib/server/master-white-label.functions.ts";
+import { statusLabel } from "../lib/ui-labels.ts";
 
-type StatusFilter = "all" | "trial" | "active" | "suspended";
+interface PlatformsSearch { tenantId?: string; }
+interface PlatformsLoaderData { result: MasterWhiteLabelListResult | null; detail: MasterWhiteLabelDetail | null; }
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/master/platforms")({
-  loader: () => listMasterWhiteLabels({ data: { page: 1, pageSize: 20, search: "", status: "all" } }),
-  component: MasterPlatforms,
+  validateSearch: (search: Record<string, unknown>): PlatformsSearch => {
+    const tenantId = search["tenantId"];
+    return typeof tenantId === "string" && UUID.test(tenantId) ? { tenantId } : {};
+  },
+  loaderDeps: ({ search }) => ({ tenantId: search.tenantId }),
+  loader: async ({ deps }): Promise<PlatformsLoaderData> => deps.tenantId
+    ? { result: null, detail: await getMasterWhiteLabel({ data: { tenantId: deps.tenantId } }) }
+    : { result: await listMasterWhiteLabels({ data: { page: 1, pageSize: 20 } }), detail: null },
+  component: MasterPlatformsPage,
 });
 
-function PlatformsToolbar(props: Readonly<{
-  search: string;
-  status: StatusFilter;
-  busy: boolean;
-  onSearch: (value: string) => void;
-  onStatus: (value: StatusFilter) => void;
-  onSubmit: () => void;
-}>): React.JSX.Element {
-  return <form className="console-toolbar" onSubmit={(event) => { event.preventDefault(); props.onSubmit(); }}><div className="console-toolbar__field console-toolbar__field--search"><label htmlFor="wl-search">Buscar</label><input id="wl-search" value={props.search} onChange={(event) => { props.onSearch(event.target.value); }} placeholder="Nome ou slug" /></div><div className="console-toolbar__field"><label htmlFor="wl-status">Status</label><select id="wl-status" value={props.status} onChange={(event) => { props.onStatus(event.target.value as StatusFilter); }}><option value="all">Todos</option><option value="trial">Trial</option><option value="active">Ativas</option><option value="suspended">Suspensas</option></select></div><button className="k-button" disabled={props.busy} type="submit">Aplicar filtros</button></form>;
-}
-
-function PlatformsTable(props: Readonly<{
-  data: MasterWhiteLabelListResult;
-  busy: boolean;
-  onPage: (page: number) => void;
-}>): React.JSX.Element {
-  if (!props.data.items.length) return <MasterEmptyState title="Nenhuma White Label encontrada" description="Ajuste os filtros ou cadastre uma nova plataforma." />;
-  return <><div className="master-table-wrap"><table className="master-table"><thead><tr><th>White Label</th><th>Status</th><th>Responsável</th><th>Lojas</th><th>Domínios</th><th>Criada em</th></tr></thead><tbody>{props.data.items.map((tenant) => <tr key={tenant.id}><td><a href={`/master/platforms/${tenant.id}`}><strong>{tenant.name}</strong></a><small>{tenant.slug}</small></td><td><span className="console-status">{tenant.status}</span></td><td>{tenant.ownerEmail ?? tenant.ownerUserId ?? "—"}</td><td>{tenant.storeCount}</td><td>{tenant.domainCount}</td><td>{masterDate(tenant.createdAt)}</td></tr>)}</tbody></table></div><div className="console-pagination" aria-label="Paginação"><button className="k-button" disabled={props.busy || props.data.page <= 1} onClick={() => { props.onPage(props.data.page - 1); }} type="button">Anterior</button><span>Página {props.data.page} de {props.data.pageCount} · {props.data.total} registros</span><button className="k-button" disabled={props.busy || props.data.page >= props.data.pageCount} onClick={() => { props.onPage(props.data.page + 1); }} type="button">Próxima</button></div></>;
-}
-
-function MasterPlatforms(): React.JSX.Element {
-  const initial = Route.useLoaderData();
-  const [data, setData] = useState<MasterWhiteLabelListResult>(initial);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("all");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  async function load(page: number): Promise<void> {
-    setBusy(true); setMessage("");
-    try { setData(await listMasterWhiteLabels({ data: { search, status, page, pageSize: 20 } })); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "Falha ao listar White Labels."); }
-    finally { setBusy(false); }
+function MasterPlatformsPage(): React.JSX.Element {
+  const data = Route.useLoaderData();
+  const search = Route.useSearch();
+  if (search.tenantId) {
+    return data.detail
+      ? <MasterWhiteLabelDetailView detail={data.detail} />
+      : <div className="master-page"><MasterPageHeader title="White Label não encontrada" description="O identificador informado não corresponde a uma White Label disponível para o master." /><MasterEmptyState title="Sem dados" description="Volte para a lista e escolha uma White Label existente." /><Link className="k-button" to="/master/platforms" search={{}}>Voltar</Link></div>;
   }
-  return <div className="master-stack console-page"><MasterPageHeader title="White Labels" description="Cadastre, localize e acompanhe as plataformas operadas pela Kataluu." action={<span className="console-context-note">{data.total} registradas</span>} /><MasterWhiteLabelCreateForm /><MasterPanel title="Plataformas cadastradas"><PlatformsToolbar search={search} status={status} busy={busy} onSearch={setSearch} onStatus={setStatus} onSubmit={() => { void load(1); }} />{message ? <div className="k-status" role="status">{message}</div> : null}<PlatformsTable data={data} busy={busy} onPage={(page) => { void load(page); }} /></MasterPanel></div>;
+  if (!data.result) throw new Error("Lista de White Labels indisponível");
+  return <MasterPlatformsList result={data.result} />;
+}
+
+function MasterPlatformsList({ result }: Readonly<{ result: MasterWhiteLabelListResult }>): React.JSX.Element {
+  return (
+    <div className="master-page master-page--platforms">
+      <MasterPageHeader title="White Labels" description="Cadastre e acompanhe as operações independentes que usam a infraestrutura Kataluu." action={<span>{result.total} operações</span>} />
+      <MasterPanel title="Adicionar White Label"><MasterWhiteLabelCreateForm /></MasterPanel>
+      <MasterPanel title="Operações cadastradas">
+        <div className="master-toolbar"><input type="search" placeholder="Buscar por nome, domínio ou proprietário" aria-label="Buscar White Label" /><select aria-label="Filtrar status"><option>Todos os status</option><option>Ativas</option><option>Em teste</option><option>Suspensas</option></select></div>
+        {result.items.length ? <div className="master-table-wrap"><table className="master-table"><thead><tr><th>White Label</th><th>Status</th><th>Responsável</th><th>Lojas</th><th>Domínios</th><th>Criada em</th></tr></thead><tbody>{result.items.map((tenant) => <tr key={tenant.id}><td><Link className="master-table__primary" to="/master/platforms" search={{ tenantId: tenant.id }}>{tenant.name}</Link><div className="master-table__secondary">{tenant.slug}</div></td><td><span className={`master-status master-status--${tenant.status}`}>{statusLabel(tenant.status)}</span></td><td>{tenant.ownerEmail ?? tenant.ownerUserId ?? "Sem responsável"}</td><td>{tenant.storeCount}</td><td>{tenant.domainCount}</td><td>{masterDate(tenant.createdAt)}</td></tr>)}</tbody></table></div> : <MasterEmptyState title="Nenhuma White Label encontrada" description="Cadastre a primeira operação para começar a estruturar o ecossistema da plataforma." />}
+      </MasterPanel>
+    </div>
+  );
 }
