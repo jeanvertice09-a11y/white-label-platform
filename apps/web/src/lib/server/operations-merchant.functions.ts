@@ -38,7 +38,6 @@ async function context(features: readonly MerchantOperationsFeature[] = []) {
   return { ...current, repo: new PostgresMerchantOperationsRepository(current.sql) };
 }
 
-type MerchantContext = Awaited<ReturnType<typeof context>>;
 export interface MerchantTaskAssigneeOption { userId: string; role: string; }
 
 function text(row: Record<string, unknown>, key: string): string {
@@ -47,12 +46,16 @@ function text(row: Record<string, unknown>, key: string): string {
   return value;
 }
 
-async function assertTaskAssignee(current: MerchantContext, userId: string | null | undefined): Promise<void> {
+async function assertTaskAssignee(
+  sql: { query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]> },
+  scope: { tenantId: string; storeId: string },
+  userId: string | null | undefined,
+): Promise<void> {
   if (!userId) return;
-  const rows = await current.sql.query(
+  const rows = await sql.query(
     `select user_id from public.store_members
      where tenant_id=$1::uuid and store_id=$2::uuid and user_id=$3::uuid limit 1`,
-    [current.scope.tenantId, current.scope.storeId, userId],
+    [scope.tenantId, scope.storeId, userId],
   );
   if (!rows[0]) throw new Error("Responsável não pertence à equipe desta loja");
 }
@@ -159,12 +162,12 @@ export const listMerchantTaskAssignees = createServerFn({ method: "GET" }).handl
 });
 export const createMerchantTask = createServerFn({ method: "POST" }).validator(task).handler(async ({ data }) => {
   const current = await context();
-  await assertTaskAssignee(current, data.assigneeUserId);
+  await assertTaskAssignee(current.sql, current.scope, data.assigneeUserId);
   return current.repo.createTask(current.scope, data, current.userId);
 });
 export const updateMerchantTask = createServerFn({ method: "POST" }).validator(z.object({ taskId: uuid, input: task })).handler(async ({ data }) => {
   const current = await context();
-  await assertTaskAssignee(current, data.input.assigneeUserId);
+  await assertTaskAssignee(current.sql, current.scope, data.input.assigneeUserId);
   return current.repo.updateTask(current.scope, data.taskId, data.input);
 });
 export const setMerchantTaskStatus = createServerFn({ method: "POST" }).validator(z.object({ taskId: uuid, status: z.enum(["open", "done"]) })).handler(async ({ data }) => {
