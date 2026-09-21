@@ -26,6 +26,8 @@
     "test:e2e": "bun tests/e2e/smoke.ts",
     "homologation:plan": "bun scripts/homologation/cli.ts plan",
     "homologation:assets": "bun scripts/homologation/cli.ts assets",
+    "homologation:domains:preflight": "bun scripts/homologation/cli.ts domains-preflight",
+    "homologation:domains:provision": "bun scripts/homologation/cli.ts domains-provision",
     "homologation:preflight": "bun scripts/homologation/cli.ts preflight",
     "homologation:preflight:functional": "bun scripts/homologation/cli.ts preflight",
     "homologation:preflight:production": "bun scripts/homologation/cli.ts preflight-production",

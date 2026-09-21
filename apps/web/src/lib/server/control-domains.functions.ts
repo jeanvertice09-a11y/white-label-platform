@@ -5,6 +5,7 @@ import { createConfiguredDomainProvider } from "./domain-provider.server.ts";
 import { loadControlDomainWorkspace } from "./control-domains.read.server.ts";
 import { createControlDomain, deleteControlDomain, setControlDomainStatus, updateControlDomain } from "./control-domains.write.server.ts";
 import { verifyControlDomain } from "./control-domains.verify.server.ts";
+import { createConfiguredVercelDomainProvisioner } from "./vercel-domain-provisioner.server.ts";
 
 const domainTypeSchema = z.enum(["tenant_panel", "tenant_site", "store_admin", "store_catalog"]);
 const domainInputSchema = z.object({
@@ -30,14 +31,26 @@ export const createControlDomainAction = createServerFn({ method: "POST" })
   .validator(domainInputSchema)
   .handler(async ({ data }) => {
     const ctx = await controlMerchantMutation();
-    return createControlDomain(ctx.sql, ctx.tenantId, ctx.actorUserId, data);
+    return createControlDomain(
+      ctx.sql,
+      ctx.tenantId,
+      ctx.actorUserId,
+      data,
+      createConfiguredVercelDomainProvisioner(),
+    );
   });
 
 export const updateControlDomainAction = createServerFn({ method: "POST" })
   .validator(domainUpdateSchema)
   .handler(async ({ data }) => {
     const ctx = await controlMerchantMutation();
-    return updateControlDomain(ctx.sql, ctx.tenantId, ctx.actorUserId, data);
+    return updateControlDomain(
+      ctx.sql,
+      ctx.tenantId,
+      ctx.actorUserId,
+      data,
+      createConfiguredVercelDomainProvisioner(),
+    );
   });
 
 export const verifyControlDomainAction = createServerFn({ method: "POST" })
@@ -57,7 +70,14 @@ export const setControlDomainStatusAction = createServerFn({ method: "POST" })
   .validator(domainStatusSchema)
   .handler(async ({ data }) => {
     const ctx = await controlMerchantMutation();
-    return setControlDomainStatus(ctx.sql, ctx.tenantId, ctx.actorUserId, data.domainId, data.status);
+    return setControlDomainStatus(
+      ctx.sql,
+      ctx.tenantId,
+      ctx.actorUserId,
+      data.domainId,
+      data.status,
+      createConfiguredVercelDomainProvisioner(),
+    );
   });
 
 export const deleteControlDomainAction = createServerFn({ method: "POST" })

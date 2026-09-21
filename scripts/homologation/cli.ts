@@ -1,7 +1,12 @@
 import { dirname, isAbsolute, resolve } from "node:path";
 import postgres from "postgres";
+import { createConfiguredVercelDomainProvisioner } from "../../apps/web/src/lib/server/vercel-domain-provisioner.server.ts";
 import { buildAssetManifestTemplate } from "./asset-manifest.ts";
 import { verifyPublishedAssets } from "./assets-verify.ts";
+import {
+  provisionHomologationDomains,
+  runHomologationDomainProvisioningPreflight,
+} from "./domain-provisioning.ts";
 import { cleanupHomologationSeed, applyHomologationSeed } from "./seed.ts";
 import type { HomologationMediaMode, HomologationRuntimeConfig, ResolvedAsset } from "./model.ts";
 import { homologationPlan, validateRuntimeConfig } from "./plan.ts";
@@ -75,6 +80,12 @@ function assertDeferredMediaConfirmation(): void {
   }
 }
 
+function assertDomainProvisioningConfirmation(): void {
+  if (process.env["HOMOLOGATION_DOMAINS_PROVISION_CONFIRM"] !== "KATALUU_HML_DOMAINS_V1") {
+    throw new Error("HOMOLOGATION_DOMAINS_PROVISION_CONFIRM=KATALUU_HML_DOMAINS_V1 obrigatório");
+  }
+}
+
 async function withDb<T>(fn: (db: DbClient) => Promise<T>): Promise<T> {
   const db = openDb(databaseUrl());
   try { return await fn(db); } finally { await db.close(); }
@@ -86,9 +97,26 @@ async function productionPreflight(config: HomologationRuntimeConfig): Promise<R
   return { database, media };
 }
 
+async function runDomainPreflight(): Promise<void> {
+  const config = await readConfig("deferred");
+  const provisioner = createConfiguredVercelDomainProvisioner();
+  const domains = await withDb((db) => runHomologationDomainProvisioningPreflight(db, config, provisioner));
+  write({ ok: true, action: "domains-preflight", mutates: false, domains });
+}
+
+async function runDomainProvision(): Promise<void> {
+  assertDomainProvisioningConfirmation();
+  const config = await readConfig("deferred");
+  const provisioner = createConfiguredVercelDomainProvisioner();
+  const domains = await withDb((db) => provisionHomologationDomains(db, config, provisioner));
+  write({ ok: true, action: "domains-provision", domains });
+}
+
 async function run(command: string | undefined): Promise<void> {
   if (command === "plan") { write(homologationPlan()); return; }
   if (command === "assets") { write(buildAssetManifestTemplate()); return; }
+  if (command === "domains-preflight") { await runDomainPreflight(); return; }
+  if (command === "domains-provision") { await runDomainProvision(); return; }
   if (command === "preflight") {
     const config = await readConfig("deferred");
     const database = await withDb((db) => runHomologationPreflight(db, config, { mediaMode: "deferred" }));
@@ -127,7 +155,9 @@ async function run(command: string | undefined): Promise<void> {
     write({ ok: true, action: "cleanup", version: "kataluu-homologation-v1" });
     return;
   }
-  throw new Error("Uso: bun scripts/homologation/cli.ts <plan|assets|preflight|preflight-production|apply|apply-functional|cleanup>");
+  throw new Error(
+    "Uso: bun scripts/homologation/cli.ts <plan|assets|domains-preflight|domains-provision|preflight|preflight-production|apply|apply-functional|cleanup>",
+  );
 }
 
 run(process.argv[2]).catch((error: unknown) => {
