@@ -67,8 +67,7 @@ export async function updateSupplier(
   const rows = await sql.query(
     `update public.merchant_suppliers set
        name=$4,trade_name=$5,document=$6,contact_name=$7,phone=$8,whatsapp=$9,email=$10,address=$11,notes=$12,updated_at=now()
-     where tenant_id=$1 and store_id=$2 and id=$3::uuid
-     returning *,0::integer as received_purchases,0::bigint as received_total_cents,null::text as last_received_purchase_at`,
+     where tenant_id=$1 and store_id=$2 and id=$3::uuid returning *,0::integer as received_purchases,0::bigint as received_total_cents,null::text as last_received_purchase_at`,
     [scope.tenantId, scope.storeId, supplierId, ...values(input)],
   );
   if (!rows[0]) throw new Error("Fornecedor não encontrado");
@@ -84,8 +83,7 @@ export async function updateSupplierStatus(
   assertScope(scope);
   const rows = await sql.query(
     `update public.merchant_suppliers set status=$4,updated_at=now()
-     where tenant_id=$1 and store_id=$2 and id=$3::uuid
-     returning *,0::integer as received_purchases,0::bigint as received_total_cents,null::text as last_received_purchase_at`,
+     where tenant_id=$1 and store_id=$2 and id=$3::uuid returning *,0::integer as received_purchases,0::bigint as received_total_cents,null::text as last_received_purchase_at`,
     [scope.tenantId, scope.storeId, supplierId, status],
   );
   if (!rows[0]) throw new Error("Fornecedor não encontrado");
