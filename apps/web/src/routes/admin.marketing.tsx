@@ -26,10 +26,10 @@ function MarketingPage(): React.JSX.Element {
     <div className="k-page">
       <PageHead
         title="Marketing"
-        description="Campanhas CRM com consentimento, segmentação e fila segura, além de cupons."
+        description="Crie promoções com cupons e prepare campanhas para sua base de clientes."
       />
-      <CampaignManager initialPage={campaigns} />
-      <CouponManager coupons={coupons} />
+      <div id="coupons"><CouponManager coupons={coupons} /></div>
+      <div id="campaigns"><CampaignManager initialPage={campaigns} /></div>
     </div>
   );
 }
