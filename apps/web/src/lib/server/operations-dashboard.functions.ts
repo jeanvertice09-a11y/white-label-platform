@@ -14,17 +14,22 @@ function optionalText(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-async function getCurrentPlan(
+export async function getCurrentStorePlan(
   sql: { query(sql: string, params: unknown[]): Promise<Record<string, unknown>[]> },
   tenantId: string,
+  storeId: string,
 ): Promise<PlanSummary | null> {
   const rows = await sql.query(
     `select p.name,p.slug,s.status
-     from public.subscriptions s
-     left join public.plans p on p.id=s.plan_id
-     where s.tenant_id=$1 and s.level='tenant_billing'
-     order by s.created_at desc limit 1`,
-    [tenantId],
+     from public.store_subscriptions s
+     left join public.tenant_plans p
+       on p.tenant_id=s.tenant_id and p.id=s.tenant_plan_id
+     where s.tenant_id=$1 and s.store_id=$2
+     order by
+       case when s.status in ('trialing','active','past_due','suspended') then 0 else 1 end,
+       s.created_at desc
+     limit 1`,
+    [tenantId, storeId],
   );
   if (rows.length === 0) return null;
   const row = rows[0];
@@ -45,7 +50,7 @@ export const getMerchantOperationsDashboard = createServerFn({ method: "GET" })
       getMerchantDashboardMetrics(current.sql, current.scope),
       catalog.getSettings(current.scope),
       catalog.getStore(current.scope),
-      getCurrentPlan(current.sql, current.scope.tenantId),
+      getCurrentStorePlan(current.sql, current.scope.tenantId, current.scope.storeId),
     ]);
     if (!store) throw new Error("Loja não encontrada");
     return {
