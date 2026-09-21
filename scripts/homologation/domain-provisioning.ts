@@ -1,6 +1,6 @@
 import type { DomainType, ManagedDomainProvisioner } from "@white-label/domains";
 import { DEMO_STORES, DEMO_TENANTS } from "./fixtures/data.ts";
-import type { HomologationRuntimeConfig, SqlExecutor } from "./model.ts";
+import type { DomainConfig, SqlExecutor, TenantKey } from "./model.ts";
 import { requireStoreDomain } from "./model.ts";
 
 interface ExpectedDomain {
@@ -21,14 +21,35 @@ export interface HomologationDomainPreview {
   error: string | null;
 }
 
-export function expectedHomologationDomains(config: HomologationRuntimeConfig): ExpectedDomain[] {
+export type HomologationDomainConfig = Record<TenantKey, DomainConfig>;
+
+export const HOMOLOGATION_DOMAINS: HomologationDomainConfig = {
+  aurora: {
+    tenantSite: "aurora-hml.kataluu.com.br",
+    tenantPanel: "painel-aurora-hml.kataluu.com.br",
+    stores: {
+      lume: { admin: "gestao-lume-hml.kataluu.com.br", catalog: "lume-hml.kataluu.com.br" },
+      botanica: { admin: "gestao-botanica-hml.kataluu.com.br", catalog: "botanica-hml.kataluu.com.br" },
+    },
+  },
+  nexo: {
+    tenantSite: "nexo-hml.kataluu.com.br",
+    tenantPanel: "painel-nexo-hml.kataluu.com.br",
+    stores: {
+      passo: { admin: "gestao-passo-hml.kataluu.com.br", catalog: "passo-hml.kataluu.com.br" },
+      casa: { admin: "gestao-casa-hml.kataluu.com.br", catalog: "casa-hml.kataluu.com.br" },
+    },
+  },
+};
+
+export function expectedHomologationDomains(domains: HomologationDomainConfig): ExpectedDomain[] {
   const rows: ExpectedDomain[] = [];
   for (const tenant of DEMO_TENANTS) {
-    const domain = config.domains[tenant.key];
+    const domain = domains[tenant.key];
     rows.push({ hostname: domain.tenantSite, tenantId: tenant.id, storeId: null, type: "tenant_site" });
     rows.push({ hostname: domain.tenantPanel, tenantId: tenant.id, storeId: null, type: "tenant_panel" });
     for (const store of DEMO_STORES.filter((item) => item.tenantKey === tenant.key)) {
-      const storeDomain = requireStoreDomain(config, tenant.key, store.key);
+      const storeDomain = requireStoreDomain({ domains } as Parameters<typeof requireStoreDomain>[0], tenant.key, store.key);
       rows.push({
         hostname: storeDomain.admin,
         tenantId: tenant.id,
@@ -67,11 +88,11 @@ async function databasePreview(sql: SqlExecutor, expected: ExpectedDomain) {
 
 export async function runHomologationDomainProvisioningPreflight(
   sql: SqlExecutor,
-  config: HomologationRuntimeConfig,
+  domains: HomologationDomainConfig,
   provisioner: ManagedDomainProvisioner,
 ): Promise<HomologationDomainPreview[]> {
   const result: HomologationDomainPreview[] = [];
-  for (const expected of expectedHomologationDomains(config)) {
+  for (const expected of expectedHomologationDomains(domains)) {
     const database = await databasePreview(sql, expected);
     try {
       const vercel = await provisioner.getProjectDomainState(expected.hostname);
@@ -112,10 +133,10 @@ async function assertDatabaseDomainsReady(sql: SqlExecutor, expected: ExpectedDo
 
 export async function provisionHomologationDomains(
   sql: SqlExecutor,
-  config: HomologationRuntimeConfig,
+  domains: HomologationDomainConfig,
   provisioner: ManagedDomainProvisioner,
 ) {
-  const expected = expectedHomologationDomains(config);
+  const expected = expectedHomologationDomains(domains);
   await assertDatabaseDomainsReady(sql, expected);
   const results = [];
   for (const domain of expected) {
