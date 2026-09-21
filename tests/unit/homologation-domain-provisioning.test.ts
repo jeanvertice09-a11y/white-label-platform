@@ -10,7 +10,7 @@ import { homologationTestConfig } from "../db/homologation-fixture.ts";
 describe("homologation Vercel-domain preflight", () => {
   test("preflight faz somente SELECT/GET e nunca provisiona", async () => {
     const config = homologationTestConfig();
-    const expected = expectedHomologationDomains(config);
+    const expected = expectedHomologationDomains(config.domains);
     const byHostname = new Map(expected.map((item) => [item.hostname, item]));
     const sqlCalls: string[] = [];
     const sql: SqlExecutor = {
@@ -48,7 +48,7 @@ describe("homologation Vercel-domain preflight", () => {
       },
     };
 
-    const result = await runHomologationDomainProvisioningPreflight(sql, config, provisioner);
+    const result = await runHomologationDomainProvisioningPreflight(sql, config.domains, provisioner);
     expect(result).toHaveLength(12);
     expect(reads).toBe(12);
     expect(writes).toBe(0);
