@@ -1,5 +1,9 @@
 import { useState } from "react";
 
+interface ShareCapableNavigator extends Navigator {
+  share?: (data?: ShareData) => Promise<void>;
+}
+
 export function PublicCatalogActions(props: Readonly<{ url: string; storeName: string }>): React.JSX.Element {
   const [status, setStatus] = useState("");
 
@@ -13,12 +17,13 @@ export function PublicCatalogActions(props: Readonly<{ url: string; storeName: s
   }
 
   async function share(): Promise<void> {
-    if (!navigator.share) {
+    const shareFn = (navigator as ShareCapableNavigator).share;
+    if (typeof shareFn !== "function") {
       await copy();
       return;
     }
     try {
-      await navigator.share({ title: props.storeName, url: props.url });
+      await shareFn.call(navigator, { title: props.storeName, url: props.url });
       setStatus("Compartilhamento aberto.");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;

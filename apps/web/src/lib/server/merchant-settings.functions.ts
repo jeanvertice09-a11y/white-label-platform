@@ -52,8 +52,8 @@ async function loadPlan(sql: Sql, scope: CatalogScope) {
      limit 1`,
     [scope.tenantId, scope.storeId],
   );
+  if (rows.length === 0) return null;
   const row = rows[0];
-  if (!row) return null;
   const name = valueText(row["name"]);
   const status = valueText(row["status"]);
   const billingInterval = valueText(row["billing_interval"]);
@@ -72,11 +72,11 @@ async function loadPlan(sql: Sql, scope: CatalogScope) {
 async function loadAccount(userId: string) {
   const client = createRequestSupabaseClient();
   const { data, error } = await client.auth.getUser();
-  if (error || !data.user || data.user.id !== userId) throw new Error("Conta autenticada não encontrada");
+  if (error || data.user.id !== userId) throw new Error("Conta autenticada não encontrada");
   return {
     email: data.user.email ?? null,
     phone: data.user.phone ?? null,
-    createdAt: data.user.created_at ?? null,
+    createdAt: data.user.created_at,
   };
 }
 
@@ -149,8 +149,7 @@ export const saveMerchantStoreProfile = createServerFn({ method: "POST" })
        select settings from upserted_settings`,
       [context.scope.tenantId, context.scope.storeId, data.name, JSON.stringify(patch)],
     );
-    const row = rows[0];
-    if (!row) throw new Error("Loja não encontrada no escopo autenticado");
+    if (rows.length === 0) throw new Error("Loja não encontrada no escopo autenticado");
     await auditProfileUpdate(sql, context.scope, context.userId);
-    return { name: data.name, profile: readPublicStoreProfile(row["settings"]) };
+    return { name: data.name, profile: readPublicStoreProfile(rows[0]["settings"]) };
   });
