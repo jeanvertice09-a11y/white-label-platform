@@ -1,0 +1,45 @@
+name: Homologation Functional Seed
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type KATALUU_HML_V1 to authorize the functional HML seed"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  functional-seed:
+    if: ${{ inputs.confirm == 'KATALUU_HML_V1' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - run: bun install --frozen-lockfile
+      - name: Prepare private HML config
+        shell: bash
+        env:
+          HOMOLOGATION_CONFIG_JSON: ${{ secrets.HOMOLOGATION_CONFIG_JSON }}
+        run: |
+          test -n "$HOMOLOGATION_CONFIG_JSON" || { echo "HOMOLOGATION_CONFIG_JSON secret is required"; exit 1; }
+          printf '%s' "$HOMOLOGATION_CONFIG_JSON" > "$RUNNER_TEMP/homologation-config.json"
+          chmod 600 "$RUNNER_TEMP/homologation-config.json"
+      - name: Apply functional HML seed
+        run: bun run homologation:apply:functional
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          HOMOLOGATION_CONFIG_FILE: ${{ runner.temp }}/homologation-config.json
+          HOMOLOGATION_CONFIRM: KATALUU_HML_V1
+          HOMOLOGATION_AUTH_READY: "true"
+          HOMOLOGATION_DOMAINS_VERIFIED: "true"
+          HOMOLOGATION_MEDIA_DEFERRED: KATALUU_HML_MEDIA_DEFERRED
+      - name: Remove private HML config
+        if: always()
+        run: rm -f "$RUNNER_TEMP/homologation-config.json"
