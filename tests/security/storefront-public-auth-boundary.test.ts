@@ -168,11 +168,15 @@ describe("storefront public auth boundary", () => {
   test("busca, categoria, carrinho e checkout WhatsApp continuam no boundary público", () => {
     const categoryRoute = webSource("routes", "categoria.$slug.tsx");
     const storefront = webSource("features", "storefront", "storefront-view.tsx");
+    const cartHook = webSource("features", "storefront", "use-storefront-cart.ts");
     const checkout = webSource("lib", "server", "storefront-checkout.functions.ts");
     expect(categoryRoute).toContain("getPublicCategoryPage");
     expect(storefront).toContain("listPublicCatalogProducts");
-    expect(storefront).toContain("createCart");
+    expect(storefront).toContain("useStorefrontCart");
     expect(storefront).toContain("CartPanel");
+    expect(cartHook).toContain("createCart");
+    expect(cartHook).toContain("cartStorageKey");
+    expect(cartHook).not.toContain("loadStoreAdmin");
     expect(checkout).toContain("createPublicCatalogContext");
     expect(checkout).not.toContain("loadStoreAdmin");
   });
