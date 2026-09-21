@@ -22,6 +22,7 @@ import "../styles/console-system.css";
 import "../styles/console-compat.css";
 import "../styles/console-pages.css";
 import "../styles/editorial-console.css";
+import "../styles/panel-navigation-lot1.css";
 
 export const Route = createFileRoute("/control")({
   loader: async () => {
