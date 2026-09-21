@@ -88,18 +88,18 @@ export const Route = createFileRoute("/admin/operations")({
 });
 
 function OperationsPending(): React.JSX.Element {
-  return <div className="k-empty">Carregando operações da loja…</div>;
+  return <div className="k-empty">Carregando dados da loja…</div>;
 }
 
 function OperationsError(props: Readonly<{ error: unknown }>): React.JSX.Element {
-  const message = props.error instanceof Error ? props.error.message : "Não foi possível carregar as operações.";
-  return <div className="k-empty"><strong>Operações indisponíveis</strong><span>{message}</span></div>;
+  const message = props.error instanceof Error ? props.error.message : "Não foi possível carregar esta área.";
+  return <div className="k-empty"><strong>Área indisponível</strong><span>{message}</span></div>;
 }
 
 function OperationsRoutePage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return <div className="k-page">
-    <PageHead title="Operações" description="Fornecedores, compras, financeiro interno e tarefas da loja em um único espaço operacional." />
+    <PageHead title="Gestão da loja" description="Acesse financeiro, compras, fornecedores e tarefas sem sair deste espaço." />
     <MerchantOperationsPage
       access={data.access}
       suppliers={data.suppliers}
