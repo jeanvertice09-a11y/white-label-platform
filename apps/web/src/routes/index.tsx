@@ -24,7 +24,18 @@ export const Route = createFileRoute("/")({
   },
   head: ({ loaderData }) => {
     if (loaderData?.kind === "storefront") {
-      return { meta: [{ title: `${loaderData.catalog.store.name} | Catálogo` }, { name: "description", content: `Catálogo online de ${loaderData.catalog.store.name}.` }] };
+      const title = loaderData.catalog.settings.seoTitle ?? `${loaderData.catalog.store.name} | Catálogo`;
+      const description = loaderData.catalog.settings.seoDescription ?? loaderData.catalog.profile.description ?? `Catálogo online de ${loaderData.catalog.store.name}.`;
+      return {
+        meta: [
+          { title },
+          { name: "description", content: description },
+          { property: "og:title", content: title },
+          { property: "og:description", content: description },
+          { property: "og:type", content: "website" },
+        ],
+        links: [{ rel: "canonical", href: loaderData.catalog.canonicalUrl }],
+      };
     }
     const site = loaderData?.kind === "public" ? loaderData.site : null;
     if (site?.kind === "white_label") {

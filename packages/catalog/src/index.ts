@@ -9,6 +9,7 @@ export type {
   CatalogSettings,
   StoreBanner,
   StorefrontStore,
+  PublicStoreProfile,
   CatalogQuery,
   CatalogPage,
   StorefrontSnapshot,
@@ -39,6 +40,7 @@ export {
   isCatalogCheckoutEnabled,
 } from "./behavior.ts";
 export type { CatalogBehavior, CatalogBehaviorFlag } from "./behavior.ts";
+export { EMPTY_PUBLIC_STORE_PROFILE, readPublicStoreProfile } from "./store-profile.ts";
 export { buildWhatsappMessage, buildWhatsappCheckoutUrl } from "./whatsapp.ts";
 export { assertCatalogSettings, assertProductInput, assertVariantInput, assertCategoryInput } from "./validation.ts";
 export { PUBLIC_MEDIA_ORIGIN, getCatalogPublicMediaUrl } from "./storage.ts";

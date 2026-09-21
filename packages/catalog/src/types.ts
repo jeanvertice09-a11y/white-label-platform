@@ -93,6 +93,14 @@ export interface StorefrontStore extends CatalogScope {
   trialEndsAt: string | null;
 }
 
+export interface PublicStoreProfile {
+  description: string | null;
+  phone: string | null;
+  publicEmail: string | null;
+  address: string | null;
+  instagram: string | null;
+}
+
 export interface CatalogQuery extends CatalogScope {
   page: number;
   pageSize: number;
@@ -114,4 +122,5 @@ export interface StorefrontSnapshot {
   categories: Category[];
   banners: StoreBanner[];
   products: CatalogPage;
+  profile?: PublicStoreProfile;
 }

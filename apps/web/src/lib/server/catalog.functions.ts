@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { getCatalogBehavior } from "@white-label/catalog";
+import { getCatalogBehavior, readPublicStoreProfile } from "@white-label/catalog";
+import type { CatalogScope } from "@white-label/catalog";
 import { storefrontCategoryPath, storefrontProductPath } from "../storefront-paths.ts";
 import { createMerchantCatalogContext, createPublicCatalogContext } from "./catalog-context.server.ts";
 import { resolveCatalogSettingsEntitlements } from "./catalog-entitlements.server.ts";
@@ -21,14 +22,23 @@ async function entitledSettings(context: Awaited<ReturnType<typeof createPublicC
   return resolveCatalogSettingsEntitlements(createAdminSqlExecutor(), context.scope, raw);
 }
 
+async function publicProfile(scope: CatalogScope) {
+  const rows = await createAdminSqlExecutor().query(
+    `select settings from public.store_settings where tenant_id=$1::uuid and store_id=$2::uuid limit 1`,
+    [scope.tenantId, scope.storeId],
+  );
+  return readPublicStoreProfile(rows[0]?.["settings"]);
+}
+
 async function publicSnapshot(input: QueryInput) {
   const query = querySchema.parse(input);
   const context = await createPublicCatalogContext(getRequestHost());
-  const [settings, categories, banners, products] = await Promise.all([
+  const [settings, categories, banners, products, profile] = await Promise.all([
     entitledSettings(context), context.repository.listCategories(context.scope, true),
     context.repository.listBanners(context.scope, true), context.repository.listProducts({ ...context.scope, ...query }, true),
+    publicProfile(context.scope),
   ]);
-  return { store: context.store, settings, categories: settings.showCategories ? categories : [], banners, products, canonicalUrl: `https://${context.hostname}/` };
+  return { store: context.store, settings, categories: settings.showCategories ? categories : [], banners, products, profile, canonicalUrl: `https://${context.hostname}/` };
 }
 
 async function merchantSnapshot() {
@@ -66,9 +76,9 @@ export const getPublicCatalogProduct = createServerFn({ method: "GET" }).validat
 
 export const getPublicProductPage = createServerFn({ method: "GET" }).validator(slugSchema).handler(async ({ data }) => {
   const context = await createPublicCatalogContext(getRequestHost());
-  const [settings, categories, product] = await Promise.all([
+  const [settings, categories, product, profile] = await Promise.all([
     entitledSettings(context), context.repository.listCategories(context.scope, true),
-    context.repository.getProductBySlug(context.scope, data.slug, true),
+    context.repository.getProductBySlug(context.scope, data.slug, true), publicProfile(context.scope),
   ]);
   if (!product) throw new Error("Produto não encontrado");
   const behavior = getCatalogBehavior(settings);
@@ -76,21 +86,22 @@ export const getPublicProductPage = createServerFn({ method: "GET" }).validator(
     ? (await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 6, categoryId: product.categoryId, sort: "position" }, true)).items.filter((item) => item.id !== product.id).slice(0, 4)
     : [];
   return {
-    store: context.store, settings, categories: settings.showCategories ? categories : [], product, relatedProducts,
+    store: context.store, settings, categories: settings.showCategories ? categories : [], product, relatedProducts, profile,
     canonicalUrl: `https://${context.hostname}${storefrontProductPath(product.slug)}`,
   };
 });
 
 export const getPublicCategoryPage = createServerFn({ method: "GET" }).validator(slugSchema).handler(async ({ data }) => {
   const context = await createPublicCatalogContext(getRequestHost());
-  const [settings, categories, banners] = await Promise.all([
+  const [settings, categories, banners, profile] = await Promise.all([
     entitledSettings(context), context.repository.listCategories(context.scope, true), context.repository.listBanners(context.scope, true),
+    publicProfile(context.scope),
   ]);
   if (!settings.showCategories) throw new Error("Categorias indisponíveis neste catálogo");
   const category = categories.find((item) => item.slug === data.slug);
   if (!category) throw new Error("Categoria não encontrada");
   const products = await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 12, categoryId: category.id, sort: "position" }, true);
-  return { store: context.store, settings, categories, banners, products, category, canonicalUrl: `https://${context.hostname}${storefrontCategoryPath(category.slug)}` };
+  return { store: context.store, settings, categories, banners, products, profile, category, canonicalUrl: `https://${context.hostname}${storefrontCategoryPath(category.slug)}` };
 });
 
 export const getMerchantCatalogOverview = createServerFn({ method: "GET" }).handler(async () => merchantSnapshot());
