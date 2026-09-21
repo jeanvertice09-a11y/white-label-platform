@@ -4,6 +4,7 @@ import { createConfiguredVercelDomainProvisioner } from "../../apps/web/src/lib/
 import { buildAssetManifestTemplate } from "./asset-manifest.ts";
 import { verifyPublishedAssets } from "./assets-verify.ts";
 import {
+  HOMOLOGATION_DOMAINS,
   provisionHomologationDomains,
   runHomologationDomainProvisioningPreflight,
 } from "./domain-provisioning.ts";
@@ -98,17 +99,15 @@ async function productionPreflight(config: HomologationRuntimeConfig): Promise<R
 }
 
 async function runDomainPreflight(): Promise<void> {
-  const config = await readConfig("deferred");
   const provisioner = createConfiguredVercelDomainProvisioner();
-  const domains = await withDb((db) => runHomologationDomainProvisioningPreflight(db, config, provisioner));
+  const domains = await withDb((db) => runHomologationDomainProvisioningPreflight(db, HOMOLOGATION_DOMAINS, provisioner));
   write({ ok: true, action: "domains-preflight", mutates: false, domains });
 }
 
 async function runDomainProvision(): Promise<void> {
   assertDomainProvisioningConfirmation();
-  const config = await readConfig("deferred");
   const provisioner = createConfiguredVercelDomainProvisioner();
-  const domains = await withDb((db) => provisionHomologationDomains(db, config, provisioner));
+  const domains = await withDb((db) => provisionHomologationDomains(db, HOMOLOGATION_DOMAINS, provisioner));
   write({ ok: true, action: "domains-provision", domains });
 }
 
