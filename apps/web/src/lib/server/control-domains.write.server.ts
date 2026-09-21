@@ -48,6 +48,14 @@ async function assertHostnameFree(
   if (rows[0]?.["taken"] === true) throw new Error("Hostname já está cadastrado.");
 }
 
+async function assertDomainOwned(sql: ControlSql, tenantId: string, domainId: string): Promise<void> {
+  const rows = await sql.query(
+    "select exists(select 1 from public.domains where tenant_id=$1::uuid and id=$2::uuid) owned",
+    [tenantId, domainId],
+  );
+  if (rows[0]?.["owned"] !== true) throw new Error("Domínio não encontrado nesta White Label.");
+}
+
 async function ensureManagedHostname(
   hostname: string,
   provisioner: ManagedDomainProvisioner | null,
@@ -102,6 +110,7 @@ export async function updateControlDomain(
 ): Promise<{ ok: true }> {
   assertScope(input.type, input.storeId);
   await assertCommercialDomainAccess(sql, tenantId, input.type, input.storeId);
+  await assertDomainOwned(sql, tenantId, input.domainId);
   const hostname = assertAllowedCustomHostname(normalizeDomainRegistrationInput(input.hostname));
   await assertHostnameFree(sql, hostname, input.domainId);
   await ensureManagedHostname(hostname, provisioner);

@@ -4,7 +4,10 @@ import {
   PostgresDomainStore,
   type ManagedDomainProvisioner,
 } from "@white-label/domains";
-import { createControlDomain } from "../../apps/web/src/lib/server/control-domains.write.server.ts";
+import {
+  createControlDomain,
+  updateControlDomain,
+} from "../../apps/web/src/lib/server/control-domains.write.server.ts";
 import type { Harness } from "./harness.ts";
 import { setupDatabase } from "./harness.ts";
 import { seedIds, seedSql } from "./seed.ts";
@@ -60,5 +63,30 @@ describe("managed Kataluu domain provisioning boundary", () => {
 
     const resolver = new DomainResolver(new PostgresDomainStore(h.db));
     expect(await resolver.resolve("hml-boundary.kataluu.com.br")).toBeNull();
+  });
+
+  test("IDOR de update não chama Vercel antes de provar ownership", async () => {
+    const foreign = await createControlDomain(
+      h.db,
+      ids.tenantB,
+      ids.users.tenantB,
+      { hostname: "foreign-before.example.test", type: "tenant_panel", storeId: null },
+    );
+    const calls: string[] = [];
+    await expect(
+      updateControlDomain(
+        h.db,
+        ids.tenantA,
+        ids.users.tenantA,
+        {
+          domainId: foreign.id,
+          hostname: "idor-managed.kataluu.com.br",
+          type: "tenant_panel",
+          storeId: null,
+        },
+        fakeProvisioner(calls),
+      ),
+    ).rejects.toThrow("Domínio não encontrado");
+    expect(calls).toHaveLength(0);
   });
 });
