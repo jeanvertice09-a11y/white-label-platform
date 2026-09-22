@@ -1,0 +1,628 @@
+/* Responsive platform layer — Master + Control only.
+   Loaded after legacy/editorial console CSS so it can unify the current visual identity
+   without touching Merchant Admin or storefront. */
+
+.master-shell,
+.control-shell {
+  --console-primary: #7B5EA7;
+  --console-primary-hover: #684C94;
+  --console-primary-soft: #EFE9FA;
+  --console-text: #2D2B4E;
+  --console-text-strong: #24223F;
+  --console-muted: #716D82;
+  --console-muted-strong: #565169;
+  --console-border: #E7E1EF;
+  --console-border-strong: #D7CCE5;
+  --console-bg: #F9F7FC;
+  --console-surface: #FFFFFF;
+  --console-surface-muted: #F6F2FA;
+  --console-surface-subtle: #F0EAF7;
+  --console-success: #315E22;
+  --console-success-soft: #E6FBD6;
+  --console-focus: 0 0 0 3px rgba(123, 94, 167, .22);
+  --editorial-canvas: #F9F7FC;
+  --editorial-sidebar: #F2EDF8;
+  --editorial-sidebar-hover: rgba(255, 255, 255, .76);
+  --editorial-sidebar-active: #FFFFFF;
+  --editorial-surface: #FFFFFF;
+  --editorial-surface-soft: #EFE9FA;
+  --editorial-text: #2D2B4E;
+  --editorial-muted: #716D82;
+  --editorial-soft: #8B849B;
+  --editorial-line: #DDD4E8;
+  --editorial-line-soft: #EAE4F0;
+  --editorial-accent: #7B5EA7;
+  --master-accent: #7B5EA7;
+  --master-accent-hover: #684C94;
+  --master-accent-soft: #EFE9FA;
+  --master-text: #2D2B4E;
+  --master-muted: #716D82;
+  --master-border: #E7E1EF;
+  --control-primary: #7B5EA7;
+  --control-primary-soft: #EFE9FA;
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  background: var(--editorial-canvas);
+  color: var(--editorial-text);
+}
+
+.master-shell h1,
+.master-shell h2,
+.master-shell h3,
+.master-shell h4,
+.control-shell h1,
+.control-shell h2,
+.control-shell h3,
+.control-shell h4 {
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.master-shell .master-brand__mark,
+.control-shell .control-brand__mark {
+  background: #7B5EA7;
+  color: #fff;
+}
+
+.master-shell .master-nav__link[data-active="true"],
+.control-shell .control-nav a[data-active="true"],
+.control-shell .control-nav a:first-child[data-active="true"] {
+  background: #FFFFFF;
+  color: #2D2B4E;
+  box-shadow: none;
+}
+
+.master-shell .master-nav__link[data-active="true"]::before,
+.control-shell .control-nav a[data-active="true"]::before,
+.control-shell .control-nav a:first-child[data-active="true"]::before {
+  background: #7B5EA7;
+}
+
+.master-shell .master-nav__link[data-active="true"] svg,
+.control-shell .control-nav a[data-active="true"] svg,
+.control-shell .control-nav a:first-child[data-active="true"] svg {
+  color: #7B5EA7;
+}
+
+.master-shell .master-nav__link:hover,
+.control-shell .control-nav a:hover {
+  color: #2D2B4E;
+}
+
+.master-shell .master-button--primary,
+.master-shell .k-button--primary,
+.control-shell .k-button--primary,
+.control-shell .control-plan-button {
+  border-color: #7B5EA7;
+  background: #7B5EA7;
+  color: #fff;
+}
+
+.master-shell .master-button--primary:hover,
+.master-shell .k-button--primary:hover,
+.control-shell .k-button--primary:hover,
+.control-shell .control-plan-button:hover {
+  border-color: #684C94;
+  background: #684C94;
+}
+
+.master-shell input:focus,
+.master-shell select:focus,
+.master-shell textarea:focus,
+.control-shell input:focus,
+.control-shell select:focus,
+.control-shell textarea:focus,
+.master-shell .master-nav__link:focus-visible,
+.control-shell .control-nav a:focus-visible,
+.master-shell button:focus-visible,
+.control-shell button:focus-visible,
+.master-shell a:focus-visible,
+.control-shell a:focus-visible {
+  outline: none;
+  border-color: #7B5EA7;
+  box-shadow: var(--console-focus);
+}
+
+.master-shell .k-badge--on,
+.control-shell .k-badge--on {
+  border-color: #BDEB9C;
+  background: #C8F7A6;
+  color: #315E22;
+}
+
+.master-shell__content,
+.control-main,
+.master-main,
+.console-main,
+.control-content,
+.master-container,
+.console-container,
+.master-page,
+.master-stack,
+.console-page,
+.control-section,
+.control-plan-management,
+.control-plan-management-shell,
+.master-panel,
+.console-panel,
+.control-card,
+.master-card,
+.master-dashboard-columns,
+.control-dashboard-columns,
+.master-overview-band,
+.control-overview-band,
+.master-overview-stats,
+.control-overview-stats,
+.master-operational-grid,
+.control-branding-layout,
+.master-grid,
+.control-grid {
+  min-width: 0;
+}
+
+/* Desktop uses the available canvas; readable copy/forms keep their own line-length limits. */
+.master-shell .master-container,
+.master-shell .console-container,
+.control-shell .control-content,
+.control-shell .console-container {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+.master-shell .master-main,
+.master-shell .console-main,
+.control-shell .control-content {
+  padding-inline: clamp(28px, 3.5vw, 72px);
+}
+
+.master-page-header__copy,
+.control-page-header > div:first-child,
+.console-section-heading,
+.master-editorial-form__heading,
+.control-plan-management > header {
+  max-width: 780px;
+}
+
+.master-shell .master-page-header h1,
+.control-shell .control-page-header h1,
+.control-shell .control-section__head h2,
+.control-shell .control-plan-management > header h2 {
+  color: #2D2B4E;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.master-shell .master-page-header p,
+.control-shell .control-page-header p,
+.control-shell .control-section__head p,
+.control-shell .control-plan-management > header p {
+  max-width: 760px;
+}
+
+.master-dashboard-columns,
+.control-dashboard-columns {
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+  gap: clamp(28px, 3vw, 56px);
+}
+
+.control-branding-layout {
+  grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr);
+}
+
+.master-shell .master-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.master-shell .master-grid--two,
+.control-shell .control-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Dense administrative tables intentionally keep semantics and scroll inside their own viewport. */
+.master-shell .master-table-wrap,
+.control-shell .control-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+.master-shell .master-table,
+.control-shell .control-table {
+  width: 100%;
+  min-width: 680px;
+}
+
+.master-shell .master-table th,
+.control-shell .control-table th {
+  white-space: nowrap;
+}
+
+.master-shell .master-table td,
+.control-shell .control-table td,
+.master-shell .master-table td a,
+.control-shell .control-table td a,
+.master-shell .master-table td div,
+.control-shell .control-table td div,
+.master-shell .master-table td small,
+.control-shell .control-table td small,
+.master-shell .master-list__row,
+.control-shell .control-row,
+.control-shell .console-fact-row,
+.control-shell .console-compact-row,
+.master-shell .k-status,
+.control-shell .k-status,
+.control-shell .control-plan-message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.master-shell .master-table td,
+.control-shell .control-table td {
+  max-width: 360px;
+}
+
+.master-shell .console-table-action,
+.control-shell .console-table-action,
+.master-shell .console-money,
+.control-shell .console-money {
+  max-width: none;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.master-shell .console-toolbar,
+.control-shell .console-toolbar {
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.master-shell .console-toolbar__field,
+.control-shell .console-toolbar__field {
+  min-width: min(180px, 100%);
+}
+
+.master-shell .console-toolbar__field--search,
+.control-shell .console-toolbar__field--search {
+  min-width: min(280px, 100%);
+}
+
+.master-shell .k-form__grid,
+.control-shell .k-form__grid,
+.control-shell .control-plan-form__grid,
+.control-shell .control-plan-options {
+  min-width: 0;
+}
+
+.master-shell input,
+.master-shell select,
+.master-shell textarea,
+.control-shell input,
+.control-shell select,
+.control-shell textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.master-shell textarea,
+.control-shell textarea {
+  resize: vertical;
+}
+
+.master-shell .master-page-header__actions,
+.control-shell .control-page-header > :last-child,
+.master-shell .k-actions,
+.control-shell .k-actions,
+.control-shell .control-row {
+  min-width: 0;
+}
+
+.master-shell .console-context-note,
+.control-shell .console-context-note,
+.master-shell .control-page-context,
+.control-shell .control-page-context {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.master-sidebar__account > div,
+.control-sidebar__account > div,
+.master-brand > div,
+.control-brand > div {
+  min-width: 0;
+}
+
+/* Loading and error surfaces match the live console geometry/identity. */
+.console-route-state {
+  background: #F9F7FC;
+  color: #2D2B4E;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: clip;
+}
+.console-route-state--pending { grid-template-columns: 252px minmax(0, 1fr); }
+.console-route-state__sidebar { border-right-color: #E7E1EF; background: #F2EDF8; }
+.console-route-state__header { border-bottom-color: #E7E1EF; background: #FFFFFF; }
+.console-route-state__content { width: 100%; max-width: none; padding: 42px clamp(28px, 3.5vw, 72px) 56px; }
+.console-route-state__sidebar > span,
+.console-route-state__title,
+.console-route-state__subtitle,
+.console-route-state__summary > span,
+.console-route-state__panel { background: #EDE7F3; }
+.console-route-state__summary { border-color: #E7E1EF; background: #E7E1EF; }
+.console-route-state__summary > span { background: #F4F0F8; }
+.console-route-state__panel { border-color: #E7E1EF; }
+.console-route-error { border-color: #E7E1EF; background: #FFFFFF; box-shadow: 0 20px 50px rgba(45, 43, 78, .08); }
+.console-route-error__eyebrow,
+.console-route-error p { color: #716D82; }
+.console-route-error h1 { font-family: "Plus Jakarta Sans", Inter, sans-serif; color: #2D2B4E; }
+.console-route-error button { border-color: #7B5EA7; background: #7B5EA7; }
+.console-route-error button:hover { background: #684C94; }
+.console-route-error button:focus-visible,
+.console-route-error a:focus-visible { box-shadow: 0 0 0 3px rgba(123, 94, 167, .22); }
+
+/* Intermediate desktop/tablet: avoid three cramped fields beside a persistent sidebar. */
+@media (min-width: 980px) and (max-width: 1279px) {
+  .control-shell .control-plan-form__grid,
+  .control-shell .control-plan-options,
+  .control-shell .control-plan-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .master-shell .master-grid--three,
+  .control-shell .control-grid--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .master-dashboard-columns,
+  .control-dashboard-columns,
+  .control-branding-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile/tablet drawer and touch ergonomics. */
+@media (max-width: 979px) {
+  .master-shell,
+  .control-shell { min-height: 100dvh; }
+
+  .master-shell .master-sidebar,
+  .control-shell .control-sidebar {
+    width: min(86vw, 340px);
+    max-width: calc(100% - 32px);
+    height: 100dvh;
+    max-height: 100dvh;
+    z-index: 60;
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    box-shadow: 18px 0 44px rgba(45, 43, 78, .16);
+  }
+
+  .master-shell .master-overlay,
+  .control-shell .control-overlay { z-index: 55; background: rgba(45, 43, 78, .42); }
+
+  .master-mobile-bar,
+  .control-mobile-bar {
+    min-height: 64px;
+    padding: max(10px, env(safe-area-inset-top)) 16px 10px;
+    background: rgba(249, 247, 252, .96);
+    border-bottom-color: #E7E1EF;
+  }
+
+  .master-mobile-bar__menu,
+  .control-mobile-bar__menu,
+  .master-sidebar__logout,
+  .control-sidebar__logout {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+  }
+
+  .master-nav__link,
+  .control-nav a {
+    min-height: 46px;
+    padding-block: 11px;
+  }
+
+  .master-shell .master-main,
+  .master-shell .console-main,
+  .control-shell .control-content {
+    padding-top: 28px;
+    padding-bottom: max(58px, calc(34px + env(safe-area-inset-bottom)));
+    padding-inline: 18px;
+  }
+
+  .master-shell .master-page-header,
+  .control-shell .control-page-header,
+  .control-shell .control-section__head {
+    align-items: stretch;
+  }
+
+  .master-shell .master-page-header__actions,
+  .control-shell .control-page-header > :last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .master-shell .master-summary-surface,
+  .control-shell .control-summary-surface {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .master-shell .master-table,
+  .control-shell .control-table { min-width: 640px; }
+
+  .master-shell .k-button,
+  .control-shell .k-button,
+  .master-shell .master-button,
+  .control-shell .control-plan-button,
+  .console-route-error button,
+  .console-route-error a {
+    min-height: 44px;
+  }
+
+  .master-shell input,
+  .master-shell select,
+  .control-shell input,
+  .control-shell select { min-height: 44px; }
+
+  .console-route-state--pending { grid-template-columns: 1fr; }
+  .console-route-state__sidebar { display: none; }
+  .console-route-state__content { padding: 28px 18px 48px; }
+}
+
+@media (max-width: 768px) {
+  .master-shell .master-grid--two,
+  .master-shell .master-grid--three,
+  .control-shell .control-grid--two,
+  .control-shell .control-grid--four,
+  .master-dashboard-columns,
+  .control-dashboard-columns,
+  .control-branding-layout,
+  .master-shell .k-form__grid,
+  .control-shell .k-form__grid,
+  .control-shell .control-plan-form,
+  .control-shell .control-plan-form__grid,
+  .control-shell .control-plan-options {
+    grid-template-columns: 1fr;
+  }
+
+  .master-shell .master-table,
+  .control-shell .control-table { min-width: 600px; }
+
+  .master-shell .console-toolbar,
+  .control-shell .console-toolbar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+
+  .master-shell .console-toolbar__field--search,
+  .control-shell .console-toolbar__field--search { grid-column: 1 / -1; }
+
+  .master-shell .console-toolbar > .k-button,
+  .control-shell .console-toolbar > .k-button { width: 100%; }
+
+  .master-shell .control-row,
+  .control-shell .control-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .master-shell .master-main,
+  .master-shell .console-main,
+  .control-shell .control-content { padding-inline: 14px; }
+
+  .master-shell .master-page-header h1,
+  .control-shell .control-page-header h1,
+  .control-shell .control-section__head h2,
+  .control-shell .control-plan-management > header h2 {
+    font-size: clamp(25px, 8vw, 30px);
+    line-height: 1.14;
+  }
+
+  .master-shell .master-summary-surface,
+  .control-shell .control-summary-surface,
+  .master-operational-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .master-shell .console-toolbar,
+  .control-shell .console-toolbar { grid-template-columns: 1fr; }
+  .master-shell .console-toolbar__field--search,
+  .control-shell .console-toolbar__field--search { grid-column: auto; }
+
+  .master-shell .master-page-header__actions > *,
+  .control-shell .control-page-header > :last-child,
+  .master-shell .k-actions > .k-button,
+  .control-shell .k-actions > .k-button {
+    max-width: 100%;
+  }
+
+  .master-shell .console-pagination,
+  .control-shell .console-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .master-shell .console-pagination .k-button,
+  .control-shell .console-pagination .k-button { width: 100%; }
+
+  .master-shell .console-fact-row,
+  .control-shell .console-fact-row,
+  .master-shell .console-compact-row,
+  .control-shell .console-compact-row,
+  .master-shell .master-list__row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .master-shell .master-table,
+  .control-shell .control-table { min-width: 560px; }
+
+  .console-route-error { width: 100%; padding: 24px 20px; }
+  .console-route-error__actions { flex-direction: column; }
+  .console-route-error button,
+  .console-route-error a { width: 100%; }
+}
+
+@media (max-width: 430px) {
+  .master-mobile-bar,
+  .control-mobile-bar { padding-inline: 12px; }
+  .master-mobile-bar span,
+  .control-mobile-bar span {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .master-shell .master-main,
+  .master-shell .console-main,
+  .control-shell .control-content { padding-inline: 12px; }
+  .master-shell .master-table,
+  .control-shell .control-table { min-width: 540px; }
+}
+
+@media (max-width: 360px) {
+  .master-mobile-bar span,
+  .control-mobile-bar span { display: none; }
+  .master-shell .master-main,
+  .master-shell .console-main,
+  .control-shell .control-content { padding-inline: 10px; }
+  .master-shell .master-page-header h1,
+  .control-shell .control-page-header h1 { font-size: 25px; }
+  .master-shell .master-table,
+  .control-shell .control-table { min-width: 520px; }
+}
+
+@media (min-width: 1920px) {
+  .master-shell .master-main,
+  .master-shell .console-main,
+  .control-shell .control-content { padding-inline: clamp(56px, 4vw, 96px); }
+  .master-dashboard-columns,
+  .control-dashboard-columns { gap: 64px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .master-shell *,
+  .control-shell *,
+  .console-route-state * {
+    scroll-behavior: auto !important;
+  }
+}

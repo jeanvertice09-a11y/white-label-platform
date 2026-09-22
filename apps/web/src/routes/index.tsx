@@ -8,7 +8,6 @@ import { getPublicCatalog } from "../lib/server/catalog.functions.ts";
 import { getPublicSiteExperience } from "../lib/server/public-site.functions.ts";
 import { getRootResolution } from "../lib/server/routing.functions.ts";
 import "../styles/public.css";
-import "../styles/responsive-public.css";
 
 export const Route = createFileRoute("/")({
   loader: async () => {

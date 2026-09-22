@@ -10,6 +10,7 @@ import { getControlOnboarding } from "../lib/server/control-onboarding.functions
 import { getPublicLoginExperience } from "../lib/server/public-site.functions.ts";
 import { getLoginTarget } from "../lib/server/routing.functions.ts";
 import "../styles/public.css";
+import "../styles/auth-responsive.css";
 
 export const Route = createFileRoute("/login")({
   validateSearch: parseLoginSearch,
