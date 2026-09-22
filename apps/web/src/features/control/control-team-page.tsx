@@ -11,6 +11,7 @@ import {
 import { confirmDangerousAction } from "../../lib/ui-confirm.ts";
 import { roleLabel } from "../../lib/ui-labels.ts";
 import { ControlPageHeader } from "./control-page-header.tsx";
+import { useControlShellData } from "./control-shell.tsx";
 
 const TENANT_ROLES: readonly TenantRole[] = [
   "tenant_owner",
@@ -148,8 +149,9 @@ function StoreMembers({ initial }: Readonly<{ initial: ControlTeamWorkspace }>):
 }
 
 export function ControlTeamPage({ initial }: Readonly<{ initial: ControlTeamWorkspace }>): React.JSX.Element {
+  const shell = useControlShellData();
   return <section className="control-section">
-    <ControlPageHeader kicker="Administração" title="Equipe e acessos" description="Gerencie memberships existentes com escopo server-side por White Label e loja." />
+    <ControlPageHeader kicker="Administração" title="Equipe e acessos" description={`Gerencie os acessos de ${shell.tenant.name} com escopo server-side por White Label e loja.`} />
     <TenantMembers initial={initial} />
     <StoreMembers initial={initial} />
   </section>;
