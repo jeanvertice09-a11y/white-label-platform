@@ -9,6 +9,7 @@ import {
   systemTargetForHost,
 } from "../routing-targets.ts";
 import type { LoginTarget, RootTarget } from "../routing-targets.ts";
+import { getDomainCache } from "./domain-cache.server.ts";
 import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
 
 export type { LoginTarget, RootTarget } from "../routing-targets.ts";
@@ -23,7 +24,7 @@ async function resolveRoot(rawHost: string | null): Promise<RootResolution> {
   const systemTarget = systemTargetForHost(host);
   if (systemTarget !== undefined) return { target: systemTarget, storefront: false };
 
-  const resolver = new DomainResolver(createServiceDomainStore());
+  const resolver = new DomainResolver(createServiceDomainStore(), getDomainCache());
   const resolved = await resolver.resolve(host);
   if (!resolved) return { target: null, storefront: false };
   return {
