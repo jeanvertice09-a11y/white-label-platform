@@ -1,5 +1,17 @@
-export type { StorageProvider, UploadIntent, UploadIntentInput } from "./contracts.ts";
-export { ALLOWED_IMAGE_MIME, MAX_UPLOAD_BYTES, assertUploadAllowed } from "./contracts.ts";
+export type {
+  StorageProvider,
+  UploadIntent,
+  UploadIntentInput,
+  UploadMediaKind,
+  ImageObjectMetadata,
+} from "./contracts.ts";
+export {
+  ALLOWED_IMAGE_MIME,
+  MAX_UPLOAD_BYTES,
+  assertUploadAllowed,
+  extensionForImageMime,
+  assertImageSignature,
+} from "./contracts.ts";
 export {
   buildObjectKey,
   assertKeyBelongsToTenant,
