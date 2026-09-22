@@ -93,7 +93,7 @@ function bannerRows(anchor: string): string {
 function mediaSql(config: HomologationRuntimeConfig, anchor: string, mediaMode: HomologationMediaMode): string {
   if (mediaMode === "deferred") return "";
   return `
-insert into public.media_assets(id,tenant_id,store_id,object_key,mime,size_bytes,created_at) values ${assetRows(config, anchor)};
+insert into public.media_assets(id,tenant_id,store_id,object_key,content_type,size_bytes,created_at) values ${assetRows(config, anchor)};
 insert into public.product_images(id,tenant_id,store_id,product_id,variant_id,object_key,alt_text,position,created_at) values ${productImageRows(anchor)};
 insert into public.store_banners(id,tenant_id,store_id,title,alt_text,image_object_key,href,active,position,created_at,updated_at) values ${bannerRows(anchor)};`;
 }

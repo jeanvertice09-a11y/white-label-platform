@@ -40,6 +40,7 @@ const MIGRATIONS = [
   "0026_commercial_plan_matrix.sql",
   "0027_security_rate_limits.sql",
   "0028_production_readiness.sql",
+  "0030_media_assets.sql",
 ];
 
 class PGliteDb implements TestDb {

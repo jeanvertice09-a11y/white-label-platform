@@ -36,6 +36,7 @@
         "@white-label/inventory": "0.1.0",
         "@white-label/marketing": "0.1.0",
         "@white-label/orders": "0.1.0",
+        "@white-label/storage": "0.1.0",
         "@white-label/tenant": "0.1.0",
         "@white-label/validation": "0.1.0",
         "nitro": "3.0.260903-beta",
