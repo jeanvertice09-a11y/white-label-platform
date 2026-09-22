@@ -17,6 +17,10 @@ function job(kind: OperationalJob["kind"]): OperationalJob {
   return { id: "job-1", tenantId: "tenant-a", storeId: null, kind, payloadVersion: 1, payload: {}, attempts: 1, maxAttempts: 3 };
 }
 
+function operationalSql(results: Record<string, unknown>[][] = []): FakeSql {
+  return new FakeSql([[{ tenant_status: "active", store_status: null }], ...results]);
+}
+
 async function rejectionMessage(promise: Promise<void>): Promise<string> {
   try { await promise; } catch (error) { return error instanceof Error ? error.message : "unknown"; }
   throw new Error("Promise deveria rejeitar.");
@@ -44,9 +48,16 @@ describe("operational worker", () => {
       .toContain("nenhum provider de e-mail foi configurado");
   });
 
-  test("invalid payloads fail before side effects", async () => {
-    expect(await rejectionMessage(dispatchOperationalJob(new FakeSql([]), job("domain.verify")))).toContain("domainId");
-    expect(await rejectionMessage(dispatchOperationalJob(new FakeSql([]), job("billing.reconcile")))).toContain("paymentId");
-    expect(await rejectionMessage(dispatchOperationalJob(new FakeSql([]), job("media.process")))).toContain("assetId");
+  test("suspended scope fails before handler side effects", async () => {
+    const suspended = new FakeSql([[{ tenant_status: "suspended", store_status: null }]]);
+    expect(await rejectionMessage(dispatchOperationalJob(suspended, { ...job("domain.verify"), payload: { domainId: "d1" } })))
+      .toContain("Escopo do job suspenso");
+    expect(suspended.calls).toHaveLength(1);
+  });
+
+  test("invalid payloads fail before side effects after operational scope validation", async () => {
+    expect(await rejectionMessage(dispatchOperationalJob(operationalSql(), job("domain.verify")))).toContain("domainId");
+    expect(await rejectionMessage(dispatchOperationalJob(operationalSql(), job("billing.reconcile")))).toContain("paymentId");
+    expect(await rejectionMessage(dispatchOperationalJob(operationalSql(), job("media.process")))).toContain("assetId");
   });
 });

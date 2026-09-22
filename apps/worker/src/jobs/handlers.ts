@@ -20,11 +20,20 @@ function providerName(value: unknown): PaymentProviderName {
   if(value==="mercadopago"||value==="asaas") return value;
   throw new Error("Provider persistido inválido.");
 }
+async function assertJobScopeOperational(sql: WorkerSql, job: OperationalJob): Promise<void> {
+  if (!job.tenantId) return;
+  const rows=await sql.query(`select t.status tenant_status,s.status store_status from public.tenants t
+    left join public.stores s on s.tenant_id=t.id and s.id=$2::uuid
+    where t.id=$1::uuid and ($2::uuid is null or s.id is not null) limit 1`,[job.tenantId,job.storeId]);
+  const row=rows.at(0);
+  if(!row||row["tenant_status"]==="suspended"||(job.storeId&&row["store_status"]!=="active")) throw new Error("Escopo do job suspenso ou inexistente.");
+}
 function asaasBaseUrl(): string {
   return process.env["ASAAS_ENV"]==="production"?"https://api.asaas.com/v3":"https://api-sandbox.asaas.com/v3";
 }
 
 async function verifyDomain(sql: WorkerSql,job: OperationalJob): Promise<void> {
+  await assertJobScopeOperational(sql,job);
   const domainId=required(job,"domainId");
   const rows=await sql.query(
     `select id::text,tenant_id::text,store_id::text,hostname,status,verification_token
@@ -51,6 +60,7 @@ async function verifyDomain(sql: WorkerSql,job: OperationalJob): Promise<void> {
 }
 
 async function reconcileBilling(sql: WorkerSql,job: OperationalJob): Promise<void> {
+  await assertJobScopeOperational(sql,job);
   const paymentId=required(job,"paymentId");
   const rows=await sql.query(
     `select p.id::text,p.tenant_id::text,p.store_id::text,p.gateway_account_id::text,
@@ -76,6 +86,7 @@ async function reconcileBilling(sql: WorkerSql,job: OperationalJob): Promise<voi
 }
 
 async function processMedia(sql: WorkerSql,job: OperationalJob): Promise<void> {
+  await assertJobScopeOperational(sql,job);
   const assetId=required(job,"assetId");
   const rows=await sql.query(
     `select id::text,tenant_id::text,store_id::text,object_key,status

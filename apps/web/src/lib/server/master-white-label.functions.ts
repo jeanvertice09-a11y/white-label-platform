@@ -31,7 +31,13 @@ export const getMasterWhiteLabel = createServerFn({ method: "GET" }).validator(t
 export const createMasterWhiteLabel = createServerFn({ method: "POST" }).validator(createSchema).handler(async ({ data }) => { const c = await masterMutation(); return createWhiteLabel(c.sql, c.actorUserId, data); });
 export const updateMasterWhiteLabel = createServerFn({ method: "POST" }).validator(updateSchema).handler(async ({ data }) => { const c = await masterMutation(); return updateWhiteLabel(c.sql, c.actorUserId, data); });
 export const changeMasterWhiteLabelOwner = createServerFn({ method: "POST" }).validator(ownerSchema).handler(async ({ data }) => { const c = await masterMutation(); return changeWhiteLabelOwner(c.sql, c.actorUserId, data.tenantId, data.ownerUserId); });
-export const setMasterWhiteLabelStatus = createServerFn({ method: "POST" }).validator(statusSchema).handler(async ({ data }) => { const c = await masterMutation(); return setWhiteLabelStatus(c.sql, c.actorUserId, data.tenantId, data.status); });
+export const setMasterWhiteLabelStatus = createServerFn({ method: "POST" }).validator(statusSchema).handler(async ({ data }) => {
+  const c = await masterMutation();
+  const hostRows = await c.sql.query("select hostname from public.domains where tenant_id=$1::uuid", [data.tenantId]);
+  const result = await setWhiteLabelStatus(c.sql, c.actorUserId, data.tenantId, data.status);
+  await Promise.all(hostRows.map((row) => invalidateHostname(typeof row["hostname"] === "string" ? row["hostname"] : null)));
+  return result;
+});
 export const createMasterDomain = createServerFn({ method: "POST" }).validator(domainSchema).handler(async ({ data }) => { const c = await masterMutation(); return createWhiteLabelDomain(c.sql, c.actorUserId, data); });
 export const updateMasterDomain = createServerFn({ method: "POST" }).validator(updateDomainSchema).handler(async ({ data }) => {
   const c = await masterMutation(); const previous = await domainHostname(c.sql, data.tenantId, data.domainId);

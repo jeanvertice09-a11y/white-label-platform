@@ -11,14 +11,21 @@ export async function scheduleOperationalJobs(sql: WorkerSql): Promise<number> {
     sql.query(
       `select id::text,tenant_id::text,store_id::text,verification_token
        from public.domains
-       where status='pending' and verified_at is null and verification_token is not null
+       join public.tenants t on t.id=domains.tenant_id
+       left join public.stores s on s.tenant_id=domains.tenant_id and s.id=domains.store_id
+       where domains.status='pending' and t.status in ('trial','active')
+         and (domains.store_id is null or s.status='active') and verified_at is null and verification_token is not null
          and not exists (select 1 from public.operational_jobs j where j.kind='domain.verify'
            and j.idempotency_key='domain:'||domains.id::text||':'||domains.verification_token)
        order by created_at limit 25`,[]),
     sql.query(
       `select id::text,tenant_id::text,store_id::text,level
        from public.payments
-       where level in ('platform_billing','tenant_billing')
+       left join public.tenants t on t.id=payments.tenant_id
+       left join public.stores s on s.tenant_id=payments.tenant_id and s.id=payments.store_id
+       where (payments.tenant_id is null or t.status in ('trial','active'))
+         and (payments.store_id is null or s.status='active')
+         and level in ('platform_billing','tenant_billing')
          and status in ('pending','authorized') and provider_payment_id is not null
          and not exists (select 1 from public.operational_jobs j where j.kind='billing.reconcile'
            and j.idempotency_key='billing:'||payments.id::text)
@@ -26,7 +33,10 @@ export async function scheduleOperationalJobs(sql: WorkerSql): Promise<number> {
     sql.query(
       `select id::text,tenant_id::text,store_id::text,status
        from public.media_assets m
-       where status <> 'legacy' and (
+       join public.tenants t on t.id=m.tenant_id
+       left join public.stores s on s.tenant_id=m.tenant_id and s.id=m.store_id
+       where t.status in ('trial','active') and (m.store_id is null or s.status='active')
+         and status <> 'legacy' and (
          (status='pending' and upload_expires_at < now())
          or (status in ('ready','failed','delete_pending') and created_at < now()-interval '24 hours'
            and not exists(select 1 from public.product_images i where i.tenant_id=m.tenant_id and i.asset_id=m.id)
