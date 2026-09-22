@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { invalidateDomainCache } from "@white-label/domains";
 import { z } from "zod";
+import { getDomainCache } from "./domain-cache.server.ts";
 import { createWhiteLabelDomain, setWhiteLabelDomainStatus, updateWhiteLabelDomain, changeWhiteLabelOwner, createWhiteLabel, setWhiteLabelStatus, updateWhiteLabel } from "./master-white-label.write.server.ts";
 import { getWhiteLabelDetail, listWhiteLabels } from "./master-white-label.read.server.ts";
 import { masterMutation, masterRead } from "./master-white-label.shared.server.ts";
@@ -15,6 +17,15 @@ const domainSchema = z.object({ tenantId: z.string().uuid(), hostname: z.string(
 const updateDomainSchema = domainSchema.extend({ domainId: z.string().uuid() });
 const domainStatusSchema = z.object({ tenantId: z.string().uuid(), domainId: z.string().uuid(), status: z.enum(["pending", "suspended"]) });
 
+interface DomainLookupSql { query(sql: string, params: unknown[]): Promise<Record<string, unknown>[]> }
+async function domainHostname(sql: DomainLookupSql, tenantId: string, domainId: string): Promise<string | null> {
+  const rows = await sql.query("select hostname from public.domains where tenant_id=$1::uuid and id=$2::uuid limit 1", [tenantId, domainId]);
+  return typeof rows[0]?.["hostname"] === "string" ? rows[0]["hostname"] : null;
+}
+async function invalidateHostname(hostname: string | null): Promise<void> {
+  if (hostname) await invalidateDomainCache(getDomainCache(), hostname);
+}
+
 export const listMasterWhiteLabels = createServerFn({ method: "GET" }).validator((input: Partial<z.infer<typeof listSchema>> | undefined) => listSchema.parse(input ?? {})).handler(async ({ data }) => listWhiteLabels((await masterRead()).sql, data));
 export const getMasterWhiteLabel = createServerFn({ method: "GET" }).validator(tenantIdSchema).handler(async ({ data }) => getWhiteLabelDetail((await masterRead()).sql, data.tenantId));
 export const createMasterWhiteLabel = createServerFn({ method: "POST" }).validator(createSchema).handler(async ({ data }) => { const c = await masterMutation(); return createWhiteLabel(c.sql, c.actorUserId, data); });
@@ -22,5 +33,13 @@ export const updateMasterWhiteLabel = createServerFn({ method: "POST" }).validat
 export const changeMasterWhiteLabelOwner = createServerFn({ method: "POST" }).validator(ownerSchema).handler(async ({ data }) => { const c = await masterMutation(); return changeWhiteLabelOwner(c.sql, c.actorUserId, data.tenantId, data.ownerUserId); });
 export const setMasterWhiteLabelStatus = createServerFn({ method: "POST" }).validator(statusSchema).handler(async ({ data }) => { const c = await masterMutation(); return setWhiteLabelStatus(c.sql, c.actorUserId, data.tenantId, data.status); });
 export const createMasterDomain = createServerFn({ method: "POST" }).validator(domainSchema).handler(async ({ data }) => { const c = await masterMutation(); return createWhiteLabelDomain(c.sql, c.actorUserId, data); });
-export const updateMasterDomain = createServerFn({ method: "POST" }).validator(updateDomainSchema).handler(async ({ data }) => { const c = await masterMutation(); return updateWhiteLabelDomain(c.sql, c.actorUserId, data); });
-export const setMasterDomainStatus = createServerFn({ method: "POST" }).validator(domainStatusSchema).handler(async ({ data }) => { const c = await masterMutation(); return setWhiteLabelDomainStatus(c.sql, c.actorUserId, data.tenantId, data.domainId, data.status); });
+export const updateMasterDomain = createServerFn({ method: "POST" }).validator(updateDomainSchema).handler(async ({ data }) => {
+  const c = await masterMutation(); const previous = await domainHostname(c.sql, data.tenantId, data.domainId);
+  const result = await updateWhiteLabelDomain(c.sql, c.actorUserId, data);
+  await invalidateHostname(previous); await invalidateHostname(data.hostname); return result;
+});
+export const setMasterDomainStatus = createServerFn({ method: "POST" }).validator(domainStatusSchema).handler(async ({ data }) => {
+  const c = await masterMutation(); const hostname = await domainHostname(c.sql, data.tenantId, data.domainId);
+  const result = await setWhiteLabelDomainStatus(c.sql, c.actorUserId, data.tenantId, data.domainId, data.status);
+  await invalidateHostname(hostname); return result;
+});
