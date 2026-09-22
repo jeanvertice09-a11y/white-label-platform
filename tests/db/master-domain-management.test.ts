@@ -1,6 +1,4 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { setupDatabase } from "./harness.ts";
 import type { Harness } from "./harness.ts";
 import { createWhiteLabelDomain, updateWhiteLabelDomain } from "../../apps/web/src/lib/server/master-white-label.write.server.ts";
@@ -9,7 +7,7 @@ import { seedIds, seedSql } from "./seed.ts";
 let h: Harness;
 const ids = seedIds();
 const actor = ids.users.platformOwner;
-beforeAll(async () => { h = await setupDatabase(); await h.db.execScript(seedSql()); await h.db.execScript(readFileSync(join(import.meta.dir, "..", "..", "supabase", "migrations", "0015_master_white_label_management.sql"), "utf8")); });
+beforeAll(async () => { h = await setupDatabase(); await h.db.execScript(seedSql()); });
 afterAll(async () => { await h.db.close(); });
 
 describe("master domain management", () => {

@@ -1,6 +1,4 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { createCustomerRepository } from "../../packages/customers/src/index.ts";
 import { createOrderRepository } from "../../packages/orders/src/index.ts";
 import { createCampaignRepository } from "../../packages/marketing/src/index.ts";
@@ -18,11 +16,6 @@ let customerNoOptIn = "";
 
 beforeAll(async () => {
   h = await setupDatabase();
-  const migration = readFileSync(
-    join(import.meta.dir, "..", "..", "supabase", "migrations", "0023_marketing_campaigns.sql"),
-    "utf8",
-  );
-  await h.db.execScript(migration);
   await h.db.execScript(seedSql());
   await h.db.execScript(`
     insert into public.products

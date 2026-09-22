@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { HomologationRuntimeConfig } from "../../scripts/homologation/model.ts";
 import { stableUuid } from "../../scripts/homologation/model.ts";
 import { expectedAssets } from "../../scripts/homologation/plan.ts";
@@ -76,9 +74,6 @@ export function homologationTestConfig(): HomologationRuntimeConfig {
 }
 
 export async function prepareHomologationHarness(h: Harness, config: HomologationRuntimeConfig): Promise<void> {
-  const migrationsDir = join(import.meta.dir, "..", "..", "supabase", "migrations");
-  await h.db.execScript(readFileSync(join(migrationsDir, "0015_master_white_label_management.sql"), "utf8"));
-  await h.db.execScript(readFileSync(join(migrationsDir, "0023_marketing_campaigns.sql"), "utf8"));
   await h.db.execScript("create table if not exists auth.users(id uuid primary key,email text unique);");
   const users = [
     ...Object.entries(config.tenantOwners).map(([key, id]) => [id, config.tenantOwnerEmails[key as keyof typeof config.tenantOwnerEmails]] as const),

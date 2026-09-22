@@ -1,6 +1,4 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { setupDatabase } from "./harness.ts";
 import type { Harness } from "./harness.ts";
 import { changeWhiteLabelOwner, createWhiteLabel, setWhiteLabelStatus, updateWhiteLabel } from "../../apps/web/src/lib/server/master-white-label.write.server.ts";
@@ -10,7 +8,7 @@ const actor = "11111111-1111-4111-8111-111111111111";
 const ownerA = "22222222-2222-4222-8222-222222222222";
 const ownerB = "33333333-3333-4333-8333-333333333333";
 const missingOwner = "44444444-4444-4444-8444-444444444444";
-beforeAll(async () => { h = await setupDatabase(); await h.db.execScript("create table if not exists auth.users(id uuid primary key,email text);"); await h.db.query("insert into auth.users(id,email) values ($1,'a@example.com'),($2,'b@example.com')", [ownerA, ownerB]); await h.db.execScript(readFileSync(join(import.meta.dir, "..", "..", "supabase", "migrations", "0015_master_white_label_management.sql"), "utf8")); });
+beforeAll(async () => { h = await setupDatabase(); await h.db.execScript("create table if not exists auth.users(id uuid primary key,email text);"); await h.db.query("insert into auth.users(id,email) values ($1,'a@example.com'),($2,'b@example.com')", [ownerA, ownerB]); });
 afterAll(async () => { await h.db.close(); });
 
 describe("master White Label management", () => {
