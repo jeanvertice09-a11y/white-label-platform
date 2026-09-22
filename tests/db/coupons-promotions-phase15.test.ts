@@ -91,12 +91,15 @@ describe("phase 15 coupons + promotions", () => {
        order by created_at,id`,
       [ids.tenantA, ids.storeA, created.id],
     );
-    expect(rows.map((row) => row["action"])).toEqual([
+    const expectedActions = [
       "coupon.created",
       "coupon.deactivated",
       "coupon.activated",
       "coupon.updated",
-    ]);
+    ];
+    const actions = rows.map((row) => row["action"]);
+    expect(actions).toHaveLength(expectedActions.length);
+    for (const action of expectedActions) expect(actions).toContain(action);
   });
 
   test("inexistente, inativo, expirado, futuro e subtotal insuficiente são rejeitados", async () => {

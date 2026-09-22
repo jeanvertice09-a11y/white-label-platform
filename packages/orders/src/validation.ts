@@ -9,17 +9,13 @@ export function assertCreateOrderInput(input: CreateOrderFromCartInput): void {
     throw new Error("Chave de idempotência inválida");
   }
   if (input.items.length < 1 || input.items.length > 100) throw new Error("Carrinho inválido");
-  if (!Number.isInteger(input.shippingCents) || input.shippingCents < 0) {
-    throw new Error("Frete inválido");
-  }
+  if (!Number.isInteger(input.shippingCents) || input.shippingCents < 0) throw new Error("Frete inválido");
+  const minimumOrderCents = input.minimumOrderCents ?? 0;
+  if (!Number.isSafeInteger(minimumOrderCents) || minimumOrderCents < 0) throw new Error("Pedido mínimo inválido");
   const coupon = input.couponCode?.trim().toUpperCase() ?? null;
-  if (coupon && !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(coupon)) {
-    throw new Error("Cupom inválido");
-  }
+  if (coupon && !/^[A-Z0-9][A-Z0-9_-]{1,39}$/.test(coupon)) throw new Error("Cupom inválido");
   for (const item of input.items) {
     if (!item.productId) throw new Error("Produto inválido");
-    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999) {
-      throw new Error("Quantidade inválida");
-    }
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 999) throw new Error("Quantidade inválida");
   }
 }

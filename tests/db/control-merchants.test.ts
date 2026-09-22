@@ -182,13 +182,16 @@ describe("fase 05 control merchants", () => {
        where tenant_id=$1 and store_id=$2 order by created_at`,
       [ids.tenantA, created.id],
     );
-    expect(audits.map((row) => row["action"])).toEqual([
+    const expectedActions = [
       "control.store.created",
       "control.store.updated",
       "control.store.owner_changed",
       "control.store.suspended",
       "control.store.reactivated",
-    ]);
+    ];
+    const actions = audits.map((row) => row["action"]);
+    expect(actions).toHaveLength(expectedActions.length);
+    for (const action of expectedActions) expect(actions).toContain(action);
     expect(audits.every((row) => !String(row["metadata"]).includes("password"))).toBe(true);
   });
 

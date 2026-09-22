@@ -65,6 +65,7 @@ export interface CreateOrderFromCartInput {
   couponCode?: string | null;
   notes: string | null;
   shippingCents: number;
+  minimumOrderCents?: number;
   items: OrderCartItemInput[];
 }
 

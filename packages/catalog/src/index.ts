@@ -42,6 +42,18 @@ export {
   isCatalogCheckoutEnabled,
 } from "./behavior.ts";
 export type { CatalogBehavior, CatalogBehaviorFlag } from "./behavior.ts";
+export {
+  CATALOG_ADVANCED_LABEL_KEYS,
+  DEFAULT_CATALOG_ADVANCED_SETTINGS,
+  getCatalogAdvancedSettings,
+  mergeCatalogAdvancedSettingsLabels,
+  isProductAvailable,
+} from "./advanced.ts";
+export type {
+  CatalogAdvancedSettings,
+  CatalogCardStyle,
+  CatalogProductsPerRow,
+} from "./advanced.ts";
 export { EMPTY_PUBLIC_STORE_PROFILE, readPublicStoreProfile } from "./store-profile.ts";
 export {
   CATALOG_MERCHANDISING_LABEL_KEYS,

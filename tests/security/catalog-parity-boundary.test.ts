@@ -14,7 +14,8 @@ describe("catalog parity server boundary", () => {
     expect(schema).not.toContain("discountCents");
     expect(checkoutSource).toContain("getCatalogBehavior(settings)");
     expect(checkoutSource).toContain("item.quantity !== 1");
-    expect(checkoutSource).toContain("notes: data.notes");
+    expect(checkoutSource).toContain("advanced.checkoutAskNotes ? data.notes : null");
+    expect(checkoutSource).toContain("couponCode: data.couponCode, notes");
     expect(checkoutSource).toContain("orders.createFromCart(catalog.scope");
   });
 

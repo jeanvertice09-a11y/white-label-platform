@@ -2,7 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import {
+  getCatalogAdvancedSettings,
   getCatalogBehavior,
+  isProductAvailable,
   readPublicStoreProfile,
   resolvePublicCatalogMerchandising,
 } from "@white-label/catalog";
@@ -37,15 +39,16 @@ async function publicProfile(scope: CatalogScope) {
 async function publicSnapshot(input: QueryInput) {
   const query = querySchema.parse(input);
   const context = await createPublicCatalogContext(getRequestHost());
-  const [settings, categories, banners, products, profile] = await Promise.all([
-    entitledSettings(context), context.repository.listCategories(context.scope, true),
-    context.repository.listBanners(context.scope, true), context.repository.listProducts({ ...context.scope, ...query }, true),
+  const settings = await entitledSettings(context);
+  const advanced = getCatalogAdvancedSettings(settings);
+  const [categories, banners, products, profile] = await Promise.all([
+    context.repository.listCategories(context.scope, true), context.repository.listBanners(context.scope, true),
+    context.repository.listProducts({ ...context.scope, ...query, inStockOnly: !advanced.showOutOfStock }, true),
     publicProfile(context.scope),
   ]);
   return {
     store: context.store, settings, categories: settings.showCategories ? categories : [], banners, products, profile,
-    merchandising: resolvePublicCatalogMerchandising(settings.labels),
-    canonicalUrl: `https://${context.hostname}/`,
+    merchandising: resolvePublicCatalogMerchandising(settings.labels), canonicalUrl: `https://${context.hostname}/`,
   };
 }
 
@@ -73,25 +76,36 @@ export const listPublicCatalogProducts = createServerFn({ method: "GET" })
   .validator((data: QueryInput | undefined) => querySchema.parse(data ?? {})).handler(async ({ data }) => {
     const context = await createPublicCatalogContext(getRequestHost());
     const settings = await entitledSettings(context);
-    const safeQuery = { ...data, search: settings.showSearch ? data.search : undefined, categoryId: settings.showCategories ? data.categoryId : undefined };
+    const advanced = getCatalogAdvancedSettings(settings);
+    const safeQuery = {
+      ...data,
+      search: settings.showSearch ? data.search : undefined,
+      categoryId: settings.showCategories ? data.categoryId : undefined,
+      inStockOnly: !advanced.showOutOfStock,
+    };
     return context.repository.listProducts({ ...context.scope, ...safeQuery }, true);
   });
 
 export const getPublicCatalogProduct = createServerFn({ method: "GET" }).validator(slugSchema).handler(async ({ data }) => {
   const context = await createPublicCatalogContext(getRequestHost());
-  return context.repository.getProductBySlug(context.scope, data.slug, true);
+  const settings = await entitledSettings(context);
+  const advanced = getCatalogAdvancedSettings(settings);
+  const product = await context.repository.getProductBySlug(context.scope, data.slug, true);
+  return product && (advanced.showOutOfStock || isProductAvailable(product)) ? product : null;
 });
 
 export const getPublicProductPage = createServerFn({ method: "GET" }).validator(slugSchema).handler(async ({ data }) => {
   const context = await createPublicCatalogContext(getRequestHost());
-  const [settings, categories, product, profile] = await Promise.all([
-    entitledSettings(context), context.repository.listCategories(context.scope, true),
+  const settings = await entitledSettings(context);
+  const advanced = getCatalogAdvancedSettings(settings);
+  const [categories, product, profile] = await Promise.all([
+    context.repository.listCategories(context.scope, true),
     context.repository.getProductBySlug(context.scope, data.slug, true), publicProfile(context.scope),
   ]);
-  if (!product) throw new Error("Produto não encontrado");
+  if (!product || (!advanced.showOutOfStock && !isProductAvailable(product))) throw new Error("Produto não encontrado");
   const behavior = getCatalogBehavior(settings);
   const relatedProducts = behavior.showRelated && product.categoryId
-    ? (await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 6, categoryId: product.categoryId, sort: "position" }, true)).items.filter((item) => item.id !== product.id).slice(0, 4)
+    ? (await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 6, categoryId: product.categoryId, sort: "position", inStockOnly: !advanced.showOutOfStock }, true)).items.filter((item) => item.id !== product.id).slice(0, 4)
     : [];
   return {
     store: context.store, settings, categories: settings.showCategories ? categories : [], product, relatedProducts, profile,
@@ -102,14 +116,15 @@ export const getPublicProductPage = createServerFn({ method: "GET" }).validator(
 
 export const getPublicCategoryPage = createServerFn({ method: "GET" }).validator(slugSchema).handler(async ({ data }) => {
   const context = await createPublicCatalogContext(getRequestHost());
-  const [settings, categories, banners, profile] = await Promise.all([
-    entitledSettings(context), context.repository.listCategories(context.scope, true), context.repository.listBanners(context.scope, true),
-    publicProfile(context.scope),
+  const settings = await entitledSettings(context);
+  const advanced = getCatalogAdvancedSettings(settings);
+  const [categories, banners, profile] = await Promise.all([
+    context.repository.listCategories(context.scope, true), context.repository.listBanners(context.scope, true), publicProfile(context.scope),
   ]);
   if (!settings.showCategories) throw new Error("Categorias indisponíveis neste catálogo");
   const category = categories.find((item) => item.slug === data.slug);
   if (!category) throw new Error("Categoria não encontrada");
-  const products = await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 12, categoryId: category.id, sort: "position" }, true);
+  const products = await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 12, categoryId: category.id, sort: "position", inStockOnly: !advanced.showOutOfStock }, true);
   return {
     store: context.store, settings, categories, banners, products, profile, category,
     merchandising: resolvePublicCatalogMerchandising(settings.labels),

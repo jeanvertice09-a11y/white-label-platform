@@ -1,8 +1,18 @@
 import { useState } from "react";
 import type { CSSProperties, SyntheticEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { getCatalogBehavior, setCatalogBehaviorFlag } from "@white-label/catalog";
-import type { CatalogBehaviorFlag, CatalogSettings, CatalogSettingsMutationInput } from "@white-label/catalog";
+import {
+  getCatalogAdvancedSettings,
+  getCatalogBehavior,
+  mergeCatalogAdvancedSettingsLabels,
+  setCatalogBehaviorFlag,
+} from "@white-label/catalog";
+import type {
+  CatalogAdvancedSettings,
+  CatalogBehaviorFlag,
+  CatalogSettings,
+  CatalogSettingsMutationInput,
+} from "@white-label/catalog";
 import { saveMerchantCatalogSettings } from "../../lib/server/catalog-admin.functions.ts";
 
 type SettingsDraft = CatalogSettingsMutationInput;
@@ -31,6 +41,27 @@ const BEHAVIOR_OPTIONS: ReadonlyArray<readonly [CatalogBehaviorFlag, string]> = 
   ["showWhatsapp", "Disponibilizar finalização pelo WhatsApp"], ["catalogOnly", "Catálogo somente vitrine (sem compra)"],
 ];
 
+function AdvancedFields({ draft, setField }: Readonly<{ draft: SettingsDraft; setField: Setter }>): React.JSX.Element {
+  const advanced = getCatalogAdvancedSettings(draft);
+  function setAdvanced(next: CatalogAdvancedSettings): void {
+    setField("labels", mergeCatalogAdvancedSettingsLabels(draft.labels, next));
+  }
+  function toggle(key: keyof Pick<CatalogAdvancedSettings, "showOutOfStock" | "searchSuggestions" | "checkoutAskName" | "checkoutAskPhone" | "checkoutAskNotes">, value: boolean): void {
+    setAdvanced({ ...advanced, [key]: value });
+  }
+  return <>
+    <div className="k-field k-field--full"><strong>Catálogo avançado</strong><p className="k-muted">Preferências de listagem e checkout. Estoque, preço e pedido mínimo são revalidados no servidor.</p></div>
+    <label className="k-check"><input type="checkbox" checked={advanced.showOutOfStock} onChange={(e) => { toggle("showOutOfStock", e.target.checked); }} />Exibir produtos sem estoque</label>
+    <label className="k-check"><input type="checkbox" checked={advanced.searchSuggestions} onChange={(e) => { toggle("searchSuggestions", e.target.checked); }} />Mostrar sugestões na busca</label>
+    <label className="k-check"><input type="checkbox" checked={advanced.checkoutAskName} onChange={(e) => { toggle("checkoutAskName", e.target.checked); }} />Pedir nome no checkout</label>
+    <label className="k-check"><input type="checkbox" checked={advanced.checkoutAskPhone} onChange={(e) => { toggle("checkoutAskPhone", e.target.checked); }} />Pedir telefone no checkout</label>
+    <label className="k-check"><input type="checkbox" checked={advanced.checkoutAskNotes} onChange={(e) => { toggle("checkoutAskNotes", e.target.checked); }} />Pedir observação no checkout</label>
+    <div className="k-field"><label>Pedido mínimo (R$)</label><input type="number" min="0" max="1000000" step="0.01" value={(advanced.minimumOrderCents / 100).toFixed(2)} onChange={(e) => { const value = Number(e.target.value); setAdvanced({ ...advanced, minimumOrderCents: Number.isFinite(value) && value >= 0 ? Math.round(value * 100) : 0 }); }} /></div>
+    <div className="k-field"><label>Produtos por linha</label><select value={advanced.productsPerRow} onChange={(e) => { const value = Number(e.target.value); setAdvanced({ ...advanced, productsPerRow: value === 2 || value === 3 ? value : 4 }); }}><option value={2}>2</option><option value={3}>3</option><option value={4}>4</option></select></div>
+    <div className="k-field"><label>Estilo do card</label><select value={advanced.cardStyle} onChange={(e) => { setAdvanced({ ...advanced, cardStyle: e.target.value === "compact" ? "compact" : "default" }); }}><option value="default">Padrão</option><option value="compact">Compacto</option></select></div>
+  </>;
+}
+
 function CatalogFields({ draft, setField }: Readonly<{ draft: SettingsDraft; setField: Setter }>): React.JSX.Element {
   const behavior = getCatalogBehavior(draft);
   const setBehavior = (flag: CatalogBehaviorFlag, enabled: boolean) => { setField("labels", setCatalogBehaviorFlag(draft.labels, flag, enabled)); };
@@ -47,12 +78,14 @@ function CatalogFields({ draft, setField }: Readonly<{ draft: SettingsDraft; set
     <label className="k-check"><input type="checkbox" checked={draft.showPrice} onChange={(e) => { setField("showPrice", e.target.checked); }} />Mostrar preços</label>
     <label className="k-check"><input type="checkbox" checked={draft.showStock} onChange={(e) => { setField("showStock", e.target.checked); }} />Mostrar estoque</label>
     {BEHAVIOR_OPTIONS.map(([flag, label]) => <label className="k-check" key={flag}><input type="checkbox" checked={behavior[flag]} onChange={(e) => { setBehavior(flag, e.target.checked); }} />{label}</label>)}
+    <AdvancedFields draft={draft} setField={setField} />
   </>;
 }
 
 function Preview({ draft }: Readonly<{ draft: SettingsDraft }>): React.JSX.Element {
   const style = { "--preview-primary": draft.primaryColor, "--preview-accent": draft.accentColor, "--preview-bg": draft.backgroundColor } as CSSProperties;
-  return <div className="k-preview" style={style}><div className="k-preview__bar" /><div className="k-preview__body"><strong>Prévia {draft.layout === "modern" ? "Moderno" : "Clássico"}</strong><p className="k-muted">{draft.labels["subtitle"] || "Catálogo online"}</p><span className="k-preview__accent">{getCatalogBehavior(draft).catalogOnly ? "Modo vitrine" : "Catálogo com pedidos"}</span></div></div>;
+  const advanced = getCatalogAdvancedSettings(draft);
+  return <div className="k-preview" style={style}><div className="k-preview__bar" /><div className="k-preview__body"><strong>Prévia {draft.layout === "modern" ? "Moderno" : "Clássico"}</strong><p className="k-muted">{draft.labels["subtitle"] || "Catálogo online"}</p><span className="k-preview__accent">{advanced.productsPerRow} por linha · card {advanced.cardStyle === "compact" ? "compacto" : "padrão"}</span></div></div>;
 }
 
 export function CatalogSettingsForm({ settings }: Readonly<{ settings: CatalogSettings }>): React.JSX.Element {
