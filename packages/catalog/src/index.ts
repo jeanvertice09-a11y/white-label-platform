@@ -54,6 +54,12 @@ export type {
   CatalogCardStyle,
   CatalogProductsPerRow,
 } from "./advanced.ts";
+export {
+  CATALOG_TRACKING_LABEL_KEYS,
+  getCatalogTrackingSettings,
+  mergeCatalogTrackingLabels,
+} from "./tracking.ts";
+export type { CatalogTrackingSettings } from "./tracking.ts";
 export { EMPTY_PUBLIC_STORE_PROFILE, readPublicStoreProfile } from "./store-profile.ts";
 export {
   CATALOG_MERCHANDISING_LABEL_KEYS,

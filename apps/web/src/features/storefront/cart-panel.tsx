@@ -1,11 +1,35 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CatalogAdvancedSettings, CartState } from "@white-label/catalog";
 import { cartTotalCents, clearCart, removeCartItem, setCartItemQuantity } from "@white-label/catalog";
-import { createWhatsappOrder } from "../../lib/server/storefront-checkout.functions.ts";
+import { createWhatsappOrder, refreshPublicCart } from "../../lib/server/storefront-checkout.functions.ts";
 import { storefrontMoney } from "./format.ts";
+import { trackStorefrontEvent } from "./storefront-tracking.tsx";
 
 type CheckoutResult = Awaited<ReturnType<typeof createWhatsappOrder>>;
+type RefreshResult = Awaited<ReturnType<typeof refreshPublicCart>>;
 type CheckoutSettings = Pick<CatalogAdvancedSettings, "checkoutAskName" | "checkoutAskPhone" | "checkoutAskNotes" | "minimumOrderCents">;
+
+function cartKey(productId: string, variantId: string | null): string { return `${productId}:${variantId ?? "base"}`; }
+function refreshInput(cart: CartState) { return cart.items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })); }
+
+function reconcileCart(cart: CartState, result: RefreshResult): { cart: CartState; changed: boolean; notice: string } {
+  const previous = new Map(cart.items.map((item) => [cartKey(item.productId, item.variantId), item]));
+  let removed = result.items.length !== cart.items.length; let quantityChanged = false; let priceChanged = false; let descriptionChanged = false;
+  for (const item of result.items) {
+    const before = previous.get(cartKey(item.productId, item.variantId));
+    if (!before) { removed = true; continue; }
+    if (before.quantity !== item.quantity) quantityChanged = true;
+    if (before.unitPriceCents !== item.unitPriceCents) priceChanged = true;
+    if (before.name !== item.name || before.variantName !== item.variantName) descriptionChanged = true;
+  }
+  const changed = removed || quantityChanged || priceChanged || descriptionChanged;
+  const notice = removed ? "Um produto ou variante indisponível foi removido do carrinho." : quantityChanged ? "A quantidade foi ajustada ao estoque/configuração atual." : priceChanged ? "Um preço mudou e o carrinho foi atualizado. Revise antes de confirmar." : descriptionChanged ? "Um item do carrinho foi atualizado. Revise antes de confirmar." : "";
+  return { cart: { ...cart, items: result.items }, changed, notice };
+}
+
+function trackingItems(cart: CartState) {
+  return cart.items.map((item) => ({ id: item.productId, name: item.name, variantName: item.variantName, quantity: item.quantity, unitPriceCents: item.unitPriceCents }));
+}
 
 function CartRows(props: Readonly<{ cart: CartState; showPrice: boolean; quantityEnabled: boolean; onChange: (cart: CartState) => void }>): React.JSX.Element {
   function change(productId: string, variantId: string | null, next: number): void { props.onChange(next < 1 ? removeCartItem(props.cart, productId, variantId) : setCartItemQuantity(props.cart, productId, variantId, next)); }
@@ -37,17 +61,36 @@ function safeCheckoutMessage(error: unknown): string {
 }
 
 export function CartPanel(props: Readonly<{ cart: CartState; whatsappEnabled: boolean; showPrice?: boolean; quantityEnabled?: boolean; checkoutSettings: CheckoutSettings; onChange: (cart: CartState) => void; onClose: () => void }>): React.JSX.Element {
-  const key = useRef<string | null>(null);
+  const key = useRef<string | null>(null); const initialCart = useRef(props.cart); const initialOnChange = useRef(props.onChange);
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [coupon, setCoupon] = useState(""); const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [success, setSuccess] = useState<CheckoutResult | null>(null);
-  const showPrice = props.showPrice ?? true; const quantityEnabled = props.quantityEnabled ?? true; const subtotal = cartTotalCents(props.cart); const minimumMet = subtotal >= props.checkoutSettings.minimumOrderCents;
+  const [busy, setBusy] = useState(false); const [refreshing, setRefreshing] = useState(false); const [message, setMessage] = useState(""); const [success, setSuccess] = useState<CheckoutResult | null>(null); const [minimumOrderCents, setMinimumOrderCents] = useState(props.checkoutSettings.minimumOrderCents);
+  const showPrice = props.showPrice ?? true; const quantityEnabled = props.quantityEnabled ?? true; const subtotal = cartTotalCents(props.cart); const minimumMet = subtotal >= minimumOrderCents;
+  useEffect(() => {
+    let active = true; const cart = initialCart.current;
+    if (!cart.items.length) return () => { active = false; };
+    setRefreshing(true);
+    void refreshPublicCart({ data: { items: refreshInput(cart) } }).then((result) => {
+      if (!active) return;
+      setMinimumOrderCents(result.minimumOrderCents);
+      const reconciled = reconcileCart(cart, result);
+      if (reconciled.changed) { initialOnChange.current(reconciled.cart); setMessage(reconciled.notice); }
+    }).catch((error: unknown) => { if (active) setMessage(safeCheckoutMessage(error)); }).finally(() => { if (active) setRefreshing(false); });
+    return () => { active = false; };
+  }, []);
   async function checkout(): Promise<void> {
     setBusy(true); setMessage("");
     try {
+      const refreshed = await refreshPublicCart({ data: { items: refreshInput(props.cart) } });
+      setMinimumOrderCents(refreshed.minimumOrderCents);
+      const reconciled = reconcileCart(props.cart, refreshed);
+      if (reconciled.changed) { props.onChange(reconciled.cart); setMessage(reconciled.notice || "O carrinho foi atualizado. Revise antes de confirmar."); return; }
+      if (refreshed.subtotalCents < refreshed.minimumOrderCents) { setMessage("O subtotal atual ainda não atingiu o pedido mínimo desta loja."); return; }
+      trackStorefrontEvent({ type: "begin_checkout", items: trackingItems(reconciled.cart) });
       key.current ??= crypto.randomUUID();
-      const result = await createWhatsappOrder({ data: { idempotencyKey: key.current, customerName: props.checkoutSettings.checkoutAskName ? name.trim() || null : null, customerPhone: props.checkoutSettings.checkoutAskPhone ? phone.trim() || null : null, couponCode: coupon.trim() || null, notes: props.checkoutSettings.checkoutAskNotes ? notes.trim() || null : null, items: props.cart.items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })) } });
-      setSuccess(result); props.onChange(clearCart(props.cart));
+      const result = await createWhatsappOrder({ data: { idempotencyKey: key.current, customerName: props.checkoutSettings.checkoutAskName ? name.trim() || null : null, customerPhone: props.checkoutSettings.checkoutAskPhone ? phone.trim() || null : null, couponCode: coupon.trim() || null, notes: props.checkoutSettings.checkoutAskNotes ? notes.trim() || null : null, items: refreshInput(reconciled.cart) } });
+      setSuccess(result); props.onChange(clearCart(reconciled.cart));
+      trackStorefrontEvent({ type: "order_created", orderId: result.orderId, totalCents: result.totalCents, items: result.items.flatMap((item) => item.productId ? [{ id: item.productId, name: item.productName, variantName: item.variantName, quantity: item.quantity, unitPriceCents: item.unitCents }] : []) });
     } catch (error) { setMessage(safeCheckoutMessage(error)); } finally { setBusy(false); }
   }
-  return <div className="sf__overlay sf__overlay--drawer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onClose(); }}><section className="sf__modal sf__cart-modal" aria-modal="true" role="dialog" aria-label={success ? "Confirmação do pedido" : "Carrinho e checkout"}><div className="sf__modal-head"><div><span className="sf__eyebrow">{success ? "Confirmação" : "Seu pedido"}</span><h2>{success ? "Pedido confirmado" : "Carrinho"}</h2></div><button className="sf__close" type="button" onClick={props.onClose} aria-label="Fechar">×</button></div>{success ? <OrderSuccess result={success} showPrice={showPrice} /> : <><CartRows cart={props.cart} showPrice={showPrice} quantityEnabled={quantityEnabled} onChange={props.onChange} />{props.cart.items.length ? <div className="sf__checkout"><CheckoutFields settings={props.checkoutSettings} name={name} phone={phone} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onCoupon={setCoupon} onNotes={setNotes} /><div className="sf__summary">{showPrice ? <div className="sf__summary-row sf__summary-row--total"><span>Subtotal</span><strong>{storefrontMoney(subtotal)}</strong></div> : null}{props.checkoutSettings.minimumOrderCents > 0 ? <p className="sf__minimum-order" data-met={minimumMet}>Pedido mínimo: {storefrontMoney(props.checkoutSettings.minimumOrderCents)}{minimumMet ? " · atingido" : ""}</p> : null}<p>Estoque, preço, cupom, desconto, pedido mínimo e total são validados novamente no servidor antes de o pedido ser criado.</p></div>{message ? <div className="sf__checkout-error" role="alert">{message}</div> : null}<div className="sf__checkout-actions"><button className="sf__text-button" type="button" onClick={() => { props.onChange(clearCart(props.cart)); }}>Limpar carrinho</button>{props.whatsappEnabled ? <button className="sf__primary" disabled={busy || !minimumMet} type="button" onClick={() => { void checkout(); }}>{busy ? "Criando pedido…" : minimumMet ? "Confirmar pedido" : "Pedido mínimo não atingido"}</button> : <div className="sf__checkout-error">Nenhum método de checkout público está disponível nesta loja.</div>}</div></div> : null}</>}</section></div>;
+  return <div className="sf__overlay sf__overlay--drawer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onClose(); }}><section className="sf__modal sf__cart-modal" aria-modal="true" role="dialog" aria-label={success ? "Confirmação do pedido" : "Carrinho e checkout"}><div className="sf__modal-head"><div><span className="sf__eyebrow">{success ? "Confirmação" : "Seu pedido"}</span><h2>{success ? "Pedido confirmado" : "Carrinho"}</h2></div><button className="sf__close" type="button" onClick={props.onClose} aria-label="Fechar">×</button></div>{success ? <OrderSuccess result={success} showPrice={showPrice} /> : <><CartRows cart={props.cart} showPrice={showPrice} quantityEnabled={quantityEnabled} onChange={props.onChange} />{props.cart.items.length ? <div className="sf__checkout"><CheckoutFields settings={props.checkoutSettings} name={name} phone={phone} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onCoupon={setCoupon} onNotes={setNotes} /><div className="sf__summary">{showPrice ? <div className="sf__summary-row sf__summary-row--total"><span>Subtotal</span><strong>{storefrontMoney(subtotal)}</strong></div> : null}{minimumOrderCents > 0 ? <p className="sf__minimum-order" data-met={minimumMet}>Pedido mínimo: {storefrontMoney(minimumOrderCents)}{minimumMet ? " · atingido" : ""}</p> : null}<p>Estoque, preço, cupom, desconto, pedido mínimo e total são validados novamente no servidor antes de o pedido ser criado.</p></div>{message ? <div className="sf__checkout-error" role="alert">{message}</div> : null}<div className="sf__checkout-actions"><button className="sf__text-button" type="button" onClick={() => { props.onChange(clearCart(props.cart)); }}>Limpar carrinho</button>{props.whatsappEnabled ? <button className="sf__primary" disabled={busy || refreshing || !minimumMet} type="button" onClick={() => { void checkout(); }}>{busy || refreshing ? "Atualizando carrinho…" : minimumMet ? "Confirmar pedido" : "Pedido mínimo não atingido"}</button> : <div className="sf__checkout-error">Nenhum método de checkout público está disponível nesta loja.</div>}</div></div> : null}</>}</section></div>;
 }

@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { getCatalogPublicMediaUrl } from "@white-label/catalog";
 import { KataluuLanding } from "../features/public/kataluu-landing.tsx";
 import { PublicDomainStateView } from "../features/public/public-domain-state.tsx";
 import { WhiteLabelLanding } from "../features/public/white-label-landing.tsx";
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/")({
     if (loaderData?.kind === "storefront") {
       const title = loaderData.catalog.settings.seoTitle ?? `${loaderData.catalog.store.name} | Catálogo`;
       const description = loaderData.catalog.settings.seoDescription ?? loaderData.catalog.profile.description ?? `Catálogo online de ${loaderData.catalog.store.name}.`;
+      const banner = loaderData.catalog.banners.at(0);
+      const ogImage = banner ? getCatalogPublicMediaUrl(banner, banner.imageObjectKey) : null;
       return {
         meta: [
           { title },
@@ -33,6 +36,8 @@ export const Route = createFileRoute("/")({
           { property: "og:title", content: title },
           { property: "og:description", content: description },
           { property: "og:type", content: "website" },
+          { property: "og:url", content: loaderData.catalog.canonicalUrl },
+          ...(ogImage ? [{ property: "og:image", content: ogImage }] : []),
         ],
         links: [{ rel: "canonical", href: loaderData.catalog.canonicalUrl }],
       };

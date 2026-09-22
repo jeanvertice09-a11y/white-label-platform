@@ -24,5 +24,5 @@ export interface CatalogReadRepository {
     slug: string,
     publicOnly: boolean,
   ): Promise<Product | null>;
-  getProductById(scope: CatalogScope, id: string): Promise<Product | null>;
+  getProductById(scope: CatalogScope, id: string, publicOnly?: boolean): Promise<Product | null>;
 }
