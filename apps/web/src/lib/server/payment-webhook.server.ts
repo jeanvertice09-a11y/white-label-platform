@@ -2,6 +2,7 @@ import {
   createCredentialVaultFromEnv,
   loadGatewayProvider,
   persistVerifiedWebhook,
+  MercadoPagoProvider,
 } from "@white-label/payments/server";
 import type { PaymentProviderName, ProviderWebhookInput } from "@white-label/payments";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
@@ -45,6 +46,44 @@ export async function handlePaymentWebhook(
       type: normalized.type,
       payload,
       occurredAt: normalized.occurredAt,
+    });
+    return new Response(null, { status: 200 });
+  } catch (error) {
+    if (error instanceof RateLimitError) return new Response("Too many requests", { status: 429 });
+    if (error instanceof WebhookPayloadTooLargeError) return new Response("Payload too large", { status: 413 });
+    return new Response("Webhook rejected", { status: 400 });
+  }
+}
+
+
+export async function handleMercadoPagoStoreWebhook(request: Request): Promise<Response> {
+  try {
+    const rawBody = await readBoundedBody(request, MAX_WEBHOOK_BODY_BYTES);
+    const url = new URL(request.url);
+    const dataId = url.searchParams.get("data.id") ?? url.searchParams.get("data_id");
+    if (!dataId) return new Response("Not found", { status: 404 });
+    const sql = createAdminSqlExecutor();
+    const rows = await sql.query(
+      `select p.gateway_account_id::text
+       from public.payments p join public.gateway_accounts ga on ga.id=p.gateway_account_id
+       where ga.provider='mercadopago' and ga.level='store_checkout' and ga.status='active'
+         and p.provider_payment_id=$1 limit 1`,
+      [dataId],
+    );
+    const gatewayAccountId = rows.at(0)?.["gateway_account_id"];
+    if (typeof gatewayAccountId !== "string") return new Response("Not found", { status: 404 });
+    await enforceRateLimit(sql, `webhook:mercadopago:${gatewayAccountId}`, 120, 60);
+    const secret = process.env["MERCADOPAGO_WEBHOOK_SECRET"]?.trim();
+    if (!secret) return new Response("Webhook rejected", { status: 400 });
+    const verifier = new MercadoPagoProvider({ accessToken: "webhook-verification-only", webhookSecret: secret });
+    const input = webhookInput(request, rawBody, url);
+    if (!await verifier.verifyWebhook(input)) return new Response("Unauthorized", { status: 401 });
+    const payload: unknown = JSON.parse(rawBody);
+    const normalized = await verifier.normalizeWebhook(payload);
+    if (normalized.providerPaymentId !== dataId) return new Response("Webhook rejected", { status: 400 });
+    await persistVerifiedWebhook(sql, {
+      provider: "mercadopago", gatewayAccountId, externalEventId: normalized.externalEventId,
+      type: normalized.type, payload, occurredAt: normalized.occurredAt,
     });
     return new Response(null, { status: 200 });
   } catch (error) {

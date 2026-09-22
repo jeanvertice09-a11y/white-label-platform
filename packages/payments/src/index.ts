@@ -10,6 +10,8 @@ export type {
   GatewayAccountId,
   WebhookEvent,
   CreatePaymentIntentInput,
+  CreatePaymentIntentResult,
+  PaymentCheckoutData,
   ProviderWebhookInput,
   NormalizedProviderEvent,
   RefundPaymentInput,

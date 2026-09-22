@@ -99,8 +99,8 @@ describe("SENTINEL lote 01 financial isolation", () => {
   });
 
   test("credencial ausente e provider incompatível falham fechados", async () => {
-    const missing = await addGateway(ids.tenantA, ids.storeA, "mercadopago", null);
-    expect(loadGatewayProvider(h.db, vault, "mercadopago", missing)).rejects.toThrow("não encontrada");
+    const missing = await addGateway(ids.tenantB, ids.storeB, "asaas", null);
+    expect(loadGatewayProvider(h.db, vault, "asaas", missing)).rejects.toThrow("não encontrada");
     expect(loadGatewayProvider(h.db, vault, "asaas", gatewayA)).rejects.toThrow("não encontrada");
   });
 

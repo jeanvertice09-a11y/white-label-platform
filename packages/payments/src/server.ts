@@ -11,7 +11,7 @@ export type {
   ProviderFactoryOptions,
   ProviderSecrets,
 } from "./server/provider-factory.ts";
-export { loadGatewayProvider } from "./server/gateway-provider.ts";
+export { loadGatewayProvider, refreshMercadoPagoGatewayAccessToken } from "./server/gateway-provider.ts";
 export type { LoadedGatewayProvider } from "./server/gateway-provider.ts";
 export {
   applyPaymentStatus,

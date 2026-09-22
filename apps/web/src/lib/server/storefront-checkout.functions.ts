@@ -9,6 +9,7 @@ import { createPublicCatalogContext } from "./catalog-context.server.ts";
 import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 import { enforceRateLimit } from "./rate-limit.server.ts";
+import { createStorePixPayment } from "./mercadopago-store-payment.server.ts";
 
 const cartItemSchema = z.object({
   productId: z.string().uuid(),
@@ -25,6 +26,9 @@ const checkoutSchema = z.object({
   items: z.array(cartItemSchema).min(1).max(100),
 });
 
+const onlineCheckoutSchema = checkoutSchema.extend({
+  payerEmail: z.string().trim().email().max(254),
+});
 type CartRequestItem = z.infer<typeof cartItemSchema>;
 
 function itemKey(item: Pick<CartRequestItem, "productId" | "variantId">): string {
@@ -78,6 +82,40 @@ export const createWhatsappOrder = createServerFn({ method: "POST" }).validator(
     subtotalCents: order.subtotalCents, discountCents: order.discountCents, totalCents: order.totalCents,
     items: order.items.map((item) => ({ productId: item.productId, variantId: item.variantId, productName: item.productName, variantName: item.variantName, quantity: item.quantity, unitCents: item.unitCents, totalCents: item.totalCents })),
     whatsappUrl: buildOrderWhatsappUrl(settings.whatsappPhone, order, settings.whatsappMessage),
+  };
+});
+
+
+export const createOnlinePixOrder = createServerFn({ method: "POST" }).validator(onlineCheckoutSchema).handler(async ({ data }) => {
+  const catalog = await createPublicCatalogContext(getRequestHost());
+  const settings = await catalog.repository.getSettings(catalog.scope);
+  const behavior = getCatalogBehavior(settings);
+  const advanced = getCatalogAdvancedSettings(settings);
+  if (behavior.catalogOnly || !behavior.cartEnabled || !behavior.showBuyButton) throw new Error("Pedidos desativados neste catálogo");
+  if (settings.checkoutMode === "whatsapp") throw new Error("Checkout online indisponível");
+  if (!behavior.quantityEnabled && (data.items.some((item) => item.quantity !== 1) || hasDuplicateSelection(data.items))) throw new Error("Quantidade personalizada desativada neste catálogo");
+  const customerName = advanced.checkoutAskName ? data.customerName : null;
+  const customerPhone = advanced.checkoutAskPhone && data.customerPhone ? normalizeCustomerPhone(data.customerPhone) : null;
+  const notes = advanced.checkoutAskNotes ? data.notes : null;
+  const sql = createAdminSqlExecutor();
+  await enforceRateLimit(sql, `checkout:online:${catalog.scope.tenantId}:${catalog.scope.storeId}`, 20, 60);
+  await assertOrdersEntitlement(sql, catalog.scope);
+  if (data.couponCode?.trim()) await assertCouponsEntitlement(sql, catalog.scope);
+  const order = await createOrderRepository(sql).createFromCart(catalog.scope, {
+    idempotencyKey: data.idempotencyKey, origin: "online", customerName, customerPhone,
+    couponCode: data.couponCode, notes, shippingCents: 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
+  });
+  const payment = await createStorePixPayment(catalog.scope, {
+    orderId: order.id, orderNumber: order.orderNumber, amountCents: order.totalCents, payerEmail: data.payerEmail,
+  });
+  if (!payment.checkout.qrCode && !payment.checkout.ticketUrl) throw new Error("Mercado Pago não retornou os dados do Pix.");
+  return {
+    orderId: order.id, orderNumber: order.orderNumber, displayNumber: formatOrderNumber(order.orderNumber),
+    paymentId: payment.paymentId, status: order.status, paymentStatus: order.paymentStatus,
+    subtotalCents: order.subtotalCents, discountCents: order.discountCents, totalCents: order.totalCents,
+    items: order.items.map((item) => ({ productId: item.productId, variantId: item.variantId, productName: item.productName,
+      variantName: item.variantName, quantity: item.quantity, unitCents: item.unitCents, totalCents: item.totalCents })),
+    pix: payment.checkout,
   };
 });
 

@@ -3,17 +3,20 @@ import { MerchantStoreSettingsForm } from "../features/store-admin/merchant-stor
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { PublicCatalogActions } from "../features/store-admin/public-catalog-actions.tsx";
 import { StoreDataExport } from "../features/store-admin/store-data-export.tsx";
+import { MercadoPagoConnectCard } from "../features/store-admin/mercadopago-connect-card.tsx";
+import { getMerchantMercadoPagoConnection } from "../lib/server/mercadopago-oauth.functions.ts";
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
 import { getMerchantSettingsOverview } from "../lib/server/merchant-settings.functions.ts";
 import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/settings")({
   loader: async () => {
-    const [settings, storefront] = await Promise.all([
+    const [settings, storefront, mercadoPago] = await Promise.all([
       getMerchantSettingsOverview(),
       getMerchantStorefrontStatus(),
+      getMerchantMercadoPagoConnection(),
     ]);
-    return { settings, storefront };
+    return { settings, storefront, mercadoPago };
   },
   component: SettingsPage,
 });
@@ -37,6 +40,8 @@ function intervalLabel(value: string): string {
   return value;
 }
 
+// A tela agrega seções independentes de configuração da loja.
+// eslint-disable-next-line max-lines-per-function
 function SettingsPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   const domain = data.storefront.domain;
@@ -68,6 +73,11 @@ function SettingsPage(): React.JSX.Element {
           </dl>
           {publicUrl ? <PublicCatalogActions url={publicUrl} storeName={data.settings.store.name} /> : <p className="k-inline-state">A configuração ou solicitação de domínio continua sob o fluxo administrativo da White Label; nenhum provisionamento é feito pelo navegador.</p>}
         </div>
+      </section>
+
+      <section className="k-workspace-section">
+        <header className="k-section-head"><div><span className="k-section-kicker">Pagamentos</span><h2>Recebimentos do catálogo</h2><p>O checkout online da loja usa exclusivamente Mercado Pago conectado por OAuth.</p></div></header>
+        <MercadoPagoConnectCard connected={data.mercadoPago.connected} mercadoPagoUserId={data.mercadoPago.mercadoPagoUserId} updatedAt={data.mercadoPago.updatedAt} />
       </section>
 
       <section className="k-workspace-section">
