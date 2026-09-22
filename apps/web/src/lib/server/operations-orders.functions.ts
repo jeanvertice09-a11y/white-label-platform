@@ -2,9 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createOrderRepository } from "@white-label/orders";
+import { normalizeCustomerPhone } from "@white-label/customers";
 import { createMerchantOperationsContext } from "./operations-context.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 
+const uuid = z.string().uuid();
 const idSchema = z.object({ id: z.string().uuid() });
 const advanceSchema = z.object({
   id: z.string().uuid(),
@@ -24,6 +26,17 @@ const listSchema = z.object({
   ]).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
+const manualOrderSchema = z.object({
+  idempotencyKey: uuid,
+  customerName: z.string().trim().max(160).nullable(),
+  customerPhone: z.string().trim().max(30).nullable(),
+  notes: z.string().trim().max(1000).nullable(),
+  items: z.array(z.object({
+    productId: uuid,
+    variantId: uuid.nullable(),
+    quantity: z.number().int().min(1).max(999),
+  })).min(1).max(100),
+});
 
 async function context() {
   const current = await createMerchantOperationsContext(getRequestHost());
@@ -31,9 +44,38 @@ async function context() {
   return {
     scope: current.scope,
     userId: current.userId,
+    sql: current.sql,
     repository: createOrderRepository(current.sql),
   };
 }
+
+export const createMerchantManualOrder = createServerFn({ method: "POST" })
+  .validator(manualOrderSchema)
+  .handler(async ({ data }) => {
+    const current = await context();
+    const order = await current.repository.createFromCart(current.scope, {
+      idempotencyKey: data.idempotencyKey,
+      origin: "manual",
+      customerName: data.customerName,
+      customerPhone: data.customerPhone ? normalizeCustomerPhone(data.customerPhone) : null,
+      notes: data.notes,
+      shippingCents: 0,
+      items: data.items,
+    });
+    await current.sql.query(
+      `insert into public.audit_logs
+        (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       select $1::uuid,$2::uuid,$3::uuid,'order.manual_created','order',$4,
+         jsonb_build_object('order_number',$5::integer,'item_count',$6::integer)
+       where not exists (
+         select 1 from public.audit_logs
+         where tenant_id=$2::uuid and store_id=$3::uuid
+           and action='order.manual_created' and resource_type='order' and resource_id=$4
+       ) returning id`,
+      [current.userId, current.scope.tenantId, current.scope.storeId, order.id, order.orderNumber, order.items.length],
+    );
+    return order;
+  });
 
 export const listMerchantOrders = createServerFn({ method: "GET" })
   .validator(listSchema)

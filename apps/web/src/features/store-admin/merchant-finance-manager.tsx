@@ -8,6 +8,7 @@ import {
   listMerchantFinance,
   settleMerchantFinancialEntry,
   summarizeMerchantFinance,
+  updateMerchantFinancialCategory,
 } from "../../lib/server/operations-merchant.functions.ts";
 import { formatCurrency, formatDate, messageFrom, monthRange, parseMoneyToCents, today } from "./merchant-operations-utils.ts";
 
@@ -47,6 +48,7 @@ function useMerchantFinanceState(props: MerchantFinanceManagerProps) {
   const [form, setForm] = useState<EntryFormState>(createInitialEntryForm);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDirection, setCategoryDirection] = useState<CategoryDirection>("both");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -54,6 +56,7 @@ function useMerchantFinanceState(props: MerchantFinanceManagerProps) {
     data, setData, summary, setSummary, categories, setCategories, from, setFrom, to, setTo,
     directionFilter, setDirectionFilter, statusFilter, setStatusFilter, form, setForm,
     categoryName, setCategoryName, categoryDirection, setCategoryDirection,
+    editingCategoryId, setEditingCategoryId,
     loading, setLoading, error, setError, success, setSuccess,
   };
 }
@@ -111,13 +114,36 @@ async function createEntry(event: SyntheticEvent<HTMLFormElement>, state: Mercha
 async function createCategory(event: SyntheticEvent<HTMLFormElement>, state: MerchantFinanceState): Promise<void> {
   event.preventDefault(); state.setLoading(true); state.setError(""); state.setSuccess("");
   try {
-    const created = await createMerchantFinancialCategory({ data: { name: state.categoryName, direction: state.categoryDirection } });
-    state.setCategories([...state.categories, created].sort((a, b) => a.name.localeCompare(b.name)));
+    const saved = state.editingCategoryId
+      ? await updateMerchantFinancialCategory({ data: { categoryId: state.editingCategoryId, name: state.categoryName, direction: state.categoryDirection, active: state.categories.find((item) => item.id === state.editingCategoryId)?.active ?? true } })
+      : await createMerchantFinancialCategory({ data: { name: state.categoryName, direction: state.categoryDirection } });
+    state.setCategories((state.editingCategoryId
+      ? state.categories.map((item) => item.id === saved.id ? saved : item)
+      : [...state.categories, saved]).sort((a, b) => a.name.localeCompare(b.name)));
     state.setCategoryName("");
     state.setCategoryDirection("both");
-    state.setSuccess("Categoria financeira criada.");
+    state.setEditingCategoryId(null);
+    state.setSuccess(state.editingCategoryId ? "Categoria financeira atualizada." : "Categoria financeira criada.");
   } catch (cause) {
     state.setError(messageFrom(cause, "Não foi possível criar a categoria."));
+  } finally {
+    state.setLoading(false);
+  }
+}
+
+async function toggleCategory(category: FinancialCategory, state: MerchantFinanceState): Promise<void> {
+  state.setLoading(true); state.setError(""); state.setSuccess("");
+  try {
+    const saved = await updateMerchantFinancialCategory({ data: {
+      categoryId: category.id,
+      name: category.name,
+      direction: category.direction,
+      active: !category.active,
+    } });
+    state.setCategories(state.categories.map((item) => item.id === saved.id ? saved : item));
+    state.setSuccess(saved.active ? "Categoria reativada." : "Categoria arquivada. Lançamentos existentes foram preservados.");
+  } catch (cause) {
+    state.setError(messageFrom(cause, "Não foi possível alterar a categoria."));
   } finally {
     state.setLoading(false);
   }
@@ -178,8 +204,9 @@ function FinancialCategoryForm({ state }: Readonly<{ state: MerchantFinanceState
     <form className="k-form__grid" onSubmit={(event) => { void createCategory(event, state); }}>
       <label className="k-field"><span>Nome</span><input required minLength={2} maxLength={100} value={state.categoryName} onChange={(e) => { state.setCategoryName(e.target.value); }} /></label>
       <label className="k-field"><span>Uso</span><select value={state.categoryDirection} onChange={(e) => { state.setCategoryDirection(e.target.value as CategoryDirection); }}><option value="both">Receitas e despesas</option><option value="income">Receitas</option><option value="expense">Despesas</option></select></label>
-      <div className="k-actions k-field--full"><button className="k-button" disabled={state.loading} type="submit">Adicionar categoria</button></div>
+      <div className="k-actions k-field--full"><button className="k-button" disabled={state.loading} type="submit">{state.editingCategoryId ? "Salvar categoria" : "Adicionar categoria"}</button>{state.editingCategoryId ? <button className="k-button" type="button" disabled={state.loading} onClick={() => { state.setEditingCategoryId(null); state.setCategoryName(""); state.setCategoryDirection("both"); }}>Cancelar edição</button> : null}</div>
     </form>
+    {state.categories.length ? <div className="k-config-list">{state.categories.map((category) => <div className="k-config-row" key={category.id}><span><strong>{category.name}</strong><small>{category.direction === "both" ? "Receitas e despesas" : category.direction === "income" ? "Receitas" : "Despesas"} · {category.active ? "ativa" : "arquivada"}</small></span><div className="k-actions"><button className="k-text-action" type="button" disabled={state.loading} onClick={() => { state.setEditingCategoryId(category.id); state.setCategoryName(category.name); state.setCategoryDirection(category.direction); }}>Editar</button><button className="k-text-action" type="button" disabled={state.loading} onClick={() => { void toggleCategory(category, state); }}>{category.active ? "Arquivar" : "Reativar"}</button></div></div>)}</div> : <p className="k-muted">Nenhuma categoria financeira cadastrada.</p>}
   </section>;
 }
 

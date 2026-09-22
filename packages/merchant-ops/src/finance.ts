@@ -70,6 +70,26 @@ export async function createFinancialCategory(
   return mapCategory(rows[0]);
 }
 
+export async function updateFinancialCategory(
+  sql: MerchantOpsSqlExecutor,
+  scope: MerchantScope,
+  categoryId: string,
+  input: FinancialCategoryInput,
+  active: boolean,
+): Promise<FinancialCategory> {
+  assertScope(scope);
+  assertCategory(input);
+  const rows = await sql.query(
+    `update public.merchant_financial_categories
+     set name=$4,direction=$5,active=$6,updated_at=now()
+     where tenant_id=$1 and store_id=$2 and id=$3::uuid
+     returning *`,
+    [scope.tenantId, scope.storeId, categoryId, input.name.trim(), input.direction, active],
+  );
+  if (!rows[0]) throw new Error("Categoria financeira não encontrada");
+  return mapCategory(rows[0]);
+}
+
 export async function listFinance(
   sql: MerchantOpsSqlExecutor,
   scope: MerchantScope,

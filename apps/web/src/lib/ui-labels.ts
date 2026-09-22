@@ -19,6 +19,9 @@ const STATUS_LABELS: Readonly<Record<string, string>> = {
   draft: "Rascunho",
   received: "Recebida",
   prepared: "Preparada",
+  preparing: "Em preparação",
+  ready: "Pronto",
+  completed: "Concluído",
   scheduled: "Agendada",
 };
 

@@ -3,7 +3,9 @@ import type { SyntheticEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import type { CatalogPage, Category, Product } from "@white-label/catalog";
 import { getCatalogPublicMediaUrl } from "@white-label/catalog";
+import { duplicateMerchantProduct, setMerchantProductStatus } from "../../lib/server/catalog-admin.functions.ts";
 import { listMerchantProducts } from "../../lib/server/catalog.functions.ts";
+import { confirmDangerousAction } from "../../lib/ui-confirm.ts";
 import { formatMoney } from "./format.ts";
 
 const PAGE_SIZE = 20;
@@ -67,7 +69,13 @@ function ProductIdentity({ product }: Readonly<{ product: Product }>): React.JSX
   );
 }
 
-function ProductsTable(props: Readonly<{ data: CatalogPage; categories: Category[] }>): React.JSX.Element {
+function ProductsTable(props: Readonly<{
+  data: CatalogPage;
+  categories: Category[];
+  busy: boolean;
+  onStatus: (product: Product) => Promise<void>;
+  onDuplicate: (product: Product) => Promise<void>;
+}>): React.JSX.Element {
   return (
     <div className="k-table-wrap k-table-wrap--flush">
       <table className="k-table">
@@ -83,7 +91,11 @@ function ProductsTable(props: Readonly<{ data: CatalogPage; categories: Category
                 <td className="k-table__number">{stockLabel(product)}</td>
                 <td>{product.variants.length}</td>
                 <td><span className={product.active ? "k-status-pill k-status-pill--active" : "k-status-pill"}>{product.active ? "Ativo" : "Inativo"}</span></td>
-                <td className="k-table__action"><Link className="k-text-action" to="/admin/products/$id" params={{ id: product.id }}>Editar</Link></td>
+                <td className="k-table__action"><div className="k-actions">
+                  <Link className="k-text-action" to="/admin/products/$id" params={{ id: product.id }}>Editar</Link>
+                  <button className="k-text-action" type="button" disabled={props.busy} onClick={() => { void props.onDuplicate(product); }}>Duplicar</button>
+                  <button className="k-text-action" type="button" disabled={props.busy} onClick={() => { void props.onStatus(product); }}>{product.active ? "Desativar" : "Ativar"}</button>
+                </div></td>
               </tr>
             );
           })}
@@ -112,6 +124,7 @@ export function ProductsList(props: Readonly<{ initialPage: CatalogPage; categor
   const [categoryId, setCategoryId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   async function load(page: number, clear = false): Promise<void> {
     setLoading(true); setError("");
@@ -130,6 +143,30 @@ export function ProductsList(props: Readonly<{ initialPage: CatalogPage; categor
     } finally { setLoading(false); }
   }
 
+  async function changeStatus(product: Product): Promise<void> {
+    const active = !product.active;
+    if (!active && !confirmDangerousAction(`Desativar ${product.name}? O item deixará de aparecer no catálogo público.`)) return;
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      await setMerchantProductStatus({ data: { productId: product.id, active } });
+      setSuccess(active ? "Produto ativado." : "Produto desativado com segurança.");
+      await load(data.page);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível alterar o produto.");
+    } finally { setLoading(false); }
+  }
+
+  async function duplicate(product: Product): Promise<void> {
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      await duplicateMerchantProduct({ data: { productId: product.id } });
+      setSuccess("Produto duplicado como inativo e sem estoque, pronto para revisão.");
+      await load(1);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível duplicar o produto.");
+    } finally { setLoading(false); }
+  }
+
   return (
     <section className="k-workspace-section">
       <div className="k-section-head">
@@ -138,8 +175,9 @@ export function ProductsList(props: Readonly<{ initialPage: CatalogPage; categor
       </div>
       <ProductsFilters search={search} categoryId={categoryId} categories={props.categories} loading={loading} setSearch={setSearch} setCategoryId={setCategoryId} load={load} />
       {error ? <div className="k-inline-state k-inline-state--error"><strong>Não foi possível carregar</strong><span>{error}</span><button className="k-button" type="button" onClick={() => { void load(data.page); }}>Tentar novamente</button></div> : null}
+      {success ? <div className="k-inline-state"><strong>Concluído</strong><span>{success}</span></div> : null}
       {!error && !loading && data.items.length === 0 ? <div className="k-inline-state"><strong>Nenhum produto encontrado</strong><span>Ajuste os filtros ou cadastre um novo produto.</span><Link className="k-text-action" to="/admin/products/new">Cadastrar produto</Link></div> : null}
-      {!error && data.items.length > 0 ? <ProductsTable data={data} categories={props.categories} /> : null}
+      {!error && data.items.length > 0 ? <ProductsTable data={data} categories={props.categories} busy={loading} onStatus={changeStatus} onDuplicate={duplicate} /> : null}
       {!error && data.total > 0 ? <ProductsPagination data={data} loading={loading} load={load} /> : null}
     </section>
   );

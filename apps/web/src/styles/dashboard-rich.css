@@ -255,6 +255,10 @@
 .k-quick-link:hover { border-color: #cfd8ee; transform: translateY(-1px); }
 .k-quick-link svg { width: 20px; height: 20px; color: #4f72f5; }
 .k-quick-link strong { font-size: 12px; }
+.k-dashboard-activity { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.k-dashboard-activity .k-card { min-width: 0; padding: 16px; }
+.k-dashboard-activity .k-config-row { padding-inline: 0; }
+.k-dashboard-activity .k-config-row b { white-space: nowrap; font-size: 11px; }
 
 /* ---------- Internal pages: closer to the reference UI ---------- */
 .k-page > .k-card:not(.k-stat),
@@ -296,6 +300,7 @@
   .master-analytics-grid,
   .control-overview-grid,
   .k-dashboard-grid { grid-template-columns: 1fr; }
+  .k-dashboard-activity { grid-template-columns: 1fr; }
   .k-quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 

@@ -57,6 +57,7 @@ const navigation: readonly NavGroup[] = [
     label: "Organização",
     items: [
       { to: "/admin/tasks", label: "Tarefas", exact: true, icon: "check" },
+      { to: "/admin/operations", label: "Relatórios e histórico", exact: true, icon: "activity" },
     ],
   },
   {

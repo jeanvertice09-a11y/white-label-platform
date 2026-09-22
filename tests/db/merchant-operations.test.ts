@@ -143,6 +143,19 @@ describe("merchant operations", () => {
     );
   });
 
+  test("categoria financeira pode ser editada e arquivada somente na própria loja", async () => {
+    const repo = new PostgresMerchantOperationsRepository(h.db);
+    const created = await repo.createFinancialCategory(scopeA, { name: "Serviços", direction: "income" });
+    const archived = await repo.updateFinancialCategory(scopeA, created.id, { name: "Serviços externos", direction: "both" }, false);
+    expect(archived.name).toBe("Serviços externos");
+    expect(archived.direction).toBe("both");
+    expect(archived.active).toBe(false);
+    await expectReject(
+      repo.updateFinancialCategory({ tenantId: ids.tenantB, storeId: ids.storeB }, created.id, { name: "Invasão", direction: "both" }, true),
+      "categoria financeira cross-store",
+    );
+  });
+
   test("tarefa só aceita responsável membro da mesma loja", async () => {
     const repo = new PostgresMerchantOperationsRepository(h.db);
     const task = await repo.createTask(scopeA, { title: "Conferir estoque", priority: "high", assigneeUserId: ids.users.storeA }, ids.users.storeA);
