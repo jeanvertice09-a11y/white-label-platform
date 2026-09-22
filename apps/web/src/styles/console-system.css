@@ -852,3 +852,7 @@
   .console-fact-row,
   .console-compact-row { align-items: flex-start; }
 }
+
+/* Approved Kataluu visual identity shared by Master and Control */
+:root{--console-bg:#fdfcff;--console-surface:#fff;--console-surface-muted:#faf8fd;--console-surface-subtle:#f5f1fa;--console-text:#2d2b4e;--console-text-strong:#2d2b4e;--console-muted:#6b6592;--console-muted-strong:#5c5574;--console-border:#ebe4f7;--console-border-strong:#ddd1ec;--console-primary:#7b5ea7;--console-primary-hover:#684d94;--console-primary-soft:#efe9fa;--console-focus:0 0 0 3px rgba(123,94,167,.14);--console-shadow-float:0 14px 40px rgba(123,94,167,.16)}
+.master-shell,.control-shell{font-family:"Inter",ui-sans-serif,system-ui,sans-serif}.master-shell h1,.master-shell h2,.master-shell h3,.control-shell h1,.control-shell h2,.control-shell h3,.master-brand strong,.control-brand strong{font-family:"Plus Jakarta Sans","Inter",ui-sans-serif,sans-serif;color:#2d2b4e;letter-spacing:-.025em}.master-brand__mark,.control-brand__mark{background:#7b5ea7;box-shadow:0 8px 20px rgba(123,94,167,.22)}.master-nav__link:hover,.control-nav a:hover{background:#f7f3fb;color:#7b5ea7}.master-nav__link[data-active="true"],.control-nav a[data-active="true"]{background:#efe9fa;color:#7b5ea7;box-shadow:inset 3px 0 0 #7b5ea7}.master-card,.control-card,.console-panel,.master-table-wrap,.control-table-wrap{box-shadow:0 1px 2px rgba(45,43,78,.035),0 8px 24px rgba(123,94,167,.055)}
