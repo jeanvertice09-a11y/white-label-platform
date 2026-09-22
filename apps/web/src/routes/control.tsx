@@ -10,6 +10,7 @@ import "../styles/console-pages.css";
 import "../styles/editorial-console.css";
 import "../styles/panel-navigation-lot1.css";
 import "../styles/control-real-routes.css";
+import "../styles/platform-responsive.css";
 
 export const Route = createFileRoute("/control")({
   loader: () => getTenantControlDashboard(),

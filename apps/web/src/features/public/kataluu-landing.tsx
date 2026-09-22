@@ -1,7 +1,7 @@
 import type { PublicBrand } from "../../lib/public-site.types.ts";
 import { PublicFooter, PublicHeader, publicBrandStyle } from "./public-shell.tsx";
 
-const brand: PublicBrand = { name: "Kataluu", logoUrl: null, primaryColor: "#7B5EA7" };
+const brand: PublicBrand = { name: "Kataluu", logoUrl: null, primaryColor: "#17191f" };
 const accessHref = "https://app.kataluu.com.br/login";
 const nav = [
   { href: "#produto", label: "Produto" },
@@ -26,39 +26,18 @@ function Hero(): React.JSX.Element {
   );
 }
 
-function MobileProductStage(): React.JSX.Element {
+function ProductStage(): React.JSX.Element {
   return (
-    <div className="public-mobile-stage" aria-label="Representação mobile fiel do painel do lojista">
-      <div className="public-mobile-stage__phone">
-        <div className="public-mobile-stage__screen">
-          <div className="public-mobile-stage__topbar"><span className="public-mobile-stage__menu" aria-hidden="true">≡</span><strong>Painel da loja</strong><small>Minha loja</small></div>
-          <div className="public-mobile-stage__content">
-            <span>Painel da loja / Produtos</span><h3>Produtos</h3>
-            <div className="public-mobile-stage__search">Buscar por nome ou SKU…</div>
-            <div className="public-mobile-stage__rows">
-              <div className="public-mobile-stage__row"><span className="public-mobile-stage__thumb" /><div><strong>Produto com variações</strong><small>Catálogo · estoque controlado</small></div><b>Ativo</b></div>
-              <div className="public-mobile-stage__row"><span className="public-mobile-stage__thumb" /><div><strong>Produto simples</strong><small>Catálogo · edição rápida</small></div><b>Ativo</b></div>
-            </div>
-          </div>
-          <div className="public-mobile-stage__nav" aria-hidden="true"><span>Início</span><span>Pedidos</span><span>Produtos</span><span>Loja</span></div>
+    <div className="public-product-stage" aria-label="Representação da operação White Label">
+      <div className="public-product-stage__top"><span className="public-dot" /><span>Kataluu / operação central</span><span className="public-pill">White Label</span></div>
+      <div className="public-product-stage__body">
+        <aside><strong>Visão geral</strong><span>White Labels</span><span>Faturamento</span><span>Domínios</span><span>Auditoria</span></aside>
+        <div className="public-product-stage__canvas">
+          <p>Estrutura da operação</p><strong>Uma base para múltiplas marcas</strong>
+          <div className="public-layer-stack"><span>Kataluu</span><span>Sua White Label</span><span>Seus lojistas</span><span>Clientes finais</span></div>
         </div>
       </div>
     </div>
-  );
-}
-
-function ProductStage(): React.JSX.Element {
-  return (
-    <>
-      <div className="public-product-stage" aria-label="Representação da operação White Label">
-        <div className="public-product-stage__top"><span className="public-dot" /><span>Kataluu / operação central</span><span className="public-pill">White Label</span></div>
-        <div className="public-product-stage__body">
-          <aside><strong>Visão geral</strong><span>White Labels</span><span>Faturamento</span><span>Domínios</span><span>Auditoria</span></aside>
-          <div className="public-product-stage__canvas"><p>Estrutura da operação</p><strong>Uma base para múltiplas marcas</strong><div className="public-layer-stack"><span>Kataluu</span><span>Sua White Label</span><span>Seus lojistas</span><span>Clientes finais</span></div></div>
-        </div>
-      </div>
-      <MobileProductStage />
-    </>
   );
 }
 
@@ -83,7 +62,9 @@ const resourceGroups = [
 ];
 
 function Resources(): React.JSX.Element {
-  return <section className="public-section" id="recursos"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Recursos existentes</span><h2>Da gestão da White Label à rotina do lojista.</h2><p>Uma cadeia conectada, com responsabilidades separadas e ferramentas próprias para cada nível.</p></div><div className="public-resource-grid">{resourceGroups.map((group, index) => <article key={group.title}><span>0{String(index + 1)}</span><h3>{group.title}</h3><p>{group.text}</p></article>)}</div></div></section>;
+  return (
+    <section className="public-section" id="recursos"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Recursos existentes</span><h2>Da gestão da White Label à rotina do lojista.</h2><p>Uma cadeia conectada, com responsabilidades separadas e ferramentas próprias para cada nível.</p></div><div className="public-resource-grid">{resourceGroups.map((group, index) => <article key={group.title}><span>0{String(index + 1)}</span><h3>{group.title}</h3><p>{group.text}</p></article>)}</div></div></section>
+  );
 }
 
 const steps = [
@@ -94,13 +75,19 @@ const steps = [
 ] as const;
 
 function HowItWorks(): React.JSX.Element {
-  return <section className="public-section public-section--soft" id="como-funciona"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Como funciona</span><h2>Uma estrutura em quatro níveis, sem confundir papéis.</h2></div><ol className="public-flow">{steps.map(([title, text], index) => <li key={title}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{title}</strong><p>{text}</p></div></li>)}</ol></div></section>;
+  return (
+    <section className="public-section public-section--soft" id="como-funciona"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Como funciona</span><h2>Uma estrutura em quatro níveis, sem confundir papéis.</h2></div><ol className="public-flow">{steps.map(([title, text], index) => <li key={title}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{title}</strong><p>{text}</p></div></li>)}</ol></div></section>
+  );
 }
 
 function Closing(): React.JSX.Element {
-  return <section className="public-closing"><div className="public-container public-closing__inner"><div><span className="public-eyebrow">Infraestrutura para crescer com organização</span><h2>Construa sua operação White Label sobre uma base que já separa plataforma, empresa e loja.</h2></div><div className="public-actions"><a className="public-button public-button--primary" href="#recursos">Explorar recursos</a><a className="public-button public-button--quiet" href={accessHref}>Entrar</a></div></div></section>;
+  return (
+    <section className="public-closing"><div className="public-container public-closing__inner"><div><span className="public-eyebrow">Infraestrutura para crescer com organização</span><h2>Construa sua operação White Label sobre uma base que já separa plataforma, empresa e loja.</h2></div><div className="public-actions"><a className="public-button public-button--primary" href="#recursos">Explorar recursos</a><a className="public-button public-button--quiet" href={accessHref}>Entrar</a></div></div></section>
+  );
 }
 
 export function KataluuLanding(): React.JSX.Element {
-  return <div className="public-site" style={publicBrandStyle(brand)}><PublicHeader brand={brand} nav={nav} loginHref={accessHref} /><main><Hero /><WhiteLabelSection /><Resources /><HowItWorks /><Closing /></main><PublicFooter brand={brand} nav={nav} loginHref={accessHref}><p>Infraestrutura White Label para empresas operarem sua própria plataforma de catálogo e comércio.</p></PublicFooter></div>;
+  return (
+    <div className="public-site" style={publicBrandStyle(brand)}><PublicHeader brand={brand} nav={nav} loginHref={accessHref} /><main><Hero /><WhiteLabelSection /><Resources /><HowItWorks /><Closing /></main><PublicFooter brand={brand} nav={nav} loginHref={accessHref}><p>Infraestrutura White Label para empresas operarem sua própria plataforma de catálogo e comércio.</p></PublicFooter></div>
+  );
 }

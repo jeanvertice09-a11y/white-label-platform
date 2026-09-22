@@ -67,8 +67,8 @@ function MasterSidebarAccount(): React.JSX.Element {
 
 export function MasterSidebar({ open, onClose }: Readonly<MasterSidebarProps>) {
   return <>
-    <button type="button" className={open ? "master-overlay is-open" : "master-overlay"} onClick={onClose} aria-label="Fechar menu" />
-    <aside className={open ? "master-sidebar is-open" : "master-sidebar"} aria-label="Navegação principal">
+    <button type="button" className={open ? "master-overlay is-open" : "master-overlay"} onClick={onClose} aria-label="Fechar menu" tabIndex={open ? 0 : -1} />
+    <aside id="master-navigation" className={open ? "master-sidebar is-open" : "master-sidebar"} aria-label="Navegação principal">
       <div className="master-brand"><span className="master-brand__mark" aria-hidden="true">K</span><div><strong>Kataluu</strong><small>Administração da plataforma</small></div></div>
       <nav className="master-nav" aria-label="Administração da plataforma">
         {navigation.map((group) => <div className="console-nav-group" key={group.label}>
