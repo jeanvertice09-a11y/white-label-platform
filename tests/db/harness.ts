@@ -50,6 +50,7 @@ const MIGRATIONS = [
   "0034_operational_jobs.sql",
   "0035_suspension_access_enforcement.sql",
   "0036_mercadopago_store_oauth.sql",
+  "0037_suspension_public_helper_hardening.sql",
 ];
 
 class PGliteDb implements TestDb {
