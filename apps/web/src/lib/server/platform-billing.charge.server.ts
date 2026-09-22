@@ -33,6 +33,7 @@ interface ReservedPayment {
   id: string;
   status: PaymentStatus;
   providerPaymentId: string | null;
+  gatewayAccountId: string;
 }
 
 export async function createPlatformCharge(
@@ -46,6 +47,7 @@ export async function createPlatformCharge(
   assertChargeReady(target, now);
   const key = chargeKey(target);
   const reserved = await reservePayment(sql, target, key);
+  assertReservedGateway(reserved, target.gatewayId);
   if (reserved.providerPaymentId) return existingResult(reserved, target.provider);
   const claimed = await claimProviderCreate(sql, reserved.id);
   if (!claimed) return existingResult(reserved, target.provider);
@@ -159,12 +161,12 @@ async function reservePayment(
        subscription_id,idempotency_key
      ) values ('platform_billing',$1::uuid,null,$2::uuid,$3,'BRL','pending',$4::uuid,$5)
      on conflict do nothing
-     returning id::text,status,provider_payment_id`,
+     returning id::text,status,provider_payment_id,gateway_account_id::text`,
     [target.tenantId, target.gatewayId, target.priceCents, target.subscriptionId, idempotencyKey],
   );
   if (inserted[0]) return mapReserved(inserted[0]);
   const existing = await sql.query(
-    `select id::text,status,provider_payment_id from public.payments
+    `select id::text,status,provider_payment_id,gateway_account_id::text from public.payments
      where level='platform_billing' and tenant_id=$1::uuid and idempotency_key=$2 limit 1`,
     [target.tenantId, idempotencyKey],
   );
@@ -200,7 +202,14 @@ function mapReserved(row: Row): ReservedPayment {
     id: requiredText(row, "id"),
     status: requiredText(row, "status") as PaymentStatus,
     providerPaymentId: nullableText(row, "provider_payment_id"),
+    gatewayAccountId: requiredText(row, "gateway_account_id"),
   };
+}
+
+function assertReservedGateway(payment: ReservedPayment, gatewayAccountId: string): void {
+  if (payment.gatewayAccountId !== gatewayAccountId) {
+    throw new Error("Gateway da cobrança idempotente diverge do gateway ativo.");
+  }
 }
 
 function existingResult(

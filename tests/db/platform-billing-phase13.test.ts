@@ -244,6 +244,32 @@ describe("fase 13 platform_billing core", () => {
     )).rejects.toThrow();
   });
 
+  test("retry após troca de gateway falha fechado e preserva o contexto financeiro original", async () => {
+    await disablePlatformGateways();
+    const tenantId = await makeTenant();
+    const originalGateway = await addGateway("platform_billing", "mercadopago");
+    const subscriptionId = await subscribe(tenantId);
+    const fixture = providerFixture({ failures: 1 });
+    const firstAttempt = createPlatformCharge(h.db, actor, subscriptionId, fixture.loader, NOW);
+    expect(firstAttempt).rejects.toThrow("transient");
+    await h.db.query(
+      "update public.gateway_accounts set status='disabled' where id=$1::uuid",
+      [originalGateway],
+    );
+    const replacementGateway = await addGateway("platform_billing", "mercadopago");
+    const retry = createPlatformCharge(h.db, actor, subscriptionId, fixture.loader, NOW);
+    expect(retry).rejects.toThrow("Gateway da cobrança idempotente diverge");
+    expect(fixture.state.calls).toBe(1);
+    const rows = await h.db.query(
+      `select gateway_account_id::text,provider_payment_id
+       from public.payments where subscription_id=$1::uuid`,
+      [subscriptionId],
+    );
+    expect(rows.at(0)?.["gateway_account_id"]).toBe(originalGateway);
+    expect(rows.at(0)?.["gateway_account_id"]).not.toBe(replacementGateway);
+    expect(rows.at(0)?.["provider_payment_id"]).toBeNull();
+  });
+
   test("auditoria registra fatos financeiros sem segredos", async () => {
     await disablePlatformGateways();
     const tenantId = await makeTenant();
