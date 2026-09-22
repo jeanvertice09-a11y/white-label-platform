@@ -18,10 +18,16 @@ export const Route = createFileRoute("/categoria/$slug")({
   loader: ({ params }) => getPublicCategoryPage({ data: { slug: (params as unknown as { slug: string }).slug } }),
   head: ({ loaderData }) => {
     const data = loaderData as unknown as CategoryPageData | undefined;
+    const title = data ? `${data.category.name} · ${data.store.name}` : "Categoria";
+    const description = data?.category.description ?? data?.settings.seoDescription ?? `Produtos de ${data?.category.name ?? "categoria"}`;
     return {
       meta: [
-        { title: data ? `${data.category.name} · ${data.store.name}` : "Categoria" },
-        { name: "description", content: data?.category.description ?? `Produtos de ${data?.category.name ?? "categoria"}` },
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        ...(data?.canonicalUrl ? [{ property: "og:url", content: data.canonicalUrl }] : []),
       ],
       links: data?.canonicalUrl ? [{ rel: "canonical", href: data.canonicalUrl }] : [],
     };

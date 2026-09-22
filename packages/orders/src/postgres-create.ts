@@ -24,6 +24,10 @@ const CREATE_ORDER_SQL = `with raw_input as (
     and ($5::text not in ('whatsapp','online') or p.category_id is null or exists (
       select 1 from public.categories c where c.tenant_id=$1 and c.store_id=$2
         and c.id=p.category_id and c.active=true
+        and (c.parent_id is null or exists (
+          select 1 from public.categories pc where pc.tenant_id=$1 and pc.store_id=$2
+            and pc.id=c.parent_id and pc.active=true
+        ))
     ))
     and ((i.variant_id is null and not exists (
       select 1 from public.product_variants av where av.tenant_id=$1 and av.store_id=$2

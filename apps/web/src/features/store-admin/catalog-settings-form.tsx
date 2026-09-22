@@ -20,7 +20,7 @@ type Setter = <K extends keyof SettingsDraft>(key: K, value: SettingsDraft[K]) =
 
 function initialDraft(settings: CatalogSettings): SettingsDraft {
   const { tenantId: _tenantId, storeId: _storeId, ...draft } = settings;
-  return draft;
+  return { ...draft, checkoutMode: "whatsapp" };
 }
 
 function AppearanceFields({ draft, setField }: Readonly<{ draft: SettingsDraft; setField: Setter }>): React.JSX.Element {
@@ -62,16 +62,32 @@ function AdvancedFields({ draft, setField }: Readonly<{ draft: SettingsDraft; se
   </>;
 }
 
+function TrackingFields({ draft, setField }: Readonly<{ draft: SettingsDraft; setField: Setter }>): React.JSX.Element {
+  function setTracking(key: "tracking_meta_pixel_id" | "tracking_ga4_measurement_id" | "tracking_tiktok_pixel_id", value: string): void {
+    const labels = Object.fromEntries(Object.entries(draft.labels).filter(([entryKey]) => entryKey !== key));
+    const normalized = value.replace(/\s/g, "");
+    if (normalized) labels[key] = normalized;
+    setField("labels", labels);
+  }
+  return <>
+    <div className="k-field k-field--full"><strong>Tracking por loja</strong><p className="k-muted">Somente IDs públicos. Os eventos desta loja não reutilizam configuração de outro tenant/store.</p></div>
+    <div className="k-field"><label>Meta Pixel ID</label><input value={draft.labels["tracking_meta_pixel_id"] ?? ""} pattern="[0-9]{5,32}" maxLength={32} onChange={(e) => { setTracking("tracking_meta_pixel_id", e.target.value); }} placeholder="123456789012345" /></div>
+    <div className="k-field"><label>GA4 Measurement ID</label><input value={draft.labels["tracking_ga4_measurement_id"] ?? ""} pattern="G-[A-Za-z0-9]{4,20}" maxLength={22} onChange={(e) => { setTracking("tracking_ga4_measurement_id", e.target.value.toUpperCase()); }} placeholder="G-XXXXXXXXXX" /></div>
+    <div className="k-field"><label>TikTok Pixel ID</label><input value={draft.labels["tracking_tiktok_pixel_id"] ?? ""} pattern="[A-Za-z0-9]{5,40}" maxLength={40} onChange={(e) => { setTracking("tracking_tiktok_pixel_id", e.target.value.toUpperCase()); }} placeholder="CXXXXXXXXXXXXXXX" /></div>
+  </>;
+}
+
 function CatalogFields({ draft, setField }: Readonly<{ draft: SettingsDraft; setField: Setter }>): React.JSX.Element {
   const behavior = getCatalogBehavior(draft);
   const setBehavior = (flag: CatalogBehaviorFlag, enabled: boolean) => { setField("labels", setCatalogBehaviorFlag(draft.labels, flag, enabled)); };
   return <>
     <div className="k-field k-field--full"><label>Subtítulo da loja</label><input value={draft.labels["subtitle"] ?? ""} maxLength={120} onChange={(e) => { setField("labels", { ...draft.labels, subtitle: e.target.value }); }} placeholder="Catálogo online" /></div>
-    <div className="k-field"><label>Finalização do pedido</label><select value={draft.checkoutMode} onChange={(e) => { setField("checkoutMode", e.target.value as SettingsDraft["checkoutMode"]); }}><option value="whatsapp">WhatsApp</option><option value="online">Online (em preparação)</option><option value="both">WhatsApp + Online</option></select></div>
+    <div className="k-field"><label>Finalização do pedido</label><select value={draft.checkoutMode} disabled><option value="whatsapp">WhatsApp</option></select><p className="k-muted">Checkout online/Pix só será exibido quando existir fluxo transacional real e autorizado.</p></div>
     <div className="k-field"><label>WhatsApp</label><input value={draft.whatsappPhone ?? ""} onChange={(e) => { setField("whatsappPhone", e.target.value || null); }} placeholder="5562999999999" /></div>
     <div className="k-field k-field--full"><label>Mensagem padrão do WhatsApp</label><textarea value={draft.whatsappMessage} onChange={(e) => { setField("whatsappMessage", e.target.value); }} /></div>
     <div className="k-field"><label>Título nos buscadores</label><input value={draft.seoTitle ?? ""} onChange={(e) => { setField("seoTitle", e.target.value || null); }} /></div>
     <div className="k-field"><label>Descrição nos buscadores</label><input value={draft.seoDescription ?? ""} onChange={(e) => { setField("seoDescription", e.target.value || null); }} /></div>
+    <TrackingFields draft={draft} setField={setField} />
     <div className="k-field k-field--full"><strong>Exibição e compra</strong><p className="k-muted">Preço, estoque, desconto e permissões continuam validados no servidor.</p></div>
     <label className="k-check"><input type="checkbox" checked={draft.showSearch} onChange={(e) => { setField("showSearch", e.target.checked); }} />Mostrar busca</label>
     <label className="k-check"><input type="checkbox" checked={draft.showCategories} onChange={(e) => { setField("showCategories", e.target.checked); }} />Mostrar categorias</label>

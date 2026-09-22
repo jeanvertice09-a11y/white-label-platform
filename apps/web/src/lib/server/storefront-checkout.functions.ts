@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { getCatalogAdvancedSettings, getCatalogBehavior } from "@white-label/catalog";
+import { getCatalogAdvancedSettings, getCatalogBehavior, resolvePurchasableSelection } from "@white-label/catalog";
 import { normalizeCustomerPhone } from "@white-label/customers";
 import { buildOrderWhatsappUrl, createOrderRepository, formatOrderNumber } from "@white-label/orders";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
@@ -9,14 +9,47 @@ import { createPublicCatalogContext } from "./catalog-context.server.ts";
 import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 
+const cartItemSchema = z.object({
+  productId: z.string().uuid(),
+  variantId: z.string().uuid().nullable(),
+  quantity: z.number().int().min(1).max(999),
+});
+const refreshCartSchema = z.object({ items: z.array(cartItemSchema).max(100) });
 const checkoutSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(120),
   customerName: z.string().trim().max(160).nullable(),
   customerPhone: z.string().trim().max(30).nullable(),
   couponCode: z.string().trim().max(40).nullable(),
   notes: z.string().trim().max(1000).nullable(),
-  items: z.array(z.object({ productId: z.string().uuid(), variantId: z.string().uuid().nullable(), quantity: z.number().int().min(1).max(999) })).min(1).max(100),
+  items: z.array(cartItemSchema).min(1).max(100),
 });
+
+type CartRequestItem = z.infer<typeof cartItemSchema>;
+
+function itemKey(item: Pick<CartRequestItem, "productId" | "variantId">): string {
+  return `${item.productId}:${item.variantId ?? "base"}`;
+}
+
+function hasDuplicateSelection(items: CartRequestItem[]): boolean {
+  const keys = new Set<string>();
+  for (const item of items) {
+    const key = itemKey(item);
+    if (keys.has(key)) return true;
+    keys.add(key);
+  }
+  return false;
+}
+
+function normalizeRefreshItems(items: CartRequestItem[], quantityEnabled: boolean): CartRequestItem[] {
+  const grouped = new Map<string, CartRequestItem>();
+  for (const item of items) {
+    const key = itemKey(item);
+    const previous = grouped.get(key);
+    const quantity = quantityEnabled ? Math.min(999, (previous?.quantity ?? 0) + item.quantity) : 1;
+    grouped.set(key, { productId: item.productId, variantId: item.variantId, quantity });
+  }
+  return [...grouped.values()];
+}
 
 export const createWhatsappOrder = createServerFn({ method: "POST" }).validator(checkoutSchema).handler(async ({ data }) => {
   const catalog = await createPublicCatalogContext(getRequestHost());
@@ -24,7 +57,7 @@ export const createWhatsappOrder = createServerFn({ method: "POST" }).validator(
   const behavior = getCatalogBehavior(settings);
   const advanced = getCatalogAdvancedSettings(settings);
   if (behavior.catalogOnly || !behavior.cartEnabled || !behavior.showBuyButton) throw new Error("Pedidos desativados neste catálogo");
-  if (!behavior.quantityEnabled && data.items.some((item) => item.quantity !== 1)) throw new Error("Quantidade personalizada desativada neste catálogo");
+  if (!behavior.quantityEnabled && (data.items.some((item) => item.quantity !== 1) || hasDuplicateSelection(data.items))) throw new Error("Quantidade personalizada desativada neste catálogo");
   if (!behavior.showWhatsapp || settings.checkoutMode === "online") throw new Error("Checkout por WhatsApp indisponível");
   if (!settings.whatsappPhone) throw new Error("WhatsApp não configurado");
   const customerName = advanced.checkoutAskName ? data.customerName : null;
@@ -41,7 +74,45 @@ export const createWhatsappOrder = createServerFn({ method: "POST" }).validator(
   return {
     orderId: order.id, orderNumber: order.orderNumber, displayNumber: formatOrderNumber(order.orderNumber), status: order.status,
     subtotalCents: order.subtotalCents, discountCents: order.discountCents, totalCents: order.totalCents,
-    items: order.items.map((item) => ({ productName: item.productName, variantName: item.variantName, quantity: item.quantity, unitCents: item.unitCents, totalCents: item.totalCents })),
+    items: order.items.map((item) => ({ productId: item.productId, variantId: item.variantId, productName: item.productName, variantName: item.variantName, quantity: item.quantity, unitCents: item.unitCents, totalCents: item.totalCents })),
     whatsappUrl: buildOrderWhatsappUrl(settings.whatsappPhone, order, settings.whatsappMessage),
+  };
+});
+
+export const refreshPublicCart = createServerFn({ method: "POST" }).validator(refreshCartSchema).handler(async ({ data }) => {
+  const catalog = await createPublicCatalogContext(getRequestHost());
+  const settings = await catalog.repository.getSettings(catalog.scope);
+  const behavior = getCatalogBehavior(settings);
+  const advanced = getCatalogAdvancedSettings(settings);
+  if (behavior.catalogOnly || !behavior.cartEnabled || !behavior.showBuyButton) throw new Error("Carrinho desativado neste catálogo");
+  const sql = createAdminSqlExecutor();
+  await assertOrdersEntitlement(sql, catalog.scope);
+  const requested = normalizeRefreshItems(data.items, behavior.quantityEnabled);
+  const items: Array<{ productId: string; variantId: string | null; name: string; variantName: string | null; quantity: number; unitPriceCents: number }> = [];
+  for (const item of requested) {
+    const product = await catalog.repository.getProductById(catalog.scope, item.productId, true);
+    if (!product) continue;
+    try {
+      const selection = resolvePurchasableSelection(product, item.variantId);
+      const variant = selection.variantId ? product.variants.find((candidate) => candidate.id === selection.variantId) : undefined;
+      const stockLimit = product.trackInventory ? (variant?.stockQuantity ?? product.stockQuantity) : 999;
+      if (stockLimit <= 0) continue;
+      const quantity = behavior.quantityEnabled ? Math.min(item.quantity, stockLimit, 999) : 1;
+      items.push({
+        productId: selection.productId,
+        variantId: selection.variantId,
+        name: selection.name,
+        variantName: selection.variantName,
+        quantity,
+        unitPriceCents: selection.unitPriceCents,
+      });
+    } catch {
+      // Produto/variante deixou de ser uma seleção pública comprável.
+    }
+  }
+  return {
+    items,
+    subtotalCents: items.reduce((total, item) => total + item.unitPriceCents * item.quantity, 0),
+    minimumOrderCents: advanced.minimumOrderCents,
   };
 });

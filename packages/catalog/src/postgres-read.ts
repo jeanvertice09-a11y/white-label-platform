@@ -167,8 +167,12 @@ function productWhere(query: CatalogQuery, publicOnly: boolean) {
   if (query.search?.trim()) {
     params.push("%" + query.search.trim() + "%");
     const index = String(params.length);
+    const variantActive = publicOnly ? " and ssv.active=true" : "";
     where.push(
       "(p.name ilike $" + index + " or coalesce(p.sku,'') ilike $" + index +
+      " or exists (select 1 from public.product_variants ssv where ssv.tenant_id=p.tenant_id " +
+      "and ssv.store_id=p.store_id and ssv.product_id=p.id" + variantActive +
+      " and coalesce(ssv.sku,'') ilike $" + index + ")" +
       " or exists (select 1 from public.categories sc where sc.tenant_id=p.tenant_id " +
       "and sc.store_id=p.store_id and sc.id=p.category_id and (sc.name ilike $" + index +
       " or exists (select 1 from public.categories sp where sp.tenant_id=sc.tenant_id " +
@@ -212,6 +216,6 @@ export function createCatalogReadRepository(sql: CatalogSqlExecutor): CatalogRea
     listBanners: (scope, publicOnly) => listBanners(sql, scope, publicOnly),
     listProducts: (query, publicOnly) => listProducts(sql, query, publicOnly),
     getProductBySlug: (scope, slug, publicOnly) => getProduct(sql, scope, "slug", slug, publicOnly),
-    getProductById: (scope, id) => getProduct(sql, scope, "id", id, false),
+    getProductById: (scope, id, publicOnly = false) => getProduct(sql, scope, "id", id, publicOnly),
   };
 }
