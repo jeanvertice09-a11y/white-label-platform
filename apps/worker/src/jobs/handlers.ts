@@ -1,17 +1,21 @@
 import type { Job } from "./types.ts";
 
-export async function handleEmailJob(job: Job<{ to: string; subject: string }>): Promise<void> {
-  await Promise.resolve(job);
+function rejectUnimplemented(kind: Job["kind"]): Promise<void> {
+  return Promise.reject(new Error(`Job kind ${kind} is not implemented; refusing fake success.`));
 }
 
-export async function handleMediaJob(job: Job<{ objectKey: string }>): Promise<void> {
-  await Promise.resolve(job);
+export function handleEmailJob(job: Job<{ to: string; subject: string }>): Promise<void> {
+  return rejectUnimplemented(job.kind);
 }
 
-export async function handleBillingJob(job: Job<{ level: string }>): Promise<void> {
-  await Promise.resolve(job);
+export function handleMediaJob(job: Job<{ objectKey: string }>): Promise<void> {
+  return rejectUnimplemented(job.kind);
 }
 
-export async function handleDomainVerifyJob(job: Job<{ hostname: string }>): Promise<void> {
-  await Promise.resolve(job);
+export function handleBillingJob(job: Job<{ level: string }>): Promise<void> {
+  return rejectUnimplemented(job.kind);
+}
+
+export function handleDomainVerifyJob(job: Job<{ hostname: string }>): Promise<void> {
+  return rejectUnimplemented(job.kind);
 }
