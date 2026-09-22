@@ -5,8 +5,12 @@
 
 import { validateServerSession } from "./supabase-server.server.ts";
 
+export type AuthenticatorAssuranceLevel = "aal1" | "aal2";
+
 export interface Session {
   userId: string;
+  assuranceLevel: AuthenticatorAssuranceLevel | null;
+  nextAssuranceLevel: AuthenticatorAssuranceLevel | null;
 }
 
 function assertServer(): void {
@@ -23,6 +27,9 @@ export async function resolveSessionFromRequest(): Promise<Session | null> {
 }
 
 /** Injeção p/ testes da matriz de autorização (não usada em produção). */
-export function stubSession(userId: string): Session {
-  return { userId };
+export function stubSession(
+  userId: string,
+  assuranceLevel: AuthenticatorAssuranceLevel = "aal2",
+): Session {
+  return { userId, assuranceLevel, nextAssuranceLevel: assuranceLevel };
 }
