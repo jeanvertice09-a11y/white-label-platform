@@ -127,18 +127,6 @@ export async function requireMediaAsset(
   return asset;
 }
 
-async function usageCount(sql: MediaSql, asset: MediaAsset): Promise<number> {
-  const rows = await sql.query(
-    `select
-      (select count(*) from public.product_images where tenant_id=$1::uuid and asset_id=$2::uuid) +
-      (select count(*) from public.store_banners where tenant_id=$1::uuid and asset_id=$2::uuid) +
-      (select count(*) from public.tenant_branding where tenant_id=$1::uuid and logo_asset_id=$2::uuid)
-      as usages`,
-    [asset.tenantId, asset.id],
-  );
-  return Number(rows[0]?.["usages"] ?? 0);
-}
-
 async function markFailure(sql: MediaSql, asset: MediaAsset, error: unknown): Promise<void> {
   const message = error instanceof Error ? error.message.slice(0, 1000) : "Falha de mídia";
   await sql.query(
@@ -156,15 +144,11 @@ export async function deleteMediaAssetIfUnused(
 ): Promise<boolean> {
   const asset = await requireMediaAsset(sql, scope, assetId);
   if (asset.status === "deleted") return true;
-  if (await usageCount(sql, asset) > 0) return false;
-  const transitioned = await sql.query(
-    `update public.media_assets set status='delete_pending',last_error=null,updated_at=now()
-     where tenant_id=$1::uuid and store_id is not distinct from $2::uuid and id=$3::uuid
-       and status in ('pending','ready','failed','delete_pending')
-     returning id`,
+  const claimed = await sql.query(
+    `select public.claim_media_asset_deletion($1::uuid,$2::uuid,$3::uuid) as claimed`,
     [asset.tenantId, asset.storeId, asset.id],
   );
-  if (!transitioned[0]) return false;
+  if (claimed[0]?.["claimed"] !== true) return false;
   try {
     await storage.deleteObject(asset.objectKey);
     await sql.query(
