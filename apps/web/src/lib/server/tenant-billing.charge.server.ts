@@ -27,6 +27,7 @@ interface ReservedPayment {
   id: string;
   status: PaymentStatus;
   providerPaymentId: string | null;
+  gatewayAccountId: string;
 }
 
 export interface TenantChargeResult {
@@ -170,7 +171,7 @@ async function reservePayment(
        store_subscription_id,idempotency_key
      ) values ('tenant_billing',$1::uuid,$2::uuid,$3::uuid,$4,'BRL','pending',$5::uuid,$6)
      on conflict do nothing
-     returning id::text,status,provider_payment_id`,
+     returning id::text,status,provider_payment_id,gateway_account_id::text`,
     [
       target.tenantId,
       target.storeId,
@@ -182,13 +183,17 @@ async function reservePayment(
   );
   if (inserted[0]) return mapReserved(inserted[0]);
   const existing = await sql.query(
-    `select id::text,status,provider_payment_id from public.payments
+    `select id::text,status,provider_payment_id,gateway_account_id::text from public.payments
      where level='tenant_billing' and tenant_id=$1::uuid and store_id=$2::uuid
        and idempotency_key=$3 limit 1`,
     [target.tenantId, target.storeId, idempotencyKey],
   );
   if (!existing[0]) throw new Error("Falha ao resolver cobrança tenant_billing idempotente.");
-  return mapReserved(existing[0]);
+  const reserved = mapReserved(existing[0]);
+  if (reserved.gatewayAccountId !== target.gatewayId) {
+    throw new Error("Cobrança idempotente pertence a outro gateway; troca de gateway requer novo ciclo.");
+  }
+  return reserved;
 }
 
 async function claimProviderCreate(sql: ControlSql, paymentId: string): Promise<boolean> {
@@ -243,6 +248,7 @@ function mapReserved(row: Record<string, unknown>): ReservedPayment {
     id: requiredText(row, "id"),
     status: requiredText(row, "status") as PaymentStatus,
     providerPaymentId: nullableText(row, "provider_payment_id"),
+    gatewayAccountId: requiredText(row, "gateway_account_id"),
   };
 }
 

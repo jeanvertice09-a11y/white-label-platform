@@ -33,6 +33,7 @@ interface ReservedPayment {
   id: string;
   status: PaymentStatus;
   providerPaymentId: string | null;
+  gatewayAccountId: string;
 }
 
 export async function createPlatformCharge(
@@ -159,17 +160,21 @@ async function reservePayment(
        subscription_id,idempotency_key
      ) values ('platform_billing',$1::uuid,null,$2::uuid,$3,'BRL','pending',$4::uuid,$5)
      on conflict do nothing
-     returning id::text,status,provider_payment_id`,
+     returning id::text,status,provider_payment_id,gateway_account_id::text`,
     [target.tenantId, target.gatewayId, target.priceCents, target.subscriptionId, idempotencyKey],
   );
   if (inserted[0]) return mapReserved(inserted[0]);
   const existing = await sql.query(
-    `select id::text,status,provider_payment_id from public.payments
+    `select id::text,status,provider_payment_id,gateway_account_id::text from public.payments
      where level='platform_billing' and tenant_id=$1::uuid and idempotency_key=$2 limit 1`,
     [target.tenantId, idempotencyKey],
   );
   if (!existing[0]) throw new Error("Falha ao resolver cobrança idempotente.");
-  return mapReserved(existing[0]);
+  const reserved = mapReserved(existing[0]);
+  if (reserved.gatewayAccountId !== target.gatewayId) {
+    throw new Error("Cobrança idempotente pertence a outro gateway; troca de gateway requer novo ciclo.");
+  }
+  return reserved;
 }
 
 async function claimProviderCreate(sql: AdminSql, paymentId: string): Promise<boolean> {
@@ -200,6 +205,7 @@ function mapReserved(row: Row): ReservedPayment {
     id: requiredText(row, "id"),
     status: requiredText(row, "status") as PaymentStatus,
     providerPaymentId: nullableText(row, "provider_payment_id"),
+    gatewayAccountId: requiredText(row, "gateway_account_id"),
   };
 }
 
