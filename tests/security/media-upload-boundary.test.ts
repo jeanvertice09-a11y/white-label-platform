@@ -54,10 +54,12 @@ describe("media upload security boundary", () => {
 
   test("physical deletion checks every supported reference before R2 delete", () => {
     const media = source("apps/web/src/lib/server/media.server.ts");
-    expect(media).toContain("public.product_images");
-    expect(media).toContain("public.store_banners");
-    expect(media).toContain("public.tenant_branding");
-    expect(media).toContain("if (await usageCount(sql, asset) > 0) return false");
+    const migration = source("supabase/migrations/0032_media_deletion_claim.sql");
+    expect(media).toContain("public.claim_media_asset_deletion");
+    expect(migration).toContain("not exists (");
+    expect(migration).toContain("public.product_images");
+    expect(migration).toContain("public.store_banners");
+    expect(migration).toContain("public.tenant_branding");
   });
 
   test("abandoned finalized assets are collected only after a grace period and with zero references", () => {

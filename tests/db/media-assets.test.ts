@@ -78,6 +78,28 @@ describe("media asset database boundary", () => {
     `), "media kind mismatch");
   });
 
+  test("deletion claim is atomic and refuses a referenced asset", async () => {
+    const blocked = await h.db.query(`
+      select public.claim_media_asset_deletion('${ids.tenantA}','${ids.storeA}','${PRODUCT_ASSET}') as claimed
+    `);
+    expect(blocked[0]?.["claimed"]).toBe(false);
+    const status = await h.db.query(`select status from public.media_assets where id='${PRODUCT_ASSET}'`);
+    expect(status[0]?.["status"]).toBe("ready");
+  });
+
+  test("deletion claim succeeds only after the last reference is removed", async () => {
+    await h.db.query(`
+      delete from public.product_images
+      where tenant_id='${ids.tenantA}' and store_id='${ids.storeA}' and asset_id='${PRODUCT_ASSET}'
+    `);
+    const claimed = await h.db.query(`
+      select public.claim_media_asset_deletion('${ids.tenantA}','${ids.storeA}','${PRODUCT_ASSET}') as claimed
+    `);
+    expect(claimed[0]?.["claimed"]).toBe(true);
+    const status = await h.db.query(`select status from public.media_assets where id='${PRODUCT_ASSET}'`);
+    expect(status[0]?.["status"]).toBe("delete_pending");
+  });
+
   test("tenant branding accepts only a READY logo asset from the same tenant", async () => {
     await h.db.query(`
       insert into public.tenant_branding(tenant_id,logo_url,logo_asset_id)
