@@ -67,6 +67,18 @@ export interface CreatePaymentIntentInput {
   dueDate?: string;
 }
 
+export interface PaymentCheckoutData {
+  qrCode: string | null;
+  qrCodeBase64: string | null;
+  ticketUrl: string | null;
+  expiresAt: string | null;
+}
+
+export interface CreatePaymentIntentResult {
+  providerPaymentId: ProviderPaymentId;
+  checkout?: PaymentCheckoutData;
+}
+
 export interface ProviderWebhookInput {
   rawBody: string;
   headers: Readonly<Record<string, string | undefined>>;
@@ -91,7 +103,7 @@ export interface PaymentProvider {
   readonly name: PaymentProviderName;
   createIntent(
     input: CreatePaymentIntentInput,
-  ): Promise<{ providerPaymentId: ProviderPaymentId }>;
+   ): Promise<CreatePaymentIntentResult>;
   fetchStatus(providerPaymentId: ProviderPaymentId): Promise<PaymentStatus>;
   verifyWebhook(input: ProviderWebhookInput): Promise<boolean>;
   normalizeWebhook(payload: unknown): Promise<NormalizedProviderEvent>;

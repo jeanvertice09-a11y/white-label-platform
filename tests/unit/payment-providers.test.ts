@@ -73,7 +73,7 @@ describe("MercadoPagoProvider", () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fakeFetch = mockFetch((input, init) => {
       calls.push({ url: requestUrl(input), init });
-      return Promise.resolve(jsonResponse({ id: "mp-pay-1" }));
+      return Promise.resolve(jsonResponse({ id: "ORD01PIX", status: "action_required", transactions: { payments: [{ expiration_time: "2026-09-23T22:00:00Z", payment_method: { qr_code: "000201PIX", qr_code_base64: "BASE64PIX", ticket_url: "https://mercadopago.example/pix" } }] } }));
     });
     const provider = new MercadoPagoProvider({
       accessToken: "fixture-access-token",
@@ -91,13 +91,15 @@ describe("MercadoPagoProvider", () => {
       payerEmail: "buyer@example.test",
       paymentMethod: "pix",
     });
-    expect(created.providerPaymentId === ("mp-pay-1" as ProviderPaymentId)).toBe(true);
+    expect(created.providerPaymentId === ("ORD01PIX" as ProviderPaymentId)).toBe(true);
+    expect(created.checkout?.qrCode).toBe("000201PIX");
+    expect(calls.at(0)?.url).toBe("https://api.mercadopago.com/v1/orders");
     expect(new Headers(calls.at(0)?.init?.headers).get("X-Idempotency-Key")).toBe("idem-123");
     await provider.refund({
-      providerPaymentId: "mp-pay-1" as ProviderPaymentId,
+      providerPaymentId: "ORD01PIX" as ProviderPaymentId,
       idempotencyKey: "refund-123",
     });
-    expect(calls.at(1)?.url).toContain("/v1/payments/mp-pay-1/refunds");
+    expect(calls.at(1)?.url).toContain("/v1/orders/ORD01PIX/refund");
 
     const disabled = new MercadoPagoProvider({
       accessToken: "fixture-access-token",

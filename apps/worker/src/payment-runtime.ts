@@ -2,6 +2,7 @@ import {
   createCredentialVaultFromEnv,
   listRunnableWebhookIds,
   loadGatewayProvider,
+  refreshMercadoPagoGatewayAccessToken,
   processWebhookEvent,
 } from "@white-label/payments/server";
 import type { PaymentProviderName } from "@white-label/payments";
@@ -14,8 +15,16 @@ function asaasBaseUrl(): string {
 }
 
 async function loadProvider(provider: PaymentProviderName,gatewayAccountId: string) {
+  const sql=workerSql();
+  const vault=createCredentialVaultFromEnv();
+  if(provider==="mercadopago"){
+    const clientId=process.env["MERCADOPAGO_CLIENT_ID"]?.trim();
+    const clientSecret=process.env["MERCADOPAGO_CLIENT_SECRET"]?.trim();
+    if(!clientId||!clientSecret) throw new Error("Configuração OAuth Mercado Pago ausente no worker.");
+    await refreshMercadoPagoGatewayAccessToken(sql,vault,gatewayAccountId,{clientId,clientSecret});
+  }
   const loaded=await loadGatewayProvider(
-    workerSql(),createCredentialVaultFromEnv(),provider,gatewayAccountId,
+    sql,vault,provider,gatewayAccountId,
     {writesEnabled:false,asaasBaseUrl:asaasBaseUrl()},
   );
   return loaded.provider;
