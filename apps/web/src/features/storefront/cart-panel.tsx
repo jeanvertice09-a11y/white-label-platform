@@ -8,6 +8,7 @@ import { trackStorefrontEvent } from "./storefront-tracking.tsx";
 type CheckoutResult = Awaited<ReturnType<typeof createWhatsappOrder>>;
 type RefreshResult = Awaited<ReturnType<typeof refreshPublicCart>>;
 type CheckoutSettings = Pick<CatalogAdvancedSettings, "checkoutAskName" | "checkoutAskPhone" | "checkoutAskNotes" | "minimumOrderCents">;
+const MAX_CART_QUANTITY = 999;
 
 function cartKey(productId: string, variantId: string | null): string { return `${productId}:${variantId ?? "base"}`; }
 function refreshInput(cart: CartState) { return cart.items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })); }
@@ -32,9 +33,12 @@ function trackingItems(cart: CartState) {
 }
 
 function CartRows(props: Readonly<{ cart: CartState; showPrice: boolean; quantityEnabled: boolean; onChange: (cart: CartState) => void }>): React.JSX.Element {
-  function change(productId: string, variantId: string | null, next: number): void { props.onChange(next < 1 ? removeCartItem(props.cart, productId, variantId) : setCartItemQuantity(props.cart, productId, variantId, next)); }
+  function change(productId: string, variantId: string | null, next: number): void {
+    if (next > MAX_CART_QUANTITY) return;
+    props.onChange(next < 1 ? removeCartItem(props.cart, productId, variantId) : setCartItemQuantity(props.cart, productId, variantId, next));
+  }
   if (!props.cart.items.length) return <div className="sf__empty sf__empty--cart"><strong>Seu carrinho está vazio</strong><span>Escolha um produto para iniciar seu pedido.</span></div>;
-  return <div className="sf__cart-list">{props.cart.items.map((item) => <article className="sf__cart-row" key={item.productId + ":" + (item.variantId ?? "base")}><div className="sf__cart-copy"><strong>{item.name}</strong>{item.variantName ? <span className="sf__meta">{item.variantName}</span> : null}{props.showPrice ? <span className="sf__meta">{storefrontMoney(item.unitPriceCents)} cada</span> : null}<button className="sf__text-button" type="button" onClick={() => { props.onChange(removeCartItem(props.cart, item.productId, item.variantId)); }}>Remover</button></div><div className="sf__cart-side">{props.showPrice ? <strong>{storefrontMoney(item.unitPriceCents * item.quantity)}</strong> : null}{props.quantityEnabled ? <div className="sf__qty"><button type="button" onClick={() => { change(item.productId, item.variantId, item.quantity - 1); }} aria-label="Diminuir quantidade">−</button><span>{item.quantity}</span><button type="button" onClick={() => { change(item.productId, item.variantId, item.quantity + 1); }} aria-label="Aumentar quantidade">+</button></div> : <span className="sf__meta">Qtd. {item.quantity}</span>}</div></article>)}</div>;
+  return <div className="sf__cart-list">{props.cart.items.map((item) => <article className="sf__cart-row" key={item.productId + ":" + (item.variantId ?? "base")}><div className="sf__cart-copy"><strong>{item.name}</strong>{item.variantName ? <span className="sf__meta">{item.variantName}</span> : null}{props.showPrice ? <span className="sf__meta">{storefrontMoney(item.unitPriceCents)} cada</span> : null}<button className="sf__text-button" type="button" onClick={() => { props.onChange(removeCartItem(props.cart, item.productId, item.variantId)); }}>Remover</button></div><div className="sf__cart-side">{props.showPrice ? <strong>{storefrontMoney(item.unitPriceCents * item.quantity)}</strong> : null}{props.quantityEnabled ? <div className="sf__qty"><button type="button" onClick={() => { change(item.productId, item.variantId, item.quantity - 1); }} aria-label="Diminuir quantidade">−</button><span>{item.quantity}</span><button type="button" disabled={item.quantity >= MAX_CART_QUANTITY} onClick={() => { change(item.productId, item.variantId, item.quantity + 1); }} aria-label="Aumentar quantidade">+</button></div> : <span className="sf__meta">Qtd. {item.quantity}</span>}</div></article>)}</div>;
 }
 
 function CheckoutFields(props: Readonly<{ settings: CheckoutSettings; name: string; phone: string; coupon: string; notes: string; onName: (value: string) => void; onPhone: (value: string) => void; onCoupon: (value: string) => void; onNotes: (value: string) => void }>): React.JSX.Element {

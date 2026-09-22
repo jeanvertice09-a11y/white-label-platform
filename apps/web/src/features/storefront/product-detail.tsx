@@ -11,7 +11,11 @@ interface ProductDetailProps {
   onClose?: () => void; onAdd: (product: Product, variantId: string | null, quantity: number) => void;
 }
 
-function stockLimit(product: Product, variant: ProductVariant | undefined): number { if (!product.trackInventory) return 999; return variant === undefined ? product.stockQuantity : variant.stockQuantity; }
+export function storefrontStockLimit(product: Product, variant: ProductVariant | undefined): number {
+  if (!product.trackInventory) return 999;
+  const stock = variant === undefined ? product.stockQuantity : variant.stockQuantity;
+  return Math.min(999, Math.max(0, stock));
+}
 function selectionImages(product: Product, variantId: string | null): ProductImage[] { if (variantId === null) return product.images.filter((image) => image.variantId === null); const exact = product.images.filter((image) => image.variantId === variantId); const common = product.images.filter((image) => image.variantId === null); return exact.length > 0 ? [...exact, ...common] : common; }
 function variantLabel(variant: ProductVariant): string { const attributes = Object.values(variant.attributes).filter(Boolean); return attributes.length > 0 ? `${variant.name} · ${attributes.join(" / ")}` : variant.name; }
 
@@ -39,7 +43,7 @@ export function ProductDetail(props: Readonly<ProductDetailProps>): React.JSX.El
   const [variantId, setVariantId] = useState(""); const [quantity, setQuantity] = useState(1); const [imageId, setImageId] = useState<string | null>(null);
   const selectedVariant = useMemo(() => props.product.variants.find((item) => item.id === variantId), [props.product.variants, variantId]);
   const selectedId = selectedVariant?.id ?? null; const images = useMemo(() => selectionImages(props.product, selectedId), [props.product, selectedId]);
-  const hasVariants = props.product.variants.length > 0; const hasValidSelection = !hasVariants || selectedVariant !== undefined; const limit = stockLimit(props.product, selectedVariant); const available = hasValidSelection && limit > 0;
+  const hasVariants = props.product.variants.length > 0; const hasValidSelection = !hasVariants || selectedVariant !== undefined; const limit = storefrontStockLimit(props.product, selectedVariant); const available = hasValidSelection && limit > 0;
   const currentPrice = !hasVariants ? props.product.priceCents : selectedVariant === undefined ? null : resolvePurchasableSelection(props.product, selectedVariant.id).unitPriceCents;
   const compareAt = !hasVariants ? props.product.compareAtPriceCents : selectedVariant?.compareAtPriceCents ?? null;
   const promotional = currentPrice !== null && hasPromotionalPrice(currentPrice, compareAt);
