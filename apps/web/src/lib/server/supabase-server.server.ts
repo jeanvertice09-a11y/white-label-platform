@@ -1,7 +1,7 @@
 // SERVER-ONLY: cliente Supabase SSR autenticado pelo cookie do request.
 import { createServerClient } from "@supabase/ssr";
 import { getCookies, setCookie, setResponseHeader } from "@tanstack/react-start/server";
-import type { Session } from "./session.server.ts";
+import type { AuthenticatorAssuranceLevel, Session } from "./session.server.ts";
 
 function assertServer(): void {
   const g = globalThis as Record<string, unknown>;
@@ -18,6 +18,10 @@ function readServerEnv(): { url: string; anonKey: string } {
     throw new Error("[supabase-server] SUPABASE_URL/ANON_KEY ausentes");
   }
   return { url, anonKey };
+}
+
+function normalizeAssuranceLevel(value: unknown): AuthenticatorAssuranceLevel | null {
+  return value === "aal1" || value === "aal2" ? value : null;
 }
 
 export function createRequestSupabaseClient() {
@@ -41,14 +45,22 @@ export function createRequestSupabaseClient() {
   });
 }
 
-/** Valida o JWT da sessão contra o Supabase Auth. */
+/** Valida o JWT e o nível MFA da sessão contra o Supabase Auth. */
 export async function validateServerSession(): Promise<Session | null> {
   assertServer();
   const client = createRequestSupabaseClient();
   try {
     const { data, error } = await client.auth.getUser();
     if (error) return null;
-    return { userId: data.user.id };
+    const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (assurance.error) {
+      return { userId: data.user.id, assuranceLevel: null, nextAssuranceLevel: null };
+    }
+    return {
+      userId: data.user.id,
+      assuranceLevel: normalizeAssuranceLevel(assurance.data.currentLevel),
+      nextAssuranceLevel: normalizeAssuranceLevel(assurance.data.nextLevel),
+    };
   } catch {
     return null;
   }

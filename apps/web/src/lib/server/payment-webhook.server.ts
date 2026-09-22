@@ -5,6 +5,11 @@ import {
 } from "@white-label/payments/server";
 import type { PaymentProviderName, ProviderWebhookInput } from "@white-label/payments";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
+import { enforceRateLimit, RateLimitError } from "./rate-limit.server.ts";
+
+const MAX_WEBHOOK_BODY_BYTES = 64 * 1024;
+
+class WebhookPayloadTooLargeError extends Error {}
 
 export async function handlePaymentWebhook(
   request: Request,
@@ -25,7 +30,8 @@ export async function handlePaymentWebhook(
       gatewayAccountId,
       { writesEnabled: false },
     );
-    const rawBody = await request.text();
+    await enforceRateLimit(sql, `webhook:${providerName}:${gatewayAccountId}`, 120, 60);
+    const rawBody = await readBoundedBody(request, MAX_WEBHOOK_BODY_BYTES);
     const url = new URL(request.url);
     const input = webhookInput(request, rawBody, url);
     const verified = await loaded.provider.verifyWebhook(input);
@@ -41,9 +47,44 @@ export async function handlePaymentWebhook(
       occurredAt: normalized.occurredAt,
     });
     return new Response(null, { status: 200 });
-  } catch {
+  } catch (error) {
+    if (error instanceof RateLimitError) return new Response("Too many requests", { status: 429 });
+    if (error instanceof WebhookPayloadTooLargeError) return new Response("Payload too large", { status: 413 });
     return new Response("Webhook rejected", { status: 400 });
   }
+}
+
+async function readBoundedBody(request: Request, maxBytes: number): Promise<string> {
+  const declared = request.headers.get("content-length");
+  if (declared) {
+    const contentLength = Number(declared);
+    if (Number.isFinite(contentLength) && contentLength > maxBytes) throw new WebhookPayloadTooLargeError();
+  }
+  const body = request.body as ReadableStream<Uint8Array> | null;
+  if (body === null) throw new Error("Webhook sem body.");
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  let done = false;
+  while (!done) {
+    const result = await reader.read();
+    done = result.done;
+    if (!result.done) {
+      total += result.value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new WebhookPayloadTooLargeError();
+      }
+      chunks.push(result.value);
+    }
+  }
+  const decoded = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    decoded.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(decoded);
 }
 
 function paymentProviderName(value: string): PaymentProviderName | null {

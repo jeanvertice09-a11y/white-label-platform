@@ -102,6 +102,14 @@ async function requireSession(_input: RouteInput, deps: RouteDeps): Promise<Sess
   if (!session) throw new HttpError(401, "Sessão necessária", "UNAUTHENTICATED");
   return session;
 }
+
+/** Painéis privilegiados e suas server functions exigem sessão Supabase em AAL2. */
+export function requireMfaAssurance(session: Session): void {
+  if (session.assuranceLevel !== "aal2") {
+    throw new HttpError(403, "Confirme o segundo fator para continuar", "MFA_REQUIRED");
+  }
+}
+
 const FORBIDDEN_TENANT_CONTEXT_CODES = new Set(["TENANT_FORBIDDEN", "STORE_FORBIDDEN", "CROSS_TENANT_DENIED", "CROSS_STORE_DENIED"]);
 function toHttp(error: unknown): never {
   if (error instanceof HttpError) throw error;
@@ -133,10 +141,11 @@ async function assertStoreOperational(
   if (status === "suspended") throw new HttpError(403, "Loja suspensa", "STORE_SUSPENDED");
 }
 
-/** /master: somente host de sistema + platform_owner/platform_admin. */
+/** /master: somente host de sistema + platform_owner/platform_admin + MFA AAL2. */
 export async function loadMaster(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<MasterContext> {
   try {
     const session = await requireSession(input, deps);
+    requireMfaAssurance(session);
     const host = requireHost(input);
     if (host !== "control.geral.kataluu.com.br") throw new HttpError(404, "Painel Master não existe neste host", "HOST_ROUTE_MISMATCH");
     const roles = await deps.memberships.getPlatformRoles(session.userId);
@@ -162,10 +171,12 @@ function requireDomain(resolved: TenantResolution | null, expected: DomainType):
   return resolved;
 }
 
-/** /control: tenant_panel dinâmico ou app.kataluu.com.br com tenant não ambíguo. */
+/** /control: tenant_panel dinâmico ou app.kataluu.com.br com tenant não ambíguo + MFA AAL2. */
 export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
-    const session = await requireSession(input, deps); const host = requireHost(input);
+    const session = await requireSession(input, deps);
+    requireMfaAssurance(session);
+    const host = requireHost(input);
     const memberships = await deps.memberships.getTenantMemberships(session.userId); let tenantId: TenantId;
     if (host === "app.kataluu.com.br") tenantId = uniqueTenantIdForSystemApp(memberships);
     else {
@@ -180,10 +191,12 @@ export async function loadControl(input: RouteInput, deps: RouteDeps = defaultDe
   } catch (error) { return toHttp(error); }
 }
 
-/** /admin: somente domínio store_admin + membership explícita da store. */
+/** /admin: somente domínio store_admin + membership explícita da store + MFA AAL2. */
 export async function loadStoreAdmin(input: RouteInput, deps: RouteDeps = defaultDeps): Promise<TenantContext> {
   try {
-    const session = await requireSession(input, deps); const host = requireHost(input);
+    const session = await requireSession(input, deps);
+    requireMfaAssurance(session);
+    const host = requireHost(input);
     const resolved = requireDomain(await deps.resolveTenantForHost(host), "store_admin");
     if (!resolved.storeId) throw new HttpError(500, "store_admin sem store", "DOMAIN_SCOPE_INVALID");
     await assertTenantOperational(deps, resolved.tenantId);

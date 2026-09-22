@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { OnboardingPanel } from "../features/public/onboarding-panel.tsx";
 import { PublicBrandMark, publicBrandStyle } from "../features/public/public-shell.tsx";
 import type { ControlOnboardingData } from "../lib/control-onboarding.types.ts";
@@ -45,7 +45,6 @@ function AccessChooser({ experience }: Readonly<{ experience: PublicLoginExperie
 
 function LoginPage(): React.JSX.Element {
   const data = Route.useLoaderData();
-  const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   if (data.onboarding) return <OnboardingPanel data={data.onboarding} />;
@@ -67,11 +66,8 @@ function LoginPage(): React.JSX.Element {
       await signInWithPassword(email, password);
       const { data: sessionData } = await getBrowserClient().auth.getSession();
       if (!sessionData.session) throw new Error("Sessão não foi persistida. Tente novamente.");
-      if (data.destination === "/control") {
-        window.location.assign(postLoginLocation(data.destination));
-        return;
-      }
-      await navigate({ to: data.destination });
+      const next = postLoginLocation(data.destination);
+      window.location.assign(`/mfa?next=${encodeURIComponent(next)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao entrar.");
     } finally { setBusy(false); }

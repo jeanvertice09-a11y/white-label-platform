@@ -8,6 +8,7 @@ import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createPublicCatalogContext } from "./catalog-context.server.ts";
 import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
+import { enforceRateLimit } from "./rate-limit.server.ts";
 
 const cartItemSchema = z.object({
   productId: z.string().uuid(),
@@ -64,6 +65,7 @@ export const createWhatsappOrder = createServerFn({ method: "POST" }).validator(
   const customerPhone = advanced.checkoutAskPhone && data.customerPhone ? normalizeCustomerPhone(data.customerPhone) : null;
   const notes = advanced.checkoutAskNotes ? data.notes : null;
   const sql = createAdminSqlExecutor();
+  await enforceRateLimit(sql, `checkout:${catalog.scope.tenantId}:${catalog.scope.storeId}`, 30, 60);
   await assertOrdersEntitlement(sql, catalog.scope);
   if (data.couponCode?.trim()) await assertCouponsEntitlement(sql, catalog.scope);
   const orders = createOrderRepository(sql);
