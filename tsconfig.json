@@ -67,6 +67,9 @@
       "@white-label/storage": [
         "./packages/storage/src/index.ts"
       ],
+      "@white-label/storage/server": [
+        "./packages/storage/src/server.ts"
+      ],
       "@white-label/stores": [
         "./packages/stores/src/index.ts"
       ],
