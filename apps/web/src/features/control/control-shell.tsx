@@ -1,6 +1,7 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
 import { DashboardIcon } from "../../components/dashboard/DashboardIcon.tsx";
+import { useMobileDrawerFocus } from "../../components/console/mobile-drawer-focus.ts";
 import type { TenantControlDashboardData } from "../../lib/server/platform-console.types.ts";
 import { signOut } from "../../lib/supabase-client.ts";
 import { statusLabel } from "../../lib/ui-labels.ts";
@@ -58,29 +59,17 @@ function ControlSidebar({ data, open, onClose }: Readonly<{ data: TenantControlD
 export function ControlShell({ data }: Readonly<{ data: TenantControlDashboardData }>): React.JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeMobileMenu = useCallback(() => {
+    setMobileOpen(false);
+    window.requestAnimationFrame(() => { menuButtonRef.current?.focus(); });
+  }, []);
 
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const firstLink = document.querySelector<HTMLAnchorElement>("#control-navigation a");
-    firstLink?.focus();
-    function onKeyDown(event: KeyboardEvent): void {
-      if (event.key !== "Escape") return;
-      setMobileOpen(false);
-      menuButtonRef.current?.focus();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [mobileOpen]);
+  useMobileDrawerFocus(mobileOpen, "control-navigation", closeMobileMenu);
 
   return <ControlShellContext.Provider value={data}>
     <div className="control-shell console-shell">
       <a className="console-skip-link" href="#control-content">Pular para o conteúdo</a>
-      <ControlSidebar data={data} open={mobileOpen} onClose={() => { setMobileOpen(false); }} />
+      <ControlSidebar data={data} open={mobileOpen} onClose={closeMobileMenu} />
       <main className="control-main console-shell__content">
         <div className="control-mobile-bar"><button ref={menuButtonRef} type="button" className="control-mobile-bar__menu" onClick={() => { setMobileOpen(true); }} aria-label="Abrir menu" aria-expanded={mobileOpen} aria-controls="control-navigation"><DashboardIcon name="menu" /></button><div><strong>{data.tenant.name}</strong><span>Painel da White Label</span></div></div>
         <div className="control-content console-container" id="control-content" tabIndex={-1}><Outlet /></div>

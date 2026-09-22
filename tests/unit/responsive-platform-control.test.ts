@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
 const consoleCss = readFileSync("apps/web/src/styles/platform-responsive.css", "utf8");
+const drawerQaCss = readFileSync("apps/web/src/styles/console-drawer-qa.css", "utf8");
 const authCss = readFileSync("apps/web/src/styles/auth-responsive.css", "utf8");
+const drawerFocus = readFileSync("apps/web/src/components/console/mobile-drawer-focus.ts", "utf8");
 const masterShell = readFileSync("apps/web/src/components/master/MasterShell.tsx", "utf8");
 const controlShell = readFileSync("apps/web/src/features/control/control-shell.tsx", "utf8");
 const masterRoute = readFileSync("apps/web/src/routes/master.tsx", "utf8");
@@ -46,14 +48,34 @@ describe("responsive platform console contracts", () => {
     for (const source of [masterShell, controlShell]) {
       expect(source).toContain("aria-expanded={mobileOpen}");
       expect(source).toContain("aria-controls=");
-      expect(source).toContain('event.key !== "Escape"');
-      expect(source).toContain('document.body.style.overflow = "hidden"');
+      expect(source).toContain("useMobileDrawerFocus(mobileOpen");
+    }
+    expect(drawerFocus).toContain('event.key === "Escape"');
+    expect(drawerFocus).toContain('document.body.style.overflow = "hidden"');
+  });
+
+  test("drawer mobile fechado sai da navegação e aberto contém o foco", () => {
+    expect(drawerQaCss).toContain("@media (max-width: 979px)");
+    expect(drawerQaCss).toContain("visibility: hidden");
+    expect(drawerQaCss).toContain("pointer-events: none");
+    expect(drawerQaCss).toContain("visibility: visible");
+    expect(drawerQaCss).toContain("pointer-events: auto");
+    expect(drawerFocus).toContain('event.key !== "Tab"');
+    expect(drawerFocus).toContain("event.shiftKey && document.activeElement === first");
+    expect(drawerFocus).toContain("document.activeElement === last");
+    for (const source of [masterShell, controlShell]) {
+      expect(source).toContain("requestAnimationFrame");
+      expect(source).toContain("onClose={closeMobileMenu}");
     }
   });
 
   test("layers responsivos são carregados por último nas superfícies corretas", () => {
     expect(masterRoute).toContain('import "../styles/platform-responsive.css"');
     expect(controlRoute).toContain('import "../styles/platform-responsive.css"');
+    expect(masterRoute).toContain('import "../styles/console-drawer-qa.css"');
+    expect(controlRoute).toContain('import "../styles/console-drawer-qa.css"');
+    expect(masterRoute.indexOf("platform-responsive.css")).toBeLessThan(masterRoute.indexOf("console-drawer-qa.css"));
+    expect(controlRoute.indexOf("platform-responsive.css")).toBeLessThan(controlRoute.indexOf("console-drawer-qa.css"));
     expect(loginRoute).toContain('import "../styles/auth-responsive.css"');
     expect(mfaRoute).toContain('import "../styles/auth-responsive.css"');
   });
