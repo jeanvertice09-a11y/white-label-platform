@@ -13,11 +13,46 @@ interface PlanSummary {
   status: string;
 }
 
+export interface DashboardRecentOrder {
+  id: string;
+  orderNumber: number;
+  customerName: string | null;
+  status: string;
+  totalCents: number;
+  createdAt: string;
+}
+
+export interface DashboardTaskAlert {
+  id: string;
+  title: string;
+  priority: string;
+  dueAt: string | null;
+}
+
+export interface DashboardStockAlert {
+  productId: string;
+  variantId: string | null;
+  productName: string;
+  variantName: string | null;
+  quantity: number;
+}
+
+export interface MerchantDashboardActivity {
+  recentOrders: DashboardRecentOrder[];
+  taskAlerts: DashboardTaskAlert[];
+  stockAlerts: DashboardStockAlert[];
+}
+
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const reportRange = z.object({ from: date.optional(), to: date.optional() });
 
 function optionalText(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function requiredText(value: unknown, key: string): string {
+  if (typeof value !== "string") throw new Error(`Campo ${key} inválido`);
+  return value;
 }
 
 function integer(row: Record<string, unknown>, key: string): number {
@@ -139,6 +174,80 @@ export async function getCurrentStorePlan(
   return { name: optionalText(row["name"]), slug: optionalText(row["slug"]), status };
 }
 
+const RECENT_ORDERS_SQL = `select id::text,order_number,status,customer_name,total_cents,created_at::text
+  from public.orders where tenant_id=$1 and store_id=$2
+  order by created_at desc,id desc limit 5`;
+
+const TASK_ALERTS_SQL = `select id::text,title,priority,due_at::text
+  from public.merchant_tasks where tenant_id=$1 and store_id=$2 and status='open'
+  order by (due_at is null),due_at,
+    case priority when 'high' then 0 when 'normal' then 1 else 2 end,
+    created_at desc limit 5`;
+
+const STOCK_ALERTS_SQL = `with inventory_rows as (
+  select p.id as product_id,v.id as variant_id,p.name as product_name,
+    v.name as variant_name,coalesce(sum(sm.delta),0)::integer as quantity
+  from public.products p
+  join public.product_variants v
+    on v.tenant_id=p.tenant_id and v.store_id=p.store_id and v.product_id=p.id
+  left join public.stock_movements sm
+    on sm.tenant_id=v.tenant_id and sm.store_id=v.store_id
+   and sm.product_id=v.product_id and sm.variant_id=v.id
+  where p.tenant_id=$1 and p.store_id=$2 and p.active=true
+    and p.track_inventory=true and v.active=true
+  group by p.id,v.id,p.name,v.name
+  union all
+  select p.id,null::uuid,p.name,null::text,coalesce(sum(sm.delta),0)::integer
+  from public.products p
+  left join public.stock_movements sm
+    on sm.tenant_id=p.tenant_id and sm.store_id=p.store_id
+   and sm.product_id=p.id and sm.variant_id is null
+  where p.tenant_id=$1 and p.store_id=$2 and p.active=true
+    and p.track_inventory=true and not exists (
+      select 1 from public.product_variants v
+      where v.tenant_id=p.tenant_id and v.store_id=p.store_id and v.product_id=p.id
+    )
+  group by p.id,p.name
+)
+select product_id::text,variant_id::text,product_name,variant_name,quantity
+from inventory_rows where quantity<=5
+order by quantity,product_name,variant_name nulls first limit 5`;
+
+export async function loadMerchantDashboardActivity(
+  sql: MerchantOpsSqlExecutor,
+  scope: MerchantScope,
+): Promise<MerchantDashboardActivity> {
+  const params = [scope.tenantId, scope.storeId];
+  const [orders, tasks, stock] = await Promise.all([
+    sql.query(RECENT_ORDERS_SQL, params),
+    sql.query(TASK_ALERTS_SQL, params),
+    sql.query(STOCK_ALERTS_SQL, params),
+  ]);
+  return {
+    recentOrders: orders.map((row) => ({
+      id: requiredText(row["id"], "order.id"),
+      orderNumber: integer(row, "order_number"),
+      customerName: optionalText(row["customer_name"]),
+      status: requiredText(row["status"], "order.status"),
+      totalCents: integer(row, "total_cents"),
+      createdAt: requiredText(row["created_at"], "order.created_at"),
+    })),
+    taskAlerts: tasks.map((row) => ({
+      id: requiredText(row["id"], "task.id"),
+      title: requiredText(row["title"], "task.title"),
+      priority: requiredText(row["priority"], "task.priority"),
+      dueAt: optionalText(row["due_at"]),
+    })),
+    stockAlerts: stock.map((row) => ({
+      productId: requiredText(row["product_id"], "stock.product_id"),
+      variantId: optionalText(row["variant_id"]),
+      productName: requiredText(row["product_name"], "stock.product_name"),
+      variantName: optionalText(row["variant_name"]),
+      quantity: integer(row, "quantity"),
+    })),
+  };
+}
+
 export const getMerchantOperationsReport = createServerFn({ method: "GET" })
   .validator(reportRange)
   .handler(async ({ data }) => {
@@ -151,12 +260,13 @@ export const getMerchantOperationsDashboard = createServerFn({ method: "GET" })
   .handler(async () => {
     const current = await createMerchantOperationsContext(getRequestHost());
     const catalog = createCatalogReadRepository(current.sql);
-    const [metrics, settings, store, plan] = await Promise.all([
+    const [metrics, settings, store, plan, activity] = await Promise.all([
       getMerchantDashboardMetrics(current.sql, current.scope),
       catalog.getSettings(current.scope),
       catalog.getStore(current.scope),
       getCurrentStorePlan(current.sql, current.scope.tenantId, current.scope.storeId),
+      loadMerchantDashboardActivity(current.sql, current.scope),
     ]);
     if (!store) throw new Error("Loja não encontrada");
-    return { store, metrics, plan, layout: settings.layout };
+    return { store, metrics, plan, layout: settings.layout, activity };
   });

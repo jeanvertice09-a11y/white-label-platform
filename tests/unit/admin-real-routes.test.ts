@@ -55,7 +55,7 @@ describe("admin real routes lot 3", () => {
     expect(source("apps/web/src/routes/admin.campaigns.tsx")).toContain("<CampaignManager");
   });
 
-  test("rotas agregadoras antigas permanecem apenas como navegação de compatibilidade", () => {
+  test("operações expõe histórico real e marketing permanece como compatibilidade", () => {
     const shell = source("apps/web/src/features/store-admin/admin-shell.tsx");
     const operations = source("apps/web/src/routes/admin.operations.tsx");
     const marketing = source("apps/web/src/routes/admin.marketing.tsx");
@@ -68,7 +68,8 @@ describe("admin real routes lot 3", () => {
     expect(marketing).toContain('to="/admin/campaigns"');
     expect(marketing).not.toContain('id="coupons"');
     expect(marketing).not.toContain('id="campaigns"');
-    expect(shell).not.toContain('to: "/admin/operations"');
+    expect(operations).toContain("<MerchantAuditLog");
+    expect(shell).toContain('to: "/admin/operations"');
     expect(shell).not.toContain('to: "/admin/marketing"');
   });
 });

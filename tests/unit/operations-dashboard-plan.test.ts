@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getCurrentStorePlan } from "../../apps/web/src/lib/server/operations-dashboard.functions.ts";
+import { getCurrentStorePlan, loadMerchantDashboardActivity } from "../../apps/web/src/lib/server/operations-dashboard.functions.ts";
 
 const TENANT_ID = "11111111-1111-4111-a111-111111111111";
 const STORE_ID = "22222222-2222-4222-a222-222222222222";
@@ -30,5 +30,32 @@ describe("operations dashboard current plan", () => {
     }, TENANT_ID, STORE_ID);
 
     expect(plan).toBeNull();
+  });
+});
+
+describe("operations dashboard activity", () => {
+  test("loads only recent operational data scoped by tenant and store", async () => {
+    const calls: Array<{ sql: string; params: unknown[] }> = [];
+    const responses = [
+      [{ id: "order-a", order_number: 42, customer_name: "Cliente", status: "pending", total_cents: 1990, created_at: "2026-09-22T12:00:00Z" }],
+      [{ id: "task-a", title: "Separar pedido", priority: "high", due_at: "2026-09-23T12:00:00Z" }],
+      [{ product_id: "product-a", variant_id: null, product_name: "Produto", variant_name: null, quantity: 2 }],
+    ];
+    const activity = await loadMerchantDashboardActivity({
+      query(sql, params = []) {
+        calls.push({ sql, params });
+        return Promise.resolve(responses[calls.length - 1] ?? []);
+      },
+    }, { tenantId: TENANT_ID, storeId: STORE_ID });
+
+    expect(activity.recentOrders[0]?.orderNumber).toBe(42);
+    expect(activity.taskAlerts[0]?.priority).toBe("high");
+    expect(activity.stockAlerts[0]?.quantity).toBe(2);
+    expect(calls).toHaveLength(3);
+    for (const call of calls) {
+      expect(call.sql).toContain("tenant_id=$1");
+      expect(call.sql).toContain("store_id=$2");
+      expect(call.params).toEqual([TENANT_ID, STORE_ID]);
+    }
   });
 });

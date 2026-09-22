@@ -3,6 +3,7 @@ import { DashboardIcon, type DashboardIconName } from "../components/dashboard/D
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
 import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
+import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
   loader: () => getMerchantOperationsDashboard(),
@@ -100,6 +101,48 @@ function QuickLinksSection(): React.JSX.Element {
   );
 }
 
+function RecentOperations(props: Readonly<{
+  activity: Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"];
+}>): React.JSX.Element {
+  const { recentOrders, taskAlerts, stockAlerts } = props.activity;
+  return (
+    <section className="k-workspace-section">
+      <header className="k-section-head">
+        <div><span className="k-section-kicker">Tempo real</span><h2>Operação recente</h2><p>Pedidos, tarefas e itens críticos derivados do banco da loja.</p></div>
+      </header>
+      <div className="k-dashboard-activity">
+        <div className="k-card">
+          <div className="k-row"><h3>Últimos pedidos</h3><Link className="k-text-action" to="/admin/orders">Ver todos</Link></div>
+          {recentOrders.length ? <div className="k-config-list">{recentOrders.map((order) => (
+            <Link className="k-config-row" key={order.id} to="/admin/orders/$id" params={{ id: order.id }}>
+              <span><strong>#{String(order.orderNumber).padStart(5, "0")} · {order.customerName ?? "Cliente não informado"}</strong><small>{statusLabel(order.status)} · {new Date(order.createdAt).toLocaleString("pt-BR")}</small></span>
+              <b>{formatMoney(order.totalCents)}</b>
+            </Link>
+          ))}</div> : <p className="k-muted">Nenhum pedido registrado.</p>}
+        </div>
+        <div className="k-card">
+          <div className="k-row"><h3>Tarefas em aberto</h3><Link className="k-text-action" to="/admin/tasks">Ver todas</Link></div>
+          {taskAlerts.length ? <div className="k-config-list">{taskAlerts.map((task) => (
+            <Link className="k-config-row" key={task.id} to="/admin/tasks">
+              <span><strong>{task.title}</strong><small>{task.priority === "high" ? "Alta prioridade" : task.priority === "low" ? "Baixa prioridade" : "Prioridade normal"}{task.dueAt ? ` · ${new Date(task.dueAt).toLocaleDateString("pt-BR")}` : " · sem prazo"}</small></span>
+              <b aria-hidden="true">→</b>
+            </Link>
+          ))}</div> : <p className="k-muted">Nenhuma tarefa em aberto.</p>}
+        </div>
+        <div className="k-card">
+          <div className="k-row"><h3>Estoque crítico</h3><Link className="k-text-action" to="/admin/inventory">Ver estoque</Link></div>
+          {stockAlerts.length ? <div className="k-config-list">{stockAlerts.map((item) => (
+            <Link className="k-config-row" key={`${item.productId}:${item.variantId ?? "base"}`} to="/admin/inventory">
+              <span><strong>{item.productName}</strong><small>{item.variantName ?? "Produto simples"}</small></span>
+              <b>{item.quantity}</b>
+            </Link>
+          ))}</div> : <p className="k-muted">Nenhum item com estoque baixo.</p>}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function AccountContext(props: Readonly<{
   tenantStatus: "trial" | "active" | "suspended";
   trialEndsAt: string | null;
@@ -141,6 +184,7 @@ function AdminDashboard(): React.JSX.Element {
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
+          <RecentOperations activity={data.activity} />
           <QuickLinksSection />
         </main>
         <AccountContext

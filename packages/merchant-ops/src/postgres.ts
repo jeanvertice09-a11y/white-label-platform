@@ -21,6 +21,7 @@ import {
   listFinancialCategories,
   settleFinancialEntry,
   summarizeFinance,
+  updateFinancialCategory,
 } from "./finance.ts";
 import { completeTask, createTask, listTasks, setTaskStatus, updateTask } from "./tasks.ts";
 
@@ -36,6 +37,7 @@ export class PostgresMerchantOperationsRepository implements MerchantOperationsR
   cancelPurchase(scope: MerchantScope, purchaseId: string, actorId: string) { return cancelPurchase(this.sql, scope, purchaseId, actorId); }
   listFinancialCategories(scope: MerchantScope) { return listFinancialCategories(this.sql, scope); }
   createFinancialCategory(scope: MerchantScope, input: FinancialCategoryInput) { return createFinancialCategory(this.sql, scope, input); }
+  updateFinancialCategory(scope: MerchantScope, categoryId: string, input: FinancialCategoryInput, active: boolean) { return updateFinancialCategory(this.sql, scope, categoryId, input, active); }
   listFinance(scope: MerchantScope, query: FinanceQuery) { return listFinance(this.sql, scope, query); }
   createFinancialEntry(scope: MerchantScope, input: FinancialEntryInput, actorId: string) { return createFinancialEntry(this.sql, scope, input, actorId); }
   settleFinancialEntry(scope: MerchantScope, entryId: string, settledAt: string) { return settleFinancialEntry(this.sql, scope, entryId, settledAt); }

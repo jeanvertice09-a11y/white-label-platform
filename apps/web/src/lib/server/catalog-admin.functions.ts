@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { createCatalogAdminRepository } from "@white-label/catalog";
+import { createCatalogAdminRepository, createCatalogReadRepository } from "@white-label/catalog";
 import type { CatalogScope, VariantMutationInput } from "@white-label/catalog";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createMerchantCatalogContext } from "./catalog-context.server.ts";
@@ -50,6 +50,7 @@ const settingsSchema = z.object({
 });
 const withId = <T extends z.ZodTypeAny>(schema: T) => z.object({ id: uuid, input: schema });
 const imageId = z.object({ productId: uuid, id: uuid });
+const productStatusSchema = z.object({ productId: uuid, active: z.boolean() });
 
 function normalizeVariantInput(input: z.infer<typeof variantSchema>): VariantMutationInput {
   const attributes: Record<string, string> = {};
@@ -81,19 +82,104 @@ async function auditConfiguration(
 
 export const createMerchantProduct = createServerFn({ method: "POST" }).validator(productSchema).handler(async ({ data }) => {
   const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "create");
-  return context.repository.createProduct(context.scope, { ...data, stockQuantity: 0 });
+  const product = await context.repository.createProduct(context.scope, { ...data, stockQuantity: 0 });
+  await auditConfiguration(context.sql, context.scope, context.userId, "product.created", "product", product.id, { active: product.active, track_inventory: product.trackInventory });
+  return product;
 });
 export const updateMerchantProduct = createServerFn({ method: "POST" }).validator(withId(productSchema)).handler(async ({ data }) => {
   const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
-  return context.repository.updateProduct(context.scope, data.id, data.input);
+  const product = await context.repository.updateProduct(context.scope, data.id, data.input);
+  if (product) await auditConfiguration(context.sql, context.scope, context.userId, "product.updated", "product", product.id, { active: product.active, track_inventory: product.trackInventory });
+  return product;
+});
+export const setMerchantProductStatus = createServerFn({ method: "POST" }).validator(productStatusSchema).handler(async ({ data }) => {
+  const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
+  const rows = await context.sql.query(
+    `with changed as (
+       update public.products set active=$4,updated_at=now()
+       where tenant_id=$1 and store_id=$2 and id=$3::uuid
+       returning id
+     ), audited as (
+       insert into public.audit_logs (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       select $5::uuid,$1,$2,'product.status_changed','product',id,
+         jsonb_build_object('active',$4::boolean) from changed
+       returning id
+     )
+     select id::text from changed`,
+    [context.scope.tenantId, context.scope.storeId, data.productId, data.active, context.userId],
+  );
+  if (!rows[0]) throw new Error("Produto não encontrado nesta loja");
+  return { id: data.productId, active: data.active };
+});
+export const duplicateMerchantProduct = createServerFn({ method: "POST" }).validator(z.object({ productId: uuid })).handler(async ({ data }) => {
+  const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "create");
+  const sourceRows = await context.sql.query(
+    `select name,slug from public.products where tenant_id=$1 and store_id=$2 and id=$3::uuid limit 1`,
+    [context.scope.tenantId, context.scope.storeId, data.productId],
+  );
+  if (sourceRows.length === 0) throw new Error("Produto não encontrado nesta loja");
+  const source = sourceRows[0];
+  if (typeof source["name"] !== "string" || typeof source["slug"] !== "string") {
+    throw new Error("Produto não encontrado nesta loja");
+  }
+  const suffix = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
+  const copyName = `${source["name"].slice(0, 151)} (cópia)`;
+  const copySlug = `${source["slug"].slice(0, 170)}-${suffix}`;
+  const rows = await context.sql.query(
+    `with source as (
+       select * from public.products where tenant_id=$1 and store_id=$2 and id=$3::uuid
+     ), copied as (
+       insert into public.products (
+         tenant_id,store_id,name,slug,description,sku,category_id,price_cents,
+         compare_at_price_cents,cost_cents,active,track_inventory,stock_quantity,position,updated_at
+       )
+       select tenant_id,store_id,$4,$5,description,null,category_id,price_cents,
+         compare_at_price_cents,cost_cents,false,track_inventory,0,position+1,now()
+       from source returning id
+     ), copied_variants as (
+       insert into public.product_variants (
+         tenant_id,store_id,product_id,name,sku,attributes,price_cents,
+         compare_at_price_cents,cost_cents,active,stock_quantity,position,updated_at
+       )
+       select v.tenant_id,v.store_id,c.id,v.name,null,v.attributes,v.price_cents,
+         v.compare_at_price_cents,v.cost_cents,false,0,v.position,now()
+       from public.product_variants v cross join copied c
+       where v.tenant_id=$1 and v.store_id=$2 and v.product_id=$3::uuid
+       returning id
+     ), copied_images as (
+       insert into public.product_images (
+         tenant_id,store_id,product_id,variant_id,object_key,alt_text,position
+       )
+       select i.tenant_id,i.store_id,c.id,null,i.object_key,i.alt_text,i.position
+       from public.product_images i cross join copied c
+       where i.tenant_id=$1 and i.store_id=$2 and i.product_id=$3::uuid
+       returning id
+     ), audited as (
+       insert into public.audit_logs (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       select $6::uuid,$1,$2,'product.duplicated','product',c.id,
+         jsonb_build_object('source_product_id',$3::uuid,'variants',(select count(*) from copied_variants),'images',(select count(*) from copied_images))
+       from copied c returning id
+     )
+     select id::text from copied`,
+    [context.scope.tenantId, context.scope.storeId, data.productId, copyName, copySlug, context.userId],
+  );
+  const id = rows[0]?.["id"];
+  if (typeof id !== "string") throw new Error("Não foi possível duplicar o produto");
+  const product = await createCatalogReadRepository(context.sql).getProductById(context.scope, id);
+  if (!product) throw new Error("Produto duplicado não encontrado");
+  return product;
 });
 export const createMerchantVariant = createServerFn({ method: "POST" }).validator(variantSchema).handler(async ({ data }) => {
   const context = await adminContext(); await assertVariantMutationEntitlements(context.sql, context.scope);
-  return context.repository.createVariant(context.scope, { ...normalizeVariantInput(data), stockQuantity: 0 });
+  const variant = await context.repository.createVariant(context.scope, { ...normalizeVariantInput(data), stockQuantity: 0 });
+  await auditConfiguration(context.sql, context.scope, context.userId, "product.variant_created", "product_variant", variant.id, { product_id: variant.productId, active: variant.active });
+  return variant;
 });
 export const updateMerchantVariant = createServerFn({ method: "POST" }).validator(withId(variantSchema)).handler(async ({ data }) => {
   const context = await adminContext(); await assertVariantMutationEntitlements(context.sql, context.scope);
-  return context.repository.updateVariant(context.scope, data.id, normalizeVariantInput(data.input));
+  const variant = await context.repository.updateVariant(context.scope, data.id, normalizeVariantInput(data.input));
+  if (variant) await auditConfiguration(context.sql, context.scope, context.userId, "product.variant_updated", "product_variant", variant.id, { product_id: variant.productId, active: variant.active });
+  return variant;
 });
 export const createMerchantProductImage = createServerFn({ method: "POST" }).validator(productImageSchema).handler(async ({ data }) => {
   const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "update");
@@ -121,10 +207,16 @@ export const removeMerchantProductImage = createServerFn({ method: "POST" }).val
   return { removed: true };
 });
 export const createMerchantCategory = createServerFn({ method: "POST" }).validator(categorySchema).handler(async ({ data }) => {
-  const context = await adminContext(); return context.repository.createCategory(context.scope, data);
+  const context = await adminContext();
+  const category = await context.repository.createCategory(context.scope, data);
+  await auditConfiguration(context.sql, context.scope, context.userId, "category.created", "category", category.id, { active: category.active, parent_id: category.parentId });
+  return category;
 });
 export const updateMerchantCategory = createServerFn({ method: "POST" }).validator(withId(categorySchema)).handler(async ({ data }) => {
-  const context = await adminContext(); return context.repository.updateCategory(context.scope, data.id, data.input);
+  const context = await adminContext();
+  const category = await context.repository.updateCategory(context.scope, data.id, data.input);
+  if (category) await auditConfiguration(context.sql, context.scope, context.userId, "category.updated", "category", category.id, { active: category.active, parent_id: category.parentId });
+  return category;
 });
 export const createMerchantBanner = createServerFn({ method: "POST" }).validator(bannerSchema).handler(async ({ data }) => {
   const context = await adminContext(); await assertCatalogFeatureEntitlement(context.sql, context.scope, "banners");

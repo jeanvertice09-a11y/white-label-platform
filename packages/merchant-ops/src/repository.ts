@@ -33,6 +33,7 @@ export interface MerchantOperationsRepository {
   cancelPurchase(scope: MerchantScope, purchaseId: string, actorId: string): Promise<Purchase>;
   listFinancialCategories(scope: MerchantScope): Promise<FinancialCategory[]>;
   createFinancialCategory(scope: MerchantScope, input: FinancialCategoryInput): Promise<FinancialCategory>;
+  updateFinancialCategory(scope: MerchantScope, categoryId: string, input: FinancialCategoryInput, active: boolean): Promise<FinancialCategory>;
   listFinance(scope: MerchantScope, query: FinanceQuery): Promise<Page<FinancialEntry>>;
   createFinancialEntry(scope: MerchantScope, input: FinancialEntryInput, actorId: string): Promise<FinancialEntry>;
   settleFinancialEntry(scope: MerchantScope, entryId: string, settledAt: string): Promise<FinancialEntry>;

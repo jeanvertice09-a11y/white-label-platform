@@ -3,8 +3,10 @@ import type { SyntheticEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { formatOrderNumber } from "@white-label/orders";
 import type { OrderPage, OrderStatus } from "@white-label/orders";
+import type { Product } from "@white-label/catalog";
 import { listMerchantOrders } from "../../lib/server/operations-orders.functions.ts";
 import { formatMoney } from "./format.ts";
+import { ManualOrderForm } from "./manual-order-form.tsx";
 
 const PAGE_SIZE = 20;
 const statuses: Array<"" | OrderStatus> = [
@@ -196,8 +198,9 @@ function useOrdersList(initialPage: OrderPage): Readonly<{
   return { data, search, status, date, loading, error, setSearch, setStatus, setDate, load };
 }
 
-export function OrdersList({ initialPage }: Readonly<{
+export function OrdersList({ initialPage, products }: Readonly<{
   initialPage: OrderPage;
+  products: Product[];
 }>): React.JSX.Element {
   const state = useOrdersList(initialPage);
   const filters = {
@@ -220,6 +223,7 @@ export function OrdersList({ initialPage }: Readonly<{
         </div>
         <span className="k-section-count">{state.data.total} registro(s)</span>
       </header>
+      <ManualOrderForm products={products} />
       <OrdersToolbar {...filters} />
       {state.loading ? <div className="k-inline-state">Atualizando pedidos…</div> : null}
       {state.error ? (
