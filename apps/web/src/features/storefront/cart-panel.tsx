@@ -9,6 +9,7 @@ type CheckoutResult = Awaited<ReturnType<typeof createWhatsappOrder>>;
 type RefreshResult = Awaited<ReturnType<typeof refreshPublicCart>>;
 type CheckoutSettings = Pick<CatalogAdvancedSettings, "checkoutAskName" | "checkoutAskPhone" | "checkoutAskNotes" | "minimumOrderCents">;
 const MAX_CART_QUANTITY = 999;
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 function cartKey(productId: string, variantId: string | null): string { return `${productId}:${variantId ?? "base"}`; }
 function refreshInput(cart: CartState) { return cart.items.map(({ productId, variantId, quantity }) => ({ productId, variantId, quantity })); }
@@ -65,10 +66,29 @@ function safeCheckoutMessage(error: unknown): string {
 }
 
 export function CartPanel(props: Readonly<{ cart: CartState; whatsappEnabled: boolean; showPrice?: boolean; quantityEnabled?: boolean; checkoutSettings: CheckoutSettings; onChange: (cart: CartState) => void; onClose: () => void }>): React.JSX.Element {
-  const key = useRef<string | null>(null); const initialCart = useRef(props.cart); const initialOnChange = useRef(props.onChange);
+  const key = useRef<string | null>(null); const initialCart = useRef(props.cart); const initialOnChange = useRef(props.onChange); const dialogRef = useRef<HTMLElement | null>(null); const onCloseRef = useRef(props.onClose);
+  onCloseRef.current = props.onClose;
   const [name, setName] = useState(""); const [phone, setPhone] = useState(""); const [coupon, setCoupon] = useState(""); const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false); const [refreshing, setRefreshing] = useState(false); const [message, setMessage] = useState(""); const [success, setSuccess] = useState<CheckoutResult | null>(null); const [minimumOrderCents, setMinimumOrderCents] = useState(props.checkoutSettings.minimumOrderCents);
   const showPrice = props.showPrice ?? true; const quantityEnabled = props.quantityEnabled ?? true; const subtotal = cartTotalCents(props.cart); const minimumMet = subtotal >= minimumOrderCents;
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    dialog?.querySelector<HTMLElement>(".sf__close")?.focus();
+    function onKeyDown(event: KeyboardEvent): void {
+      if (event.key === "Escape") { event.preventDefault(); onCloseRef.current(); return; }
+      if (event.key !== "Tab" || !dialog) return;
+      const items = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (!items.length) return;
+      const first = items[0]; const last = items.at(-1);
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", onKeyDown); previousFocus?.focus(); };
+  }, []);
   useEffect(() => {
     let active = true; const cart = initialCart.current;
     if (!cart.items.length) return () => { active = false; };
@@ -84,17 +104,13 @@ export function CartPanel(props: Readonly<{ cart: CartState; whatsappEnabled: bo
   async function checkout(): Promise<void> {
     setBusy(true); setMessage("");
     try {
-      const refreshed = await refreshPublicCart({ data: { items: refreshInput(props.cart) } });
-      setMinimumOrderCents(refreshed.minimumOrderCents);
-      const reconciled = reconcileCart(props.cart, refreshed);
+      const refreshed = await refreshPublicCart({ data: { items: refreshInput(props.cart) } }); setMinimumOrderCents(refreshed.minimumOrderCents); const reconciled = reconcileCart(props.cart, refreshed);
       if (reconciled.changed) { props.onChange(reconciled.cart); setMessage(reconciled.notice || "O carrinho foi atualizado. Revise antes de confirmar."); return; }
       if (refreshed.subtotalCents < refreshed.minimumOrderCents) { setMessage("O subtotal atual ainda não atingiu o pedido mínimo desta loja."); return; }
-      trackStorefrontEvent({ type: "begin_checkout", items: trackingItems(reconciled.cart) });
-      key.current ??= crypto.randomUUID();
+      trackStorefrontEvent({ type: "begin_checkout", items: trackingItems(reconciled.cart) }); key.current ??= crypto.randomUUID();
       const result = await createWhatsappOrder({ data: { idempotencyKey: key.current, customerName: props.checkoutSettings.checkoutAskName ? name.trim() || null : null, customerPhone: props.checkoutSettings.checkoutAskPhone ? phone.trim() || null : null, couponCode: coupon.trim() || null, notes: props.checkoutSettings.checkoutAskNotes ? notes.trim() || null : null, items: refreshInput(reconciled.cart) } });
-      setSuccess(result); props.onChange(clearCart(reconciled.cart));
-      trackStorefrontEvent({ type: "order_created", orderId: result.orderId, totalCents: result.totalCents, items: result.items.flatMap((item) => item.productId ? [{ id: item.productId, name: item.productName, variantName: item.variantName, quantity: item.quantity, unitPriceCents: item.unitCents }] : []) });
+      setSuccess(result); props.onChange(clearCart(reconciled.cart)); trackStorefrontEvent({ type: "order_created", orderId: result.orderId, totalCents: result.totalCents, items: result.items.flatMap((item) => item.productId ? [{ id: item.productId, name: item.productName, variantName: item.variantName, quantity: item.quantity, unitPriceCents: item.unitCents }] : []) });
     } catch (error) { setMessage(safeCheckoutMessage(error)); } finally { setBusy(false); }
   }
-  return <div className="sf__overlay sf__overlay--drawer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onClose(); }}><section className="sf__modal sf__cart-modal" aria-modal="true" role="dialog" aria-label={success ? "Confirmação do pedido" : "Carrinho e checkout"}><div className="sf__modal-head"><div><span className="sf__eyebrow">{success ? "Confirmação" : "Seu pedido"}</span><h2>{success ? "Pedido confirmado" : "Carrinho"}</h2></div><button className="sf__close" type="button" onClick={props.onClose} aria-label="Fechar">×</button></div>{success ? <OrderSuccess result={success} showPrice={showPrice} /> : <><CartRows cart={props.cart} showPrice={showPrice} quantityEnabled={quantityEnabled} onChange={props.onChange} />{props.cart.items.length ? <div className="sf__checkout"><CheckoutFields settings={props.checkoutSettings} name={name} phone={phone} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onCoupon={setCoupon} onNotes={setNotes} /><div className="sf__summary">{showPrice ? <div className="sf__summary-row sf__summary-row--total"><span>Subtotal</span><strong>{storefrontMoney(subtotal)}</strong></div> : null}{minimumOrderCents > 0 ? <p className="sf__minimum-order" data-met={minimumMet}>Pedido mínimo: {storefrontMoney(minimumOrderCents)}{minimumMet ? " · atingido" : ""}</p> : null}<p>Estoque, preço, cupom, desconto, pedido mínimo e total são validados novamente no servidor antes de o pedido ser criado.</p></div>{message ? <div className="sf__checkout-error" role="alert">{message}</div> : null}<div className="sf__checkout-actions"><button className="sf__text-button" type="button" onClick={() => { props.onChange(clearCart(props.cart)); }}>Limpar carrinho</button>{props.whatsappEnabled ? <button className="sf__primary" disabled={busy || refreshing || !minimumMet} type="button" onClick={() => { void checkout(); }}>{busy || refreshing ? "Atualizando carrinho…" : minimumMet ? "Confirmar pedido" : "Pedido mínimo não atingido"}</button> : <div className="sf__checkout-error">Nenhum método de checkout público está disponível nesta loja.</div>}</div></div> : null}</>}</section></div>;
+  return <div className="sf__overlay sf__overlay--drawer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onClose(); }}><section ref={dialogRef} className="sf__modal sf__cart-modal" aria-modal="true" role="dialog" aria-label={success ? "Confirmação do pedido" : "Carrinho e checkout"}><div className="sf__modal-head"><div><span className="sf__eyebrow">{success ? "Confirmação" : "Seu pedido"}</span><h2>{success ? "Pedido confirmado" : "Carrinho"}</h2></div><button className="sf__close" type="button" onClick={props.onClose} aria-label="Fechar">×</button></div>{success ? <OrderSuccess result={success} showPrice={showPrice} /> : <><CartRows cart={props.cart} showPrice={showPrice} quantityEnabled={quantityEnabled} onChange={props.onChange} />{props.cart.items.length ? <div className="sf__checkout"><CheckoutFields settings={props.checkoutSettings} name={name} phone={phone} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onCoupon={setCoupon} onNotes={setNotes} /><div className="sf__summary">{showPrice ? <div className="sf__summary-row sf__summary-row--total"><span>Subtotal</span><strong>{storefrontMoney(subtotal)}</strong></div> : null}{minimumOrderCents > 0 ? <p className="sf__minimum-order" data-met={minimumMet}>Pedido mínimo: {storefrontMoney(minimumOrderCents)}{minimumMet ? " · atingido" : ""}</p> : null}<p>Estoque, preço, cupom, desconto, pedido mínimo e total são validados novamente no servidor antes de o pedido ser criado.</p></div>{message ? <div className="sf__checkout-error" role="alert">{message}</div> : null}<div className="sf__checkout-actions"><button className="sf__text-button" type="button" onClick={() => { props.onChange(clearCart(props.cart)); }}>Limpar carrinho</button>{props.whatsappEnabled ? <button className="sf__primary" disabled={busy || refreshing || !minimumMet} type="button" onClick={() => { void checkout(); }}>{busy || refreshing ? "Atualizando carrinho…" : minimumMet ? "Confirmar pedido" : "Pedido mínimo não atingido"}</button> : <div className="sf__checkout-error">Nenhum método de checkout público está disponível nesta loja.</div>}</div></div> : null}</>}</section></div>;
 }
