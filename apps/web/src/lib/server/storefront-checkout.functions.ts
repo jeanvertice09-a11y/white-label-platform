@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { getCatalogBehavior } from "@white-label/catalog";
+import { getCatalogAdvancedSettings, getCatalogBehavior } from "@white-label/catalog";
 import { normalizeCustomerPhone } from "@white-label/customers";
 import { buildOrderWhatsappUrl, createOrderRepository, formatOrderNumber } from "@white-label/orders";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
@@ -22,18 +22,21 @@ export const createWhatsappOrder = createServerFn({ method: "POST" }).validator(
   const catalog = await createPublicCatalogContext(getRequestHost());
   const settings = await catalog.repository.getSettings(catalog.scope);
   const behavior = getCatalogBehavior(settings);
+  const advanced = getCatalogAdvancedSettings(settings);
   if (behavior.catalogOnly || !behavior.cartEnabled || !behavior.showBuyButton) throw new Error("Pedidos desativados neste catálogo");
   if (!behavior.quantityEnabled && data.items.some((item) => item.quantity !== 1)) throw new Error("Quantidade personalizada desativada neste catálogo");
   if (!behavior.showWhatsapp || settings.checkoutMode === "online") throw new Error("Checkout por WhatsApp indisponível");
   if (!settings.whatsappPhone) throw new Error("WhatsApp não configurado");
-  const customerPhone = data.customerPhone ? normalizeCustomerPhone(data.customerPhone) : null;
+  const customerName = advanced.checkoutAskName ? data.customerName : null;
+  const customerPhone = advanced.checkoutAskPhone && data.customerPhone ? normalizeCustomerPhone(data.customerPhone) : null;
+  const notes = advanced.checkoutAskNotes ? data.notes : null;
   const sql = createAdminSqlExecutor();
   await assertOrdersEntitlement(sql, catalog.scope);
   if (data.couponCode?.trim()) await assertCouponsEntitlement(sql, catalog.scope);
   const orders = createOrderRepository(sql);
   const order = await orders.createFromCart(catalog.scope, {
-    idempotencyKey: data.idempotencyKey, origin: "whatsapp", customerName: data.customerName,
-    customerPhone, couponCode: data.couponCode, notes: data.notes, shippingCents: 0, items: data.items,
+    idempotencyKey: data.idempotencyKey, origin: "whatsapp", customerName, customerPhone,
+    couponCode: data.couponCode, notes, shippingCents: 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
   });
   return {
     orderId: order.id, orderNumber: order.orderNumber, displayNumber: formatOrderNumber(order.orderNumber), status: order.status,

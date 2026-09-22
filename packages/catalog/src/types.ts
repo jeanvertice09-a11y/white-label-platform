@@ -124,6 +124,7 @@ export interface CatalogQuery extends CatalogScope {
   search?: string;
   categoryId?: string;
   sort?: "position" | "name" | "price_asc" | "price_desc";
+  inStockOnly?: boolean;
 }
 
 export interface CatalogPage {

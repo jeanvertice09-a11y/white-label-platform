@@ -81,6 +81,14 @@ function publicProductFilter(): string {
     "and vv.store_id=p.store_id and vv.product_id=p.id and vv.active=true))";
 }
 
+function inStockFilter(): string {
+  return "(p.track_inventory=false or (not exists (select 1 from public.product_variants sva " +
+    "where sva.tenant_id=p.tenant_id and sva.store_id=p.store_id and sva.product_id=p.id) " +
+    "and p.stock_quantity>0) or exists (select 1 from public.product_variants sv " +
+    "where sv.tenant_id=p.tenant_id and sv.store_id=p.store_id and sv.product_id=p.id " +
+    "and sv.active=true and sv.stock_quantity>0))";
+}
+
 async function getProduct(
   sql: CatalogSqlExecutor,
   scope: CatalogScope,
@@ -155,10 +163,17 @@ function productWhere(query: CatalogQuery, publicOnly: boolean) {
   const where = ["p.tenant_id=$1", "p.store_id=$2"];
   const params: unknown[] = [query.tenantId, query.storeId];
   if (publicOnly) where.push(publicProductFilter());
+  if (query.inStockOnly) where.push(inStockFilter());
   if (query.search?.trim()) {
     params.push("%" + query.search.trim() + "%");
     const index = String(params.length);
-    where.push("(p.name ilike $" + index + " or coalesce(p.sku,'') ilike $" + index + ")");
+    where.push(
+      "(p.name ilike $" + index + " or coalesce(p.sku,'') ilike $" + index +
+      " or exists (select 1 from public.categories sc where sc.tenant_id=p.tenant_id " +
+      "and sc.store_id=p.store_id and sc.id=p.category_id and (sc.name ilike $" + index +
+      " or exists (select 1 from public.categories sp where sp.tenant_id=sc.tenant_id " +
+      "and sp.store_id=sc.store_id and sp.id=sc.parent_id and sp.name ilike $" + index + "))))",
+    );
   }
   if (query.categoryId) {
     params.push(query.categoryId);
