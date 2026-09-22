@@ -43,6 +43,7 @@ const MIGRATIONS = [
   "0030_media_assets.sql",
   "0031_financial_identity_hardening.sql",
   "0032_media_deletion_claim.sql",
+  "0033_financial_invariants_hardening.sql",
 ];
 
 class PGliteDb implements TestDb {
