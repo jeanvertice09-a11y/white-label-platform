@@ -31,15 +31,18 @@ const MIGRATIONS = [
   "0012_commercial_plans_entitlements.sql",
   "0013_billing_events.sql",
   "0014_billing_level_hardening.sql",
+  "0015_master_white_label_management.sql",
   "0016_catalog_variant_integrity.sql",
   "0019_secure_gateway_accounts.sql",
   "0021_payment_provider_webhooks.sql",
   "0022_platform_billing.sql",
+  "0023_marketing_campaigns.sql",
   "0024_tenant_merchant_billing.sql",
   "0025_merchant_operations.sql",
   "0026_commercial_plan_matrix.sql",
   "0027_security_rate_limits.sql",
   "0028_production_readiness.sql",
+  "0029_tenant_owner_serialization.sql",
   "0030_media_assets.sql",
   "0031_financial_identity_hardening.sql",
   "0032_media_deletion_claim.sql",
@@ -120,6 +123,13 @@ export function listMigrationFiles(): string[] {
   const files = readdirSync(migrationsDir()).filter((file) => file.endsWith(".sql")).sort();
   const missing = MIGRATIONS.filter((migration) => !files.includes(migration));
   if (missing.length > 0) throw new Error(`migrations ausentes: ${missing.join(",")}`);
+  const unexpected = files.filter((migration) => !MIGRATIONS.includes(migration));
+  if (unexpected.length > 0) throw new Error(`migrations fora do harness: ${unexpected.join(",")}`);
+  const versions = files.map((file) => file.split("_", 1)[0] ?? "");
+  const duplicatedVersions = versions.filter((version, index) => versions.indexOf(version) !== index);
+  if (duplicatedVersions.length > 0) {
+    throw new Error(`versões de migration duplicadas: ${[...new Set(duplicatedVersions)].join(",")}`);
+  }
   return MIGRATIONS;
 }
 
