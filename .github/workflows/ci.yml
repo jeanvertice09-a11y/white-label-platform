@@ -16,6 +16,19 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck
+      - id: media_diag
+        name: Capture media migration load
+        shell: bash
+        run: |
+          set +e
+          output=$(bun -e 'const { setupDatabase } = await import("./tests/db/harness.ts"); const h = await setupDatabase(); await h.db.close();' 2>&1)
+          code=$?
+          encoded=$(printf '%s' "$output" | tail -c 480 | base64 -w0)
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "encoded=$encoded" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: "Media migration stderr ${{ steps.media_diag.outputs.encoded }}"
+        run: test "${{ steps.media_diag.outputs.code }}" = "0"
       - run: bun run test:all
       - run: bun run test:db
       - run: bun run test:security

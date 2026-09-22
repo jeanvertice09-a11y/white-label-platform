@@ -10,18 +10,24 @@ describe("admin workflows lot 4", () => {
     const route = source("apps/web/src/routes/admin.products.$id.tsx");
     const manager = source("apps/web/src/features/store-admin/product-image-manager.tsx");
     expect(route).toContain("<ProductImageManager product={data.product} />");
-    expect(manager).toContain("createMerchantProductImage");
+    expect(manager).toContain("uploadMerchantMedia");
+    expect(manager).toContain("createUploadedProductImage");
+    expect(manager).toContain("updateUploadedProductImage");
     expect(manager).toContain("setMerchantPrimaryProductImage");
-    expect(manager).toContain("removeMerchantProductImage");
-    expect(manager).toContain("Upload direto ainda não está disponível");
+    expect(manager).toContain("removeUploadedProductImage");
+    expect(manager).toContain("multiple accept=\"image/jpeg,image/png,image/webp\"");
+    expect(manager).not.toContain("Upload direto ainda não está disponível");
   });
 
-  test("banner suporta edição e arquivamento sem criar outro sistema", () => {
+  test("banner suporta upload, preview, edição e arquivamento no fluxo existente", () => {
     const manager = source("apps/web/src/features/store-admin/banner-manager.tsx");
-    expect(manager).toContain("createMerchantBanner");
-    expect(manager).toContain("updateMerchantBanner");
+    expect(manager).toContain("uploadMerchantMedia");
+    expect(manager).toContain("saveUploadedBanner");
+    expect(manager).toContain("removeUploadedBanner");
+    expect(manager).toContain("URL.createObjectURL");
     expect(manager).toContain("Editar banner");
     expect(manager).toContain("Arquivar");
+    expect(manager).not.toContain("Upload direto ainda não está disponível");
   });
 
   test("fornecedor suporta edição e preserva histórico por status", () => {
