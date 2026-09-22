@@ -27,6 +27,7 @@ interface ReservedPayment {
   id: string;
   status: PaymentStatus;
   providerPaymentId: string | null;
+  gatewayAccountId: string;
 }
 
 export interface TenantChargeResult {
@@ -50,6 +51,7 @@ export async function createTenantMerchantCharge(
   assertChargeReady(target, now);
   const key = chargeKey(target);
   const reserved = await reservePayment(sql, target, key);
+  assertReservedGateway(reserved, target.gatewayId);
   if (reserved.providerPaymentId) return existingResult(reserved, target.provider);
   const claimed = await claimProviderCreate(sql, reserved.id);
   if (!claimed) return existingResult(reserved, target.provider);
@@ -170,7 +172,7 @@ async function reservePayment(
        store_subscription_id,idempotency_key
      ) values ('tenant_billing',$1::uuid,$2::uuid,$3::uuid,$4,'BRL','pending',$5::uuid,$6)
      on conflict do nothing
-     returning id::text,status,provider_payment_id`,
+     returning id::text,status,provider_payment_id,gateway_account_id::text`,
     [
       target.tenantId,
       target.storeId,
@@ -182,7 +184,7 @@ async function reservePayment(
   );
   if (inserted[0]) return mapReserved(inserted[0]);
   const existing = await sql.query(
-    `select id::text,status,provider_payment_id from public.payments
+    `select id::text,status,provider_payment_id,gateway_account_id::text from public.payments
      where level='tenant_billing' and tenant_id=$1::uuid and store_id=$2::uuid
        and idempotency_key=$3 limit 1`,
     [target.tenantId, target.storeId, idempotencyKey],
@@ -243,7 +245,14 @@ function mapReserved(row: Record<string, unknown>): ReservedPayment {
     id: requiredText(row, "id"),
     status: requiredText(row, "status") as PaymentStatus,
     providerPaymentId: nullableText(row, "provider_payment_id"),
+    gatewayAccountId: requiredText(row, "gateway_account_id"),
   };
+}
+
+function assertReservedGateway(payment: ReservedPayment, gatewayAccountId: string): void {
+  if (payment.gatewayAccountId !== gatewayAccountId) {
+    throw new Error("Gateway da cobrança idempotente diverge do gateway ativo.");
+  }
 }
 
 function existingResult(payment: ReservedPayment, provider: PaymentProviderName): TenantChargeResult {
