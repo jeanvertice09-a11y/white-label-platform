@@ -64,8 +64,10 @@ describe("fase 17 storefront commerce", () => {
   test("busca, paginação e categoria/subcategoria são server-side e scoped", async () => {
     const catalog = createCatalogReadRepository(h.db);
     const search = await catalog.listProducts({ ...scope, page: 1, pageSize: 1, search: "Camiseta", sort: "name" }, true);
-    expect(search.total).toBe(1);
+    expect(search.total).toBe(2);
     expect(search.items[0]?.id).toBe(SIMPLE);
+    const searchSecondPage = await catalog.listProducts({ ...scope, page: 2, pageSize: 1, search: "Camiseta", sort: "name" }, true);
+    expect(searchSecondPage.items[0]?.id).toBe(VAR_PRODUCT);
     const parent = await catalog.listProducts({ ...scope, page: 1, pageSize: 10, categoryId: PARENT, sort: "position" }, true);
     expect(parent.items.map((item) => item.id)).toEqual([SIMPLE, SECOND, VAR_PRODUCT]);
     const categories = await catalog.listCategories(scope, true);
