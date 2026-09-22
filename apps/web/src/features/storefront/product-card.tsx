@@ -4,9 +4,11 @@ import { storefrontProductPath } from "../../lib/storefront-paths.ts";
 import { storefrontMoney } from "./format.ts";
 import { PromotionBadge } from "./promotion-badge.tsx";
 
-function cardPrice(product: Product): { current: number; compareAt: number | null; prefix: string } {
+export function storefrontCardPrice(product: Product): { current: number; compareAt: number | null; prefix: string } {
   if (!product.variants.length) return { current: product.priceCents, compareAt: product.compareAtPriceCents, prefix: "" };
-  const variant = product.variants.reduce((lowest, item) => item.priceCents < lowest.priceCents ? item : lowest);
+  const purchasable = product.trackInventory ? product.variants.filter((item) => item.stockQuantity > 0) : product.variants;
+  const candidates = purchasable.length > 0 ? purchasable : product.variants;
+  const variant = candidates.reduce((lowest, item) => item.priceCents < lowest.priceCents ? item : lowest);
   return { current: variant.priceCents, compareAt: variant.compareAtPriceCents, prefix: "A partir de " };
 }
 
@@ -20,7 +22,7 @@ export function ProductCard(props: Readonly<{
 }>): React.JSX.Element {
   const image = props.product.images.at(0);
   const imageUrl = image ? getCatalogPublicMediaUrl(props.product, image.objectKey) : null;
-  const price = cardPrice(props.product);
+  const price = storefrontCardPrice(props.product);
   const promotional = hasPromotionalPrice(price.current, price.compareAt);
   const isAvailable = isProductAvailable(props.product);
   const cardStyle = props.cardStyle ?? "default";

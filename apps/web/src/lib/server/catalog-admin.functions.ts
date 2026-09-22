@@ -145,14 +145,14 @@ export const duplicateMerchantProduct = createServerFn({ method: "POST" }).valid
          v.compare_at_price_cents,v.cost_cents,false,0,v.position,now()
        from public.product_variants v cross join copied c
        where v.tenant_id=$1 and v.store_id=$2 and v.product_id=$3::uuid
-       returning id
+       returning id,attributes
      ), copied_images as (
-       insert into public.product_images (
-         tenant_id,store_id,product_id,variant_id,object_key,alt_text,position
-       )
-       select i.tenant_id,i.store_id,c.id,null,i.object_key,i.alt_text,i.position
+       insert into public.product_images (tenant_id,store_id,product_id,variant_id,object_key,alt_text,position)
+       select i.tenant_id,i.store_id,c.id,case when i.variant_id is null then null else cv.id end,i.object_key,i.alt_text,i.position
        from public.product_images i cross join copied c
-       where i.tenant_id=$1 and i.store_id=$2 and i.product_id=$3::uuid
+       left join public.product_variants source_variant on source_variant.tenant_id=i.tenant_id and source_variant.store_id=i.store_id and source_variant.product_id=i.product_id and source_variant.id=i.variant_id
+       left join copied_variants cv on cv.attributes is not distinct from source_variant.attributes
+       where i.tenant_id=$1 and i.store_id=$2 and i.product_id=$3::uuid and (i.variant_id is null or cv.id is not null)
        returning id
      ), audited as (
        insert into public.audit_logs (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
