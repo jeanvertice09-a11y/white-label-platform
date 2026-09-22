@@ -141,6 +141,7 @@
   .public-hero { padding-top:44px; }
   .public-hero__copy h1 { font-size:clamp(38px,12vw,52px); line-height:1; }
   .public-product-stage { display:none; }
+  .sales-mockup-stack { display:none; }
   .public-mobile-stage { display:block; width:100%; }
   .public-brand-demo__bar { min-height:56px; flex-wrap:wrap; padding-block:9px; }
   .public-brand-demo__bar > span:last-child { width:100%; padding-left:40px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

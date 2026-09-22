@@ -3,28 +3,7 @@ import { PublicFooter, PublicHeader, publicBrandStyle } from "./public-shell.tsx
 
 const brand: PublicBrand = { name: "Kataluu", logoUrl: null, primaryColor: "#7B5EA7" };
 const accessHref = "https://app.kataluu.com.br/login";
-const nav = [
-  { href: "#produto", label: "Produto" },
-  { href: "#recursos", label: "Recursos" },
-  { href: "#white-label", label: "White Label" },
-  { href: "#como-funciona", label: "Como funciona" },
-];
-
-function Hero(): React.JSX.Element {
-  return (
-    <section className="public-hero" id="produto">
-      <div className="public-container public-hero__grid">
-        <div className="public-hero__copy">
-          <span className="public-eyebrow">Infraestrutura White Label</span>
-          <h1>Sua plataforma. Sua marca. Seus lojistas.</h1>
-          <p>A Kataluu reúne a infraestrutura para sua empresa oferecer catálogo e operação de comércio digital com identidade própria, gestão centralizada e separação segura entre cada cliente.</p>
-          <div className="public-actions"><a className="public-button public-button--primary" href="#como-funciona">Entender como funciona</a><a className="public-button public-button--quiet" href={accessHref}>Acessar</a></div>
-        </div>
-        <ProductStage />
-      </div>
-    </section>
-  );
-}
+const nav = [{ href: "#produto", label: "Produto" },{ href: "#experiencia", label: "Experiência" },{ href: "#recursos", label: "Recursos" },{ href: "#white-label", label: "White Label" }];
 
 function MobileProductStage(): React.JSX.Element {
   return (
@@ -47,60 +26,20 @@ function MobileProductStage(): React.JSX.Element {
   );
 }
 
-function ProductStage(): React.JSX.Element {
-  return (
-    <>
-      <div className="public-product-stage" aria-label="Representação da operação White Label">
-        <div className="public-product-stage__top"><span className="public-dot" /><span>Kataluu / operação central</span><span className="public-pill">White Label</span></div>
-        <div className="public-product-stage__body">
-          <aside><strong>Visão geral</strong><span>White Labels</span><span>Faturamento</span><span>Domínios</span><span>Auditoria</span></aside>
-          <div className="public-product-stage__canvas"><p>Estrutura da operação</p><strong>Uma base para múltiplas marcas</strong><div className="public-layer-stack"><span>Kataluu</span><span>Sua White Label</span><span>Seus lojistas</span><span>Clientes finais</span></div></div>
-        </div>
-      </div>
-      <MobileProductStage />
-    </>
-  );
+function DashboardMockup(): React.JSX.Element {
+  const bars=[42,68,51,84,64,91,74,96];
+  return <div className="sales-mockup-stack" aria-label="Mockups das interfaces da Kataluu">
+    <div className="sales-window"><div className="sales-window__bar"><span className="sales-window__dot"/><span className="sales-window__dot"/><span className="sales-window__dot"/><span className="sales-window__url">painel.suamarca.com.br/control</span></div>
+      <div className="sales-dashboard"><aside className="sales-dashboard__side"><div className="sales-dashboard__brand"><i>S</i><span>Sua marca</span></div><div className="sales-dashboard__nav"><span className="is-active">Visão geral</span><span>Lojistas</span><span>Planos</span><span>Domínios</span><span>Pagamentos</span><span>Equipe</span></div></aside>
+        <div className="sales-dashboard__main"><span className="sales-dashboard__kicker">Painel da White Label</span><small>Painel da loja / Produtos</small><h3>Visão geral da operação</h3><div className="sales-metrics"><div className="sales-metric"><span>Lojas ativas</span><strong>Dados reais</strong></div><div className="sales-metric"><span>Receita</span><strong>Dados reais</strong></div><div className="sales-metric"><span>Pedidos</span><strong>Dados reais</strong></div></div><div className="sales-chart">{bars.map((height,index)=><i key={index} style={{ height: String(height) + "%" }} />)}</div></div>
+      </div></div>
+    <div className="sales-phone"><div className="sales-phone__screen"><div className="sales-phone__head"><span>Minha Loja</span><span>♡ &nbsp; 🛒</span></div><div className="sales-phone__hero"/><div className="sales-phone__cats"><span>Novidades</span><span>Ofertas</span><span>Mais vendidos</span></div><div className="sales-phone__products">{["Produto destaque","Nova coleção","Mais vendido","Oferta"].map((item)=><div className="sales-phone__product" key={item}><div className="sales-phone__image"/><b>{item}</b><strong>Preço da loja</strong></div>)}</div></div></div>
+  </div>;
 }
-
-function WhiteLabelSection(): React.JSX.Element {
-  return (
-    <section className="public-section public-section--contrast" id="white-label">
-      <div className="public-container public-editorial-grid">
-        <div><span className="public-eyebrow">White Label de verdade</span><h2>A operação é sua. A experiência também.</h2><p>Nome, marca, cor principal e domínios fazem a plataforma assumir a identidade de cada empresa sem misturar contextos entre White Labels e lojas.</p></div>
-        <div className="public-brand-demo" aria-label="Exemplo visual de personalização">
-          <div className="public-brand-demo__bar"><span className="public-brand-demo__logo">S</span><strong>Sua marca</strong><span>painel.suamarca.com.br</span></div>
-          <div className="public-brand-demo__screen"><span>Gestão de lojistas</span><h3>Uma plataforma que parece sua porque opera como sua.</h3><div className="public-brand-demo__line" /><div className="public-brand-demo__line public-brand-demo__line--short" /></div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const resourceGroups = [
-  { title: "Gestão", text: "Lojistas, lojas, planos, assinaturas, faturamento e domínios em um contexto central." },
-  { title: "Commerce", text: "Catálogo, produtos, variantes, estoque, pedidos, clientes, cupons e campanhas para a operação do lojista." },
-  { title: "Operação", text: "Dashboards, auditoria, billing e isolamento multi-tenant para administrar a plataforma com rastreabilidade." },
-];
-
-function Resources(): React.JSX.Element {
-  return <section className="public-section" id="recursos"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Recursos existentes</span><h2>Da gestão da White Label à rotina do lojista.</h2><p>Uma cadeia conectada, com responsabilidades separadas e ferramentas próprias para cada nível.</p></div><div className="public-resource-grid">{resourceGroups.map((group, index) => <article key={group.title}><span>0{String(index + 1)}</span><h3>{group.title}</h3><p>{group.text}</p></article>)}</div></div></section>;
-}
-
-const steps = [
-  ["Kataluu", "Infraestrutura e governança da plataforma."],
-  ["Sua White Label", "Sua identidade, domínios, planos e gestão."],
-  ["Seus lojistas", "Cada loja com operação e contexto próprios."],
-  ["Clientes dos lojistas", "A experiência final de catálogo e compra."],
-] as const;
-
-function HowItWorks(): React.JSX.Element {
-  return <section className="public-section public-section--soft" id="como-funciona"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Como funciona</span><h2>Uma estrutura em quatro níveis, sem confundir papéis.</h2></div><ol className="public-flow">{steps.map(([title, text], index) => <li key={title}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{title}</strong><p>{text}</p></div></li>)}</ol></div></section>;
-}
-
-function Closing(): React.JSX.Element {
-  return <section className="public-closing"><div className="public-container public-closing__inner"><div><span className="public-eyebrow">Infraestrutura para crescer com organização</span><h2>Construa sua operação White Label sobre uma base que já separa plataforma, empresa e loja.</h2></div><div className="public-actions"><a className="public-button public-button--primary" href="#recursos">Explorar recursos</a><a className="public-button public-button--quiet" href={accessHref}>Entrar</a></div></div></section>;
-}
-
-export function KataluuLanding(): React.JSX.Element {
-  return <div className="public-site" style={publicBrandStyle(brand)}><PublicHeader brand={brand} nav={nav} loginHref={accessHref} /><main><Hero /><WhiteLabelSection /><Resources /><HowItWorks /><Closing /></main><PublicFooter brand={brand} nav={nav} loginHref={accessHref}><p>Infraestrutura White Label para empresas operarem sua própria plataforma de catálogo e comércio.</p></PublicFooter></div>;
-}
+function Hero(): React.JSX.Element { return <section className="public-hero" id="produto"><div className="public-container public-hero__grid"><div className="public-hero__copy"><span className="public-eyebrow">Sua plataforma, com a sua marca</span><h1>Venda uma plataforma completa sem começar do zero.</h1><p>A Kataluu entrega a estrutura White Label para você operar sua própria marca, cadastrar lojistas e oferecer catálogo, gestão, vendas e experiência de compra em uma única base.</p><div className="public-actions"><a className="public-button public-button--primary" href="#experiencia">Conhecer a plataforma</a><a className="public-button public-button--quiet" href={accessHref}>Acessar painel</a></div></div><div><DashboardMockup/><MobileProductStage/></div></div></section>; }
+function Experience(): React.JSX.Element { return <section className="sales-real-ui" id="experiencia"><div className="public-container sales-real-ui__grid"><div className="sales-real-ui__copy"><span className="public-eyebrow">Interface baseada no produto real</span><h2>Do seu painel ao catálogo do lojista.</h2><p>Os mockups reproduzem as áreas e a navegação que existem hoje na plataforma: gestão da White Label, administração da loja e storefront responsivo. Sem números comerciais inventados.</p><div className="sales-chip-row"><span>Master</span><span>White Label</span><span>Lojistas</span><span>Produtos</span><span>Pedidos</span><span>CRM</span><span>Financeiro</span><span>Marketing</span></div></div><div className="sales-window"><div className="sales-window__bar"><span className="sales-window__dot"/><span className="sales-window__dot"/><span className="sales-window__dot"/><span className="sales-window__url">gestao.sualoja.com.br/admin</span></div><div className="sales-dashboard"><aside className="sales-dashboard__side"><div className="sales-dashboard__brand"><i>K</i><span>Painel da loja</span></div><div className="sales-dashboard__nav"><span>Início</span><span className="is-active">Produtos</span><span>Pedidos</span><span>Clientes</span><span>Estoque</span><span>Financeiro</span><span>Marketing</span></div></aside><div className="sales-dashboard__main"><span className="sales-dashboard__kicker">Catálogo</span><h3>Produtos</h3><div className="sales-proof"><article><span>01</span><h3>Variantes</h3><p>Preço, SKU e estoque por opção.</p></article><article><span>02</span><h3>Pedidos</h3><p>Venda com totais validados no servidor.</p></article><article><span>03</span><h3>Clientes</h3><p>Histórico e operação em um só lugar.</p></article></div></div></div></div></div></section>; }
+const resourceGroups=[{title:"Sua White Label",text:"Marca, domínios, planos, equipe, lojistas, billing e visão central da operação."},{title:"Painel do lojista",text:"Produtos, variantes, estoque, pedidos, clientes, financeiro, compras, tarefas e marketing."},{title:"Loja para o cliente",text:"Catálogo responsivo, busca, variantes, carrinho, checkout, SEO e tracking por loja."}];
+function Resources(): React.JSX.Element { return <section className="public-section" id="recursos"><div className="public-container"><div className="public-section__heading"><span className="public-eyebrow">Uma operação completa</span><h2>Três experiências conectadas pela mesma infraestrutura.</h2><p>Você administra a plataforma, seu cliente administra a loja e o consumidor compra no catálogo da marca dele.</p></div><div className="public-resource-grid">{resourceGroups.map((g,i)=><article key={g.title}><span>0{i+1}</span><h3>{g.title}</h3><p>{g.text}</p></article>)}</div></div></section>; }
+function WhiteLabelSection(): React.JSX.Element { return <section className="public-section public-section--contrast" id="white-label"><div className="public-container public-editorial-grid"><div><span className="public-eyebrow">White Label de verdade</span><h2>Seu nome na frente. A infraestrutura trabalhando por trás.</h2><p>Identidade, domínio e operação separados por empresa e por loja. A experiência final pertence à sua marca.</p></div><div className="public-brand-demo"><div className="public-brand-demo__bar"><span className="public-brand-demo__logo">S</span><strong>Sua marca</strong><span>painel.suamarca.com.br</span></div><div className="public-brand-demo__screen"><span>Gestão de lojistas</span><h3>Uma plataforma que parece sua porque opera como sua.</h3><div className="public-brand-demo__line"/><div className="public-brand-demo__line public-brand-demo__line--short"/></div></div></div></section>; }
+function Closing(): React.JSX.Element { return <section className="public-closing"><div className="public-container public-closing__inner"><div><span className="public-eyebrow">Pronta para receber a sua identidade</span><h2>Uma base para você construir sua própria operação de software e comércio.</h2></div><div className="public-actions"><a className="public-button public-button--primary" href="#produto">Ver plataforma</a><a className="public-button public-button--quiet" href={accessHref}>Entrar</a></div></div></section>; }
+export function KataluuLanding(): React.JSX.Element { return <div className="public-site" style={publicBrandStyle(brand)}><PublicHeader brand={brand} nav={nav} loginHref={accessHref}/><main><Hero/><Experience/><Resources/><WhiteLabelSection/><Closing/></main><PublicFooter brand={brand} nav={nav} loginHref={accessHref}><p>Infraestrutura White Label para empresas operarem sua própria plataforma de catálogo e comércio.</p></PublicFooter></div>; }
