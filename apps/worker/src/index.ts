@@ -25,14 +25,21 @@ async function dispatch(job: Job): Promise<void> {
     case "domain.verify":
       await handleDomainVerifyJob(job as Job<{ hostname: string }>);
       break;
+    default: {
+      const unsupported: never = job.kind;
+      throw new Error(`Unsupported job kind: ${String(unsupported)}`);
+    }
   }
 }
 
 async function paymentTick(): Promise<void> {
   try {
     await pollPaymentWebhooks();
-  } catch {
-    console.error("[worker] payment webhook poll failed.");
+  } catch (error) {
+    console.error("[worker] payment webhook poll failed.", {
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : "unknown error",
+    });
   }
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { getCatalogTrackingSettings } from "@white-label/catalog";
 import type { CatalogSettings } from "@white-label/catalog";
+import { recordStorefrontAnalytics } from "../../lib/server/storefront-analytics.functions.ts";
 
 interface TrackingItem {
   id: string;
@@ -41,6 +42,8 @@ type TrackingWindow = Window & {
 
 let activeConfiguration: string | null = null;
 let trackingEnabled = false;
+let fallbackSessionId: string | null = null;
+const ANALYTICS_SESSION_KEY = "kataluu:storefront-analytics-session";
 
 function appendScript(key: string, source: string): void {
   if (document.querySelector(`script[data-storefront-tracker="${key}"]`)) return;
@@ -174,8 +177,53 @@ function sendTikTok(event: StorefrontTrackingEvent): void {
   ttq.track?.("PlaceAnOrder", { value: event.totalCents / 100, currency: "BRL", content_ids: event.items.map((item) => item.id) });
 }
 
+function analyticsSessionId(): string {
+  try {
+    const current = window.sessionStorage.getItem(ANALYTICS_SESSION_KEY);
+    if (current) return current;
+    const created = window.crypto.randomUUID();
+    window.sessionStorage.setItem(ANALYTICS_SESSION_KEY, created);
+    return created;
+  } catch {
+    fallbackSessionId ??= window.crypto.randomUUID();
+    return fallbackSessionId;
+  }
+}
+
+function persistInternalAnalytics(event: StorefrontTrackingEvent): void {
+  try {
+    const base = {
+      eventId: window.crypto.randomUUID(),
+      sessionId: analyticsSessionId(),
+      type: event.type,
+    };
+    const payload = event.type === "product_view"
+      ? { ...base, productId: event.productId }
+      : event.type === "add_to_cart"
+        ? { ...base, productId: event.productId, valueCents: event.unitPriceCents * event.quantity }
+        : event.type === "begin_checkout"
+          ? { ...base, valueCents: Math.round(totalValue(event.items) * 100) }
+          : event.type === "order_created"
+            ? { ...base, orderId: event.orderId, valueCents: event.totalCents }
+            : base;
+    void recordStorefrontAnalytics({ data: payload }).catch((error: unknown) => {
+      console.warn(
+        "[storefront-analytics] persist failed",
+        error instanceof Error ? error.message : "unknown error",
+      );
+    });
+  } catch (error) {
+    console.warn(
+      "[storefront-analytics] local session failed",
+      error instanceof Error ? error.message : "unknown error",
+    );
+  }
+}
+
 export function trackStorefrontEvent(event: StorefrontTrackingEvent): void {
-  if (typeof window === "undefined" || !trackingEnabled) return;
+  if (typeof window === "undefined") return;
+  persistInternalAnalytics(event);
+  if (!trackingEnabled) return;
   sendMeta(event);
   sendGa4(event);
   sendTikTok(event);
