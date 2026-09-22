@@ -1,3 +1,4 @@
+import type { CatalogMerchandising } from "@white-label/catalog";
 import type { CampaignPage } from "@white-label/marketing";
 import {
   CampaignComposer,
@@ -5,6 +6,7 @@ import {
   CampaignSearch,
 } from "./campaign-ui.tsx";
 import { CampaignList } from "./campaign-list.tsx";
+import { CatalogMerchandisingForm } from "./catalog-merchandising-form.tsx";
 import {
   useCampaignAction,
   useCampaignListing,
@@ -13,7 +15,8 @@ import {
 
 export function CampaignManager({
   initialPage,
-}: Readonly<{ initialPage: CampaignPage }>): React.JSX.Element {
+  merchandising,
+}: Readonly<{ initialPage: CampaignPage; merchandising: CatalogMerchandising }>): React.JSX.Element {
   const listing = useCampaignListing(initialPage);
   const saving = useCampaignSave(listing.reload);
   const actions = useCampaignAction(listing.reload);
@@ -21,37 +24,23 @@ export function CampaignManager({
   const message = actions.actionMessage || saving.saveMessage;
 
   return (
-    <section className="k-workspace-section">
-      <header className="k-section-head">
-        <div>
-          <span className="k-section-kicker">CRM</span>
-          <h2>Campanhas</h2>
-          <p>Segmentação com consentimento explícito e preparação segura de destinatários.</p>
-        </div>
-        <span className="k-section-count">{listing.page.total} campanha(s)</span>
-      </header>
-      <CampaignComposer busy={busy} save={saving.save} />
-      <CampaignSearch
-        busy={busy}
-        search={listing.search}
-        setSearch={listing.setSearch}
-        reload={listing.reload}
-      />
-      {message ? <div className="k-inline-state">{message}</div> : null}
-      <CampaignList
-        page={listing.page}
-        detail={actions.detail}
-        busy={busy}
-        save={saving.save}
-        runAction={actions.runAction}
-      />
-      <CampaignPagination
-        busy={busy}
-        page={listing.page.page}
-        pageSize={listing.page.pageSize}
-        total={listing.page.total}
-        reload={listing.reload}
-      />
-    </section>
+    <>
+      <CatalogMerchandisingForm initial={merchandising} />
+      <section className="k-workspace-section">
+        <header className="k-section-head">
+          <div>
+            <span className="k-section-kicker">Marketing</span>
+            <h2>Campanhas</h2>
+            <p>Segmentação com consentimento explícito e preparação segura de destinatários.</p>
+          </div>
+          <span className="k-section-count">{listing.page.total} campanha(s)</span>
+        </header>
+        <CampaignComposer busy={busy} save={saving.save} />
+        <CampaignSearch busy={busy} search={listing.search} setSearch={listing.setSearch} reload={listing.reload} />
+        {message ? <div className="k-inline-state">{message}</div> : null}
+        <CampaignList page={listing.page} detail={actions.detail} busy={busy} save={saving.save} runAction={actions.runAction} />
+        <CampaignPagination busy={busy} page={listing.page.page} pageSize={listing.page.pageSize} total={listing.page.total} reload={listing.reload} />
+      </section>
+    </>
   );
 }

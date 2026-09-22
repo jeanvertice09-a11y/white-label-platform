@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { getCatalogBehavior, readPublicStoreProfile } from "@white-label/catalog";
+import {
+  getCatalogBehavior,
+  readPublicStoreProfile,
+  resolvePublicCatalogMerchandising,
+} from "@white-label/catalog";
 import type { CatalogScope } from "@white-label/catalog";
 import { storefrontCategoryPath, storefrontProductPath } from "../storefront-paths.ts";
 import { createMerchantCatalogContext, createPublicCatalogContext } from "./catalog-context.server.ts";
@@ -38,7 +42,11 @@ async function publicSnapshot(input: QueryInput) {
     context.repository.listBanners(context.scope, true), context.repository.listProducts({ ...context.scope, ...query }, true),
     publicProfile(context.scope),
   ]);
-  return { store: context.store, settings, categories: settings.showCategories ? categories : [], banners, products, profile, canonicalUrl: `https://${context.hostname}/` };
+  return {
+    store: context.store, settings, categories: settings.showCategories ? categories : [], banners, products, profile,
+    merchandising: resolvePublicCatalogMerchandising(settings.labels),
+    canonicalUrl: `https://${context.hostname}/`,
+  };
 }
 
 async function merchantSnapshot() {
@@ -87,6 +95,7 @@ export const getPublicProductPage = createServerFn({ method: "GET" }).validator(
     : [];
   return {
     store: context.store, settings, categories: settings.showCategories ? categories : [], product, relatedProducts, profile,
+    merchandising: resolvePublicCatalogMerchandising(settings.labels),
     canonicalUrl: `https://${context.hostname}${storefrontProductPath(product.slug)}`,
   };
 });
@@ -101,7 +110,11 @@ export const getPublicCategoryPage = createServerFn({ method: "GET" }).validator
   const category = categories.find((item) => item.slug === data.slug);
   if (!category) throw new Error("Categoria não encontrada");
   const products = await context.repository.listProducts({ ...context.scope, page: 1, pageSize: 12, categoryId: category.id, sort: "position" }, true);
-  return { store: context.store, settings, categories, banners, products, profile, category, canonicalUrl: `https://${context.hostname}${storefrontCategoryPath(category.slug)}` };
+  return {
+    store: context.store, settings, categories, banners, products, profile, category,
+    merchandising: resolvePublicCatalogMerchandising(settings.labels),
+    canonicalUrl: `https://${context.hostname}${storefrontCategoryPath(category.slug)}`,
+  };
 });
 
 export const getMerchantCatalogOverview = createServerFn({ method: "GET" }).handler(async () => merchantSnapshot());

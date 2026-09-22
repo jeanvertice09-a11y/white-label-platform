@@ -7,6 +7,8 @@ export type {
   ProductImage,
   Product,
   CatalogSettings,
+  CatalogMerchandising,
+  PublicCatalogMerchandising,
   StoreBanner,
   StorefrontStore,
   PublicStoreProfile,
@@ -41,6 +43,14 @@ export {
 } from "./behavior.ts";
 export type { CatalogBehavior, CatalogBehaviorFlag } from "./behavior.ts";
 export { EMPTY_PUBLIC_STORE_PROFILE, readPublicStoreProfile } from "./store-profile.ts";
+export {
+  CATALOG_MERCHANDISING_LABEL_KEYS,
+  hasPromotionalPrice,
+  isSafePromotionalHref,
+  mergeCatalogMerchandisingLabels,
+  readCatalogMerchandising,
+  resolvePublicCatalogMerchandising,
+} from "./merchandising.ts";
 export { buildWhatsappMessage, buildWhatsappCheckoutUrl } from "./whatsapp.ts";
 export { assertCatalogSettings, assertProductInput, assertVariantInput, assertCategoryInput } from "./validation.ts";
 export { PUBLIC_MEDIA_ORIGIN, getCatalogPublicMediaUrl } from "./storage.ts";
