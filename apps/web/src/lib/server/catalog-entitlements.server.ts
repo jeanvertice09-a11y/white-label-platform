@@ -91,6 +91,7 @@ export async function assertProductMutationEntitlements(
   sql: BillingSqlExecutor,
   scope: CatalogScope,
   mode: "create" | "update",
+  createIncrement = 1,
 ): Promise<void> {
   const snapshot = await loadStoreEntitlementSnapshot(sql, scope);
   if (!snapshot) return;
@@ -99,7 +100,7 @@ export async function assertProductMutationEntitlements(
     assertConfiguredCatalogEntitlements(snapshot, {
       feature: "products",
       maxProductsUsage: currentUsage,
-      maxProductsIncrement: 1,
+      maxProductsIncrement: createIncrement,
     });
     return;
   }
