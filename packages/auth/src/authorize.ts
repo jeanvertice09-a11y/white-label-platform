@@ -50,6 +50,11 @@ export function canManageTenantStores(roles: RoleSet): boolean {
   return hasAny(roles.tenantRoles, ["tenant_owner", "tenant_admin"]);
 }
 
+/** Gestão de equipe no /control: reutiliza o mesmo boundary owner/admin do tenant. */
+export function canManageTenantTeam(roles: RoleSet): boolean {
+  return hasAny(roles.tenantRoles, ["tenant_owner", "tenant_admin"]);
+}
+
 /** Gestão de gateways no /control: mesmo boundary administrativo do tenant. */
 export function canManageTenantGateways(roles: RoleSet): boolean {
   return hasAny(roles.tenantRoles, ["tenant_owner", "tenant_admin"]);
@@ -77,6 +82,12 @@ export function assertCanAccessTenantControl(roles: RoleSet): void {
 export function assertCanManageTenantStores(roles: RoleSet): void {
   if (!canManageTenantStores(roles)) {
     throw new AuthorizationError("Gestão de lojistas requer tenant_owner/admin");
+  }
+}
+
+export function assertCanManageTenantTeam(roles: RoleSet): void {
+  if (!canManageTenantTeam(roles)) {
+    throw new AuthorizationError("Gestão de equipe requer tenant_owner/admin");
   }
 }
 
