@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
+import { invalidateDomainCache } from "@white-label/domains";
 import { z } from "zod";
+import { getDomainCache } from "./domain-cache.server.ts";
 import {
   controlMerchantMutation,
   controlMerchantRead,
@@ -110,13 +112,21 @@ export const setControlMerchantStatusAction = createServerFn({ method: "POST" })
   .validator(statusSchema)
   .handler(async ({ data }) => {
     const ctx = await controlMerchantMutation();
-    return setControlMerchantStatus(
+    const hostRows = await ctx.sql.query(
+      "select hostname from public.domains where tenant_id=$1::uuid and store_id=$2::uuid",
+      [ctx.tenantId, data.storeId],
+    );
+    const result = await setControlMerchantStatus(
       ctx.sql,
       ctx.tenantId,
       ctx.actorUserId,
       data.storeId,
       data.status,
     );
+    await Promise.all(hostRows.map(async (row) => {
+      if (typeof row["hostname"] === "string") await invalidateDomainCache(getDomainCache(), row["hostname"]);
+    }));
+    return result;
   });
 
 export const assignControlMerchantPlanAction = createServerFn({ method: "POST" })

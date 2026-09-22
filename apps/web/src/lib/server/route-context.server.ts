@@ -128,7 +128,7 @@ function requireHost(input: RouteInput): string {
 async function assertTenantOperational(deps: RouteDeps, tenantId: TenantId): Promise<void> {
   const status = await deps.getTenantStatus(String(tenantId));
   if (status === null) throw new HttpError(404, "White Label não encontrada", "TENANT_NOT_FOUND");
-  if (status === "suspended") throw new HttpError(403, "White Label suspensa", "TENANT_SUSPENDED");
+  if (status !== "active" && status !== "trial") throw new HttpError(403, "White Label indisponível", "TENANT_SUSPENDED");
 }
 async function assertStoreOperational(
   deps: RouteDeps,
@@ -138,7 +138,7 @@ async function assertStoreOperational(
   if (!deps.getStoreStatus) return;
   const status = await deps.getStoreStatus(String(tenantId), String(storeId));
   if (status === null) throw new HttpError(404, "Loja não encontrada", "STORE_NOT_FOUND");
-  if (status === "suspended") throw new HttpError(403, "Loja suspensa", "STORE_SUSPENDED");
+  if (status !== "active") throw new HttpError(403, "Loja indisponível", "STORE_SUSPENDED");
 }
 
 /** /master: somente host de sistema + platform_owner/platform_admin + MFA AAL2. */
