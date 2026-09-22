@@ -24,11 +24,13 @@ export type {
   CouponRepository,
   CampaignRepository,
 } from "./repository.ts";
+export type { CampaignDisplayStatus, CouponDisplayStatus } from "./presentation.ts";
 export {
   CouponError,
   normalizeCouponCode,
   normalizeCouponInput,
   evaluateCoupon,
 } from "./coupons.ts";
+export { getCampaignDisplayStatus, getCouponDisplayStatus } from "./presentation.ts";
 export { createCouponRepository } from "./postgres.ts";
 export { createCampaignRepository } from "./campaigns-postgres.ts";

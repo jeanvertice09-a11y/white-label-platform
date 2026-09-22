@@ -75,6 +75,23 @@ export interface CatalogSettings extends CatalogScope {
   seoDescription: string | null;
 }
 
+export interface CatalogMerchandising {
+  enabled: boolean;
+  text: string;
+  href: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  countdown: boolean;
+}
+
+export interface PublicCatalogMerchandising {
+  text: string;
+  href: string | null;
+  endsAt: string | null;
+  countdown: boolean;
+  serverNow: string;
+}
+
 export interface StoreBanner extends CatalogScope {
   id: string;
   title: string | null;
@@ -123,4 +140,5 @@ export interface StorefrontSnapshot {
   banners: StoreBanner[];
   products: CatalogPage;
   profile?: PublicStoreProfile;
+  merchandising?: PublicCatalogMerchandising | null;
 }

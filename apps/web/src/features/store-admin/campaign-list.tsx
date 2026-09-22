@@ -3,6 +3,7 @@ import type {
   CampaignDetail,
   CampaignPage,
 } from "@white-label/marketing";
+import { getCampaignDisplayStatus } from "@white-label/marketing";
 import {
   CampaignDetailView,
   CampaignFields,
@@ -23,6 +24,10 @@ interface CampaignRowProps {
   ) => Promise<void>;
 }
 
+function displayStatusLabel(status: ReturnType<typeof getCampaignDisplayStatus>): string {
+  return status === "active" ? "Ativa" : statusLabel(status);
+}
+
 function DraftEditor({
   campaign,
   busy,
@@ -31,21 +36,11 @@ function DraftEditor({
 }: Readonly<Omit<CampaignRowProps, "detail">>): React.JSX.Element {
   if (campaign.status !== "draft") return <></>;
   return (
-    <form
-      className="k-record-editor__form"
-      onSubmit={(event) => { void save(event, campaign.id); }}
-    >
+    <form className="k-record-editor__form" onSubmit={(event) => { void save(event, campaign.id); }}>
       <CampaignFields campaign={campaign} />
       <div className="k-record-editor__footer">
         <button className="k-button" disabled={busy} type="submit">Salvar</button>
-        <button
-          className="k-button k-button--primary"
-          disabled={busy}
-          onClick={() => { void runAction(campaign.id, "prepare"); }}
-          type="button"
-        >
-          Preparar destinatários
-        </button>
+        <button className="k-button k-button--primary" disabled={busy} onClick={() => { void runAction(campaign.id, "prepare"); }} type="button">Preparar destinatários</button>
       </div>
     </form>
   );
@@ -67,19 +62,15 @@ function CampaignActions({
 
 function CampaignRow(props: Readonly<CampaignRowProps>): React.JSX.Element {
   const { campaign, detail, busy, save, runAction } = props;
+  const displayStatus = getCampaignDisplayStatus(campaign);
   return (
     <details className="k-record-editor">
       <summary>
         <span className="k-record-editor__identity">
           <strong>{campaign.name}</strong>
-          <small>
-            {campaign.recipientCount} destinatários
-            {campaign.scheduledAt ? ` · ${new Date(campaign.scheduledAt).toLocaleString()}` : ""}
-          </small>
+          <small>{campaign.recipientCount} destinatários{campaign.scheduledAt ? ` · ${new Date(campaign.scheduledAt).toLocaleString()}` : ""}</small>
         </span>
-        <span className={`k-status-pill k-status-pill--${campaign.status}`}>
-          {statusLabel(campaign.status)}
-        </span>
+        <span className={`k-status-pill k-status-pill--${displayStatus}`}>{displayStatusLabel(displayStatus)}</span>
       </summary>
       <div className="k-record-editor__content">
         <DraftEditor campaign={campaign} busy={busy} save={save} runAction={runAction} />
@@ -103,26 +94,6 @@ export function CampaignList({
   save: CampaignRowProps["save"];
   runAction: CampaignRowProps["runAction"];
 }>): React.JSX.Element {
-  if (page.items.length === 0) {
-    return (
-      <div className="k-inline-state">
-        <strong>Nenhuma campanha encontrada</strong>
-        <span>Crie uma campanha ou ajuste sua busca.</span>
-      </div>
-    );
-  }
-  return (
-    <div className="k-record-list">
-      {page.items.map((campaign) => (
-        <CampaignRow
-          key={campaign.id}
-          campaign={campaign}
-          detail={detail}
-          busy={busy}
-          save={save}
-          runAction={runAction}
-        />
-      ))}
-    </div>
-  );
+  if (page.items.length === 0) return <div className="k-inline-state"><strong>Nenhuma campanha encontrada</strong><span>Crie uma campanha ou ajuste sua busca.</span></div>;
+  return <div className="k-record-list">{page.items.map((campaign) => <CampaignRow key={campaign.id} campaign={campaign} detail={detail} busy={busy} save={save} runAction={runAction} />)}</div>;
 }
