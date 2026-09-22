@@ -17,7 +17,9 @@ describe("control team RBAC", () => {
     expect(canManageTenantTeam({ tenantRoles: ["tenant_admin"] })).toBe(true);
     expect(canManageTenantTeam({ tenantRoles: ["tenant_finance"] })).toBe(false);
     expect(canManageTenantTeam({ tenantRoles: ["tenant_support"] })).toBe(false);
-    expect(() => assertCanManageTenantTeam({ tenantRoles: ["tenant_support"] })).toThrow(AuthorizationError);
+    expect(() => {
+      assertCanManageTenantTeam({ tenantRoles: ["tenant_support"] });
+    }).toThrow(AuthorizationError);
   });
 
   test("server functions derivam tenant do contexto e não aceitam tenantId do browser", async () => {
@@ -53,19 +55,35 @@ describe("control team RBAC", () => {
       storeRoles: [],
     }];
     const deps: RouteDeps = {
-      resolveSession: async () => stubSession("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
-      memberships: {
-        getPlatformRoles: async () => [],
-        getTenantMemberships: async () => memberships,
+      resolveSession: async () => {
+        await Promise.resolve();
+        return stubSession("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
       },
-      resolveTenantForHost: async () => ({
-        tenantId,
-        storeId: null,
-        type: "tenant_panel",
-      }),
-      getTenantStatus: async () => "active",
+      memberships: {
+        getPlatformRoles: async () => {
+          await Promise.resolve();
+          return [];
+        },
+        getTenantMemberships: async () => {
+          await Promise.resolve();
+          return memberships;
+        },
+      },
+      resolveTenantForHost: async () => {
+        await Promise.resolve();
+        return {
+          tenantId,
+          storeId: null,
+          type: "tenant_panel",
+        };
+      },
+      getTenantStatus: async () => {
+        await Promise.resolve();
+        return "active";
+      },
     };
-    await expect(loadControl({ host: "tenant.example.com" }, deps)).resolves.toBeDefined();
+    const activeContext = await loadControl({ host: "tenant.example.com" }, deps);
+    expect(activeContext).toBeDefined();
     memberships = [];
     try {
       await loadControl({ host: "tenant.example.com" }, deps);
