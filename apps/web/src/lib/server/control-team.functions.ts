@@ -4,10 +4,12 @@ import { controlTeamMutation, controlTeamRead } from "./control-team.shared.serv
 import { loadControlTeamWorkspace } from "./control-team.read.server.ts";
 import {
   removeStoreMember,
-  removeTenantMember,
   upsertStoreMember,
-  upsertTenantMember,
 } from "./control-team.write.server.ts";
+import {
+  removeTenantMemberGuarded,
+  upsertTenantMemberGuarded,
+} from "./control-team-tenant-guard.server.ts";
 
 const tenantRoleSchema = z.enum([
   "tenant_owner",
@@ -27,7 +29,7 @@ export const saveTenantMemberAction = createServerFn({ method: "POST" })
   .validator(z.object({ email: emailSchema, role: tenantRoleSchema }))
   .handler(async ({ data }) => {
     const ctx = await controlTeamMutation();
-    return upsertTenantMember(
+    return upsertTenantMemberGuarded(
       ctx.sql,
       ctx.tenantId,
       ctx.actorUserId,
@@ -41,7 +43,7 @@ export const removeTenantMemberAction = createServerFn({ method: "POST" })
   .validator(z.object({ userId: z.string().uuid() }))
   .handler(async ({ data }) => {
     const ctx = await controlTeamMutation();
-    return removeTenantMember(
+    return removeTenantMemberGuarded(
       ctx.sql,
       ctx.tenantId,
       ctx.actorUserId,
