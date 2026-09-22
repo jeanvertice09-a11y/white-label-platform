@@ -9,6 +9,7 @@ import "../styles/console-compat.css";
 import "../styles/console-pages.css";
 import "../styles/editorial-console.css";
 import "../styles/platform-responsive.css";
+import "../styles/console-drawer-qa.css";
 
 export const Route = createFileRoute("/master")({
   loader: () => loadMasterContext(),

@@ -1,0 +1,16 @@
+/* QA final: closed mobile drawers must not remain keyboard/screen-reader targets. */
+@media (max-width: 979px) {
+  .master-shell .master-sidebar,
+  .control-shell .control-sidebar {
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .18s ease, visibility 0s linear .18s;
+  }
+
+  .master-shell .master-sidebar.is-open,
+  .control-shell .control-sidebar.is-open {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+}
