@@ -28,7 +28,7 @@ describe("catalog postgres repository scope", () => {
   test("busca cobre nome, SKU e categoria sem sair do tenant/store", async () => {
     const calls: Array<{ sql: string; params: unknown[] }> = []; const sql: CatalogSqlExecutor = { query(statement, params) { calls.push({ sql: statement, params }); return Promise.resolve([]); } };
     const repository = createCatalogReadRepository(sql); await repository.listProducts({ tenantId: "tenant-a", storeId: "store-a", page: 1, pageSize: 20, search: "camisa" }, true);
-    const call = calls[0]; expect(call?.params.slice(0, 3)).toEqual(["tenant-a", "store-a", "%camisa%"]); expect(call?.sql).toContain("p.name ilike $3"); expect(call?.sql).toContain("coalesce(p.sku,'') ilike $3"); expect(call?.sql).toContain("sc.tenant_id=p.tenant_id"); expect(call?.sql).toContain("sc.store_id=p.store_id"); expect(call?.sql).toContain("sc.name ilike $3");
+    const call = calls[0]; expect(call.params.slice(0, 3)).toEqual(["tenant-a", "store-a", "%camisa%"]); expect(call.sql).toContain("p.name ilike $3"); expect(call.sql).toContain("coalesce(p.sku,'') ilike $3"); expect(call.sql).toContain("sc.tenant_id=p.tenant_id"); expect(call.sql).toContain("sc.store_id=p.store_id"); expect(call.sql).toContain("sc.name ilike $3");
   });
 
   test("filtro sem estoque é aplicado somente quando solicitado pelo servidor", async () => {
