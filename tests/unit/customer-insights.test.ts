@@ -31,10 +31,16 @@ describe("merchant customer insights", () => {
   });
 
   test("não converte cliente inexistente em métricas zeradas", async () => {
-    await expect(loadMerchantCustomerInsights({
-      query(sql) {
-        return Promise.resolve(sql.includes("from public.customers c") ? [] : []);
-      },
-    }, { tenantId: TENANT_ID, storeId: STORE_ID }, CUSTOMER_ID)).rejects.toThrow("Cliente não encontrado");
+    let message = "";
+    try {
+      await loadMerchantCustomerInsights({
+        query() {
+          return Promise.resolve([]);
+        },
+      }, { tenantId: TENANT_ID, storeId: STORE_ID }, CUSTOMER_ID);
+    } catch (error) {
+      message = error instanceof Error ? error.message : "erro desconhecido";
+    }
+    expect(message).toBe("Cliente não encontrado");
   });
 });

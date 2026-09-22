@@ -122,7 +122,7 @@ export async function loadMerchantCustomerInsights(
     sql.query(CUSTOMER_METRICS_SQL, [scope.tenantId, scope.storeId, customerId]),
     sql.query(CUSTOMER_PRODUCTS_SQL, [scope.tenantId, scope.storeId, customerId]),
   ]);
-  const row = metricRows[0];
+  const row = metricRows.at(0);
   if (!row) throw new Error("Cliente não encontrado");
   return {
     completedOrders: integer(row, "completed_orders"),
