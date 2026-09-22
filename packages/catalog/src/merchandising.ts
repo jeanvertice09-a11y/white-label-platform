@@ -11,6 +11,7 @@ const PROMO_KEYS = [
   "promo.endsAt",
   "promo.countdown",
 ] as const;
+const PROMO_KEY_SET = new Set<string>(PROMO_KEYS);
 
 export const CATALOG_MERCHANDISING_LABEL_KEYS = PROMO_KEYS;
 
@@ -58,8 +59,9 @@ export function mergeCatalogMerchandisingLabels(
   labels: Record<string, string>,
   merchandising: CatalogMerchandising,
 ): Record<string, string> {
-  const next = { ...labels };
-  for (const key of PROMO_KEYS) delete next[key];
+  const next = Object.fromEntries(
+    Object.entries(labels).filter(([key]) => !PROMO_KEY_SET.has(key)),
+  );
   next["promo.enabled"] = merchandising.enabled ? "true" : "false";
   if (merchandising.text.trim()) next["promo.text"] = merchandising.text.trim();
   if (merchandising.href) next["promo.href"] = merchandising.href.trim();

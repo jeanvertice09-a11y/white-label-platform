@@ -15,6 +15,11 @@ function iso(value: string): string | null {
   return value ? new Date(value).toISOString() : null;
 }
 
+function field(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value : "";
+}
+
 export function CatalogMerchandisingForm({
   initial,
 }: Readonly<{ initial: CatalogMerchandising }>): React.JSX.Element {
@@ -30,10 +35,10 @@ export function CatalogMerchandisingForm({
     try {
       const saved = await saveMerchantCatalogMerchandising({ data: {
         enabled: form.get("enabled") === "on",
-        text: String(form.get("text") ?? ""),
-        href: String(form.get("href") ?? "").trim() || null,
-        startsAt: iso(String(form.get("startsAt") ?? "")),
-        endsAt: iso(String(form.get("endsAt") ?? "")),
+        text: field(form, "text"),
+        href: field(form, "href").trim() || null,
+        startsAt: iso(field(form, "startsAt")),
+        endsAt: iso(field(form, "endsAt")),
         countdown: form.get("countdown") === "on",
       } });
       setValue(saved); setMessage("Merchandising do catálogo atualizado.");
