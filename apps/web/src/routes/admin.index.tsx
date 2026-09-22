@@ -2,18 +2,21 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { DashboardIcon, type DashboardIconName } from "../components/dashboard/DashboardIcon.tsx";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
+import { OnboardingChecklist } from "../features/store-admin/onboarding-checklist.tsx";
 import { StorefrontAnalyticsPanel } from "../features/store-admin/storefront-analytics-panel.tsx";
+import { getMerchantOnboarding } from "../lib/server/onboarding.functions.ts";
 import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
 import { getCurrentStorefrontAnalytics } from "../lib/server/storefront-analytics.functions.ts";
 import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
   loader: async () => {
-    const [operations, analytics] = await Promise.all([
+    const [operations, analytics, onboarding] = await Promise.all([
       getMerchantOperationsDashboard(),
       getCurrentStorefrontAnalytics(),
+      getMerchantOnboarding(),
     ]);
-    return { operations, analytics };
+    return { operations, analytics, onboarding };
   },
   component: AdminDashboard,
 });
@@ -184,6 +187,12 @@ function AdminDashboard(): React.JSX.Element {
         description="Visão operacional da loja, com o que merece atenção primeiro."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
+      <section className="k-workspace-section" id="primeiros-passos">
+        <header className="k-section-head">
+          <div><span className="k-section-kicker">Configuração guiada</span><h2>Primeiros passos</h2><p>Do cadastro da loja até o catálogo pronto, usando somente recursos reais da operação.</p></div>
+        </header>
+        <OnboardingChecklist data={data.onboarding} />
+      </section>
       <DashboardStrip
         ordersToday={metrics.ordersToday}
         pendingOrders={metrics.pendingOrders}

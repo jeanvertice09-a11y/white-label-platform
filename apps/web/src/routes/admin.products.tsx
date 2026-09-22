@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
+import { BulkImportPanel } from "../features/store-admin/bulk-import-panel.tsx";
 import { ProductsList } from "../features/store-admin/products-list.tsx";
 import {
   listMerchantCategories,
@@ -38,6 +39,7 @@ function ProductsPage(): React.JSX.Element {
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
       <ProductsList initialPage={data.products} categories={data.categories} />
+      <BulkImportPanel />
     </div>
   );
 }
