@@ -1,15 +1,26 @@
 export type JobKind =
-  | "webhook.process"
   | "email.send"
   | "media.process"
   | "billing.reconcile"
   | "domain.verify";
 
-export interface Job<TPayload = Record<string, unknown>> {
+export interface OperationalJob {
   id: string;
+  tenantId: string | null;
+  storeId: string | null;
   kind: JobKind;
-  payload: TPayload;
+  payloadVersion: 1;
+  payload: Record<string, unknown>;
   attempts: number;
   maxAttempts: number;
-  createdAt: string;
+}
+
+export interface EnqueueJob {
+  tenantId?: string | null;
+  storeId?: string | null;
+  kind: JobKind;
+  payloadVersion?: 1;
+  payload: Record<string, unknown>;
+  idempotencyKey: string;
+  maxAttempts?: number;
 }

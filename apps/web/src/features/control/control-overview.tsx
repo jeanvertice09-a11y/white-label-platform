@@ -1,8 +1,10 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "@tanstack/react-router";
 import type { ControlOperationalHealth } from "../../lib/server/control-operational-health.functions.ts";
 import type { StorefrontAnalyticsSummary } from "../../lib/server/storefront-analytics.functions.ts";
 import type { TenantBillingWorkspace } from "../../lib/server/tenant-billing.types.ts";
 import { statusLabel } from "../../lib/ui-labels.ts";
+import { retryControlOperationalJobAction } from "../../lib/server/control-operational-jobs.functions.ts";
 import { ControlPageHeader } from "./control-page-header.tsx";
 import { useControlShellData } from "./control-shell.tsx";
 
@@ -43,8 +45,32 @@ function OperationAttention(props: Readonly<{
     ["Pagamentos inconsistentes", "Status do gateway diverge do pedido", props.health.paymentInconsistencies],
     ["Domínios suspensos", "Domínio impedido de resolver", props.health.suspendedDomains],
     ["Domínios pendentes > 24h", "Sem verificação concluída", props.health.stalledPendingDomains],
+    ["Jobs em retry", "Tarefas operacionais aguardando nova tentativa", props.health.jobRetries],
+    ["Jobs em dead-letter", "Tarefas que esgotaram as tentativas", props.health.jobDeadLetters],
+    ["Jobs com lease vencida", "Worker interrompido; serão recuperados", props.health.jobStaleRunning],
   ] as const;
   return <section className="control-editorial-section control-operations-panel"><div className="control-editorial-section__header"><div><h2>Situação da operação</h2><p>Itens reais do banco que merecem acompanhamento agora.</p></div></div><div className="console-fact-list">{rows.map(([label, detail, value]) => <div className="console-fact-row" key={label}><div><strong>{label}</strong><small>{detail}</small></div><b>{value}</b></div>)}</div></section>;
+}
+
+
+function DeadLetterRecovery({ health }: Readonly<{ health: ControlOperationalHealth }>): React.JSX.Element | null {
+  const router = useRouter();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  if (health.deadLetterJobs.length === 0) return null;
+  async function retry(jobId: string): Promise<void> {
+    setBusyId(jobId); setMessage("");
+    try {
+      await retryControlOperationalJobAction({ data: { jobId } });
+      setMessage("Job reenfileirado.");
+      await router.invalidate();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível reenfileirar o job.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+  return <section className="control-editorial-section"><div className="control-editorial-section__header"><div><h2>Recuperação de jobs</h2><p>Dead-letters recentes podem ser reenfileiradas com segurança por um administrador da White Label.</p></div></div><div className="console-compact-list">{health.deadLetterJobs.map((job) => <div className="console-compact-row" key={job.id}><div><strong>{job.kind}</strong><small>{job.lastError ?? "Falha sem detalhe"} · {new Date(job.createdAt).toLocaleString("pt-BR")}</small></div><button className="k-button" type="button" disabled={busyId !== null} onClick={() => { void retry(job.id); }}>{busyId === job.id ? "Reenfileirando..." : "Tentar novamente"}</button></div>)}</div>{message ? <p className="k-status" role="status">{message}</p> : null}</section>;
 }
 
 function RecentStores(): React.JSX.Element {
@@ -66,5 +92,6 @@ export function ControlOverview({ billing, health, analytics }: Readonly<{
     <section className="control-overview-band" aria-label="Resumo da White Label"><div className="control-overview-primary"><span>Receita capturada</span><strong>{money(billing.metrics.revenueCapturedCents)}</strong><small>{String(billing.metrics.paymentsCaptured)} pagamento(s) de lojistas confirmado(s)</small></div><div className="control-overview-stats"><SummaryItem label="Lojas" value={data.stores.length} detail={`${String(activeStores)} ativas`} /><SummaryItem label="Assinaturas" value={billing.total} detail={`${String(billing.metrics.subscriptionsActive)} ativas · ${String(billing.metrics.subscriptionsTrialing)} em teste`} /><SummaryItem label="Domínios" value={data.domains.length} detail={`${String(data.domains.length - pendingDomains)} ativos`} /></div></section>
     <TenantAnalytics analytics={analytics} />
     <div className="control-dashboard-columns"><OperationAttention pastDue={billing.metrics.subscriptionsPastDue} pendingPayments={billing.metrics.paymentsPending} suspendedStores={data.stores.filter((item) => item.status === "suspended").length} pendingDomains={pendingDomains} health={health} /><RecentStores /></div>
+    <DeadLetterRecovery health={health} />
   </section>;
 }

@@ -49,13 +49,13 @@ Não foi criado um segundo mecanismo. O projeto já possui entitlements server-a
 
 Uma tabela genérica de flags hoje duplicaria autoridade sem caso real adicional. Criar somente quando houver rollout experimental que não possa ser expresso por entitlement/configuração existente.
 
-## 5. Filas / retry / dead-letter — B
+## 5. Filas / retry / dead-letter — A
 
 O pipeline de webhook de pagamentos já é durável: idempotência por evento externo, claim, `attempts`, `maxAttempts`, backoff, `next_attempt_at`, recuperação de `processing` travado e `dead_letter`. Isso foi preservado.
 
 O worker agora registra `name/message` quando o polling falha e rejeita job kind inesperado, em vez de perder completamente o diagnóstico.
 
-**C para jobs genéricos se forem habilitados:** `email.send`, `media.process`, `billing.reconcile` e `domain.verify` ainda são handlers stub e não possuem fila durável própria neste worker. Eles não podem ser vendidos/considerados executados apenas porque existem tipos/dispatch. Antes de habilitá-los: persistência de job, idempotency key, claim concorrente, max attempts/backoff, dead-letter, auditoria e implementação real do handler.
+A fila operacional genérica agora é persistente em `operational_jobs`, com idempotência, claim concorrente, lease, stale recovery, retry exponencial, max attempts, dead-letter, isolamento tenant/store e observabilidade. `domain.verify`, `billing.reconcile` e `media.process` possuem handlers reais. `email.send` permanece deliberadamente fail-closed até existir um provider real configurado; nenhum job de e-mail é marcado como enviado sem integração externa.
 
 ## 6. Observabilidade operacional — A
 
