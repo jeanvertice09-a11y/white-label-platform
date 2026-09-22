@@ -1,57 +1,28 @@
 import { pollPaymentWebhooks } from "./payment-runtime.ts";
-import { handleWebhookJob } from "./jobs/webhook.ts";
-import {
-  handleBillingJob,
-  handleDomainVerifyJob,
-  handleEmailJob,
-  handleMediaJob,
-} from "./jobs/handlers.ts";
-import type { Job } from "./jobs/types.ts";
+import { operationalTick } from "./jobs/runtime.ts";
 
-async function dispatch(job: Job): Promise<void> {
-  switch (job.kind) {
-    case "webhook.process":
-      await handleWebhookJob(job as Job<{ eventId: string }>);
-      break;
-    case "email.send":
-      await handleEmailJob(job as Job<{ to: string; subject: string }>);
-      break;
-    case "media.process":
-      await handleMediaJob(job as Job<{ objectKey: string }>);
-      break;
-    case "billing.reconcile":
-      await handleBillingJob(job as Job<{ level: string }>);
-      break;
-    case "domain.verify":
-      await handleDomainVerifyJob(job as Job<{ hostname: string }>);
-      break;
-    default: {
-      const unsupported: never = job.kind;
-      throw new Error(`Unsupported job kind: ${String(unsupported)}`);
+async function tick(): Promise<void> {
+  const results = await Promise.allSettled([pollPaymentWebhooks(), operationalTick()]);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      const error: unknown = result.reason;
+      console.error("[worker] tick failed.", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : "unknown error",
+      });
     }
   }
 }
 
-async function paymentTick(): Promise<void> {
-  try {
-    await pollPaymentWebhooks();
-  } catch (error) {
-    console.error("[worker] payment webhook poll failed.", {
-      name: error instanceof Error ? error.name : "UnknownError",
-      message: error instanceof Error ? error.message : "unknown error",
-    });
-  }
-}
-
 if (import.meta.main) {
-  const tick = Math.max(250, Number(process.env["WORKER_POLL_MS"] ?? 1000));
+  const interval = Math.max(1000, Number(process.env["WORKER_POLL_MS"] ?? 5000));
   if (!process.env["SUPABASE_DB_URL"]) {
-    console.warn("[worker] SUPABASE_DB_URL ausente; payment poll desabilitado.");
+    console.warn("[worker] SUPABASE_DB_URL ausente; worker desabilitado.");
   } else {
-    console.warn(`[worker] payment poll online (${String(tick)}ms).`);
-    void paymentTick();
-    setInterval(() => void paymentTick(), tick);
+    console.warn(`[worker] durable queues online (${String(interval)}ms).`);
+    void tick();
+    setInterval(() => void tick(), interval);
   }
 }
 
-export { dispatch };
+export { tick };
