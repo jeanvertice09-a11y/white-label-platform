@@ -94,40 +94,40 @@ function VariantFields(props: Readonly<{
   const { draft, setField } = props;
   return (
     <div className="k-form__grid">
-      <div className="k-field">
-        <label>Nome da variante</label>
+      <label className="k-field">
+        <span>Nome da variante</span>
         <input value={draft.name} onChange={(event) => { setField("name", event.target.value); }} required />
-      </div>
-      <div className="k-field">
-        <label>SKU</label>
+      </label>
+      <label className="k-field">
+        <span>SKU</span>
         <input value={draft.sku} onChange={(event) => { setField("sku", event.target.value); }} />
-      </div>
-      <div className="k-field">
-        <label>Preço</label>
+      </label>
+      <label className="k-field">
+        <span>Preço</span>
         <input inputMode="decimal" value={draft.price} onChange={(event) => { setField("price", event.target.value); }} required />
-      </div>
-      <div className="k-field">
-        <label>Preço comparativo</label>
+      </label>
+      <label className="k-field">
+        <span>Preço comparativo</span>
         <input inputMode="decimal" value={draft.compareAt} onChange={(event) => { setField("compareAt", event.target.value); }} />
-      </div>
-      <div className="k-field">
-        <label>Custo interno</label>
+      </label>
+      <label className="k-field">
+        <span>Custo interno</span>
         <input inputMode="decimal" value={draft.cost} onChange={(event) => { setField("cost", event.target.value); }} />
-      </div>
-      <div className="k-field">
-        <label>Estoque atual</label>
+      </label>
+      <label className="k-field">
+        <span>Estoque atual</span>
         <input type="number" min="0" value={draft.stock} disabled readOnly />
         <span className="k-muted">Ajuste pela área Estoque.</span>
-      </div>
-      <div className="k-field">
-        <label>Ordem</label>
+      </label>
+      <label className="k-field">
+        <span>Ordem</span>
         <input type="number" min="0" value={draft.position} onChange={(event) => { setField("position", event.target.value); }} />
-      </div>
-      <div className="k-field k-field--full">
-        <label>Atributos</label>
+      </label>
+      <label className="k-field k-field--full">
+        <span>Atributos</span>
         <textarea value={draft.attributes} onChange={(event) => { setField("attributes", event.target.value); }} placeholder={"tamanho=P\ncor=Azul"} />
         <span className="k-muted">Um por linha em atributo=valor. Combinações duplicadas continuam bloqueadas.</span>
-      </div>
+      </label>
     </div>
   );
 }
