@@ -2,11 +2,19 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { DashboardIcon, type DashboardIconName } from "../components/dashboard/DashboardIcon.tsx";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
+import { StorefrontAnalyticsPanel } from "../features/store-admin/storefront-analytics-panel.tsx";
 import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
+import { getCurrentStorefrontAnalytics } from "../lib/server/storefront-analytics.functions.ts";
 import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
-  loader: () => getMerchantOperationsDashboard(),
+  loader: async () => {
+    const [operations, analytics] = await Promise.all([
+      getMerchantOperationsDashboard(),
+      getCurrentStorefrontAnalytics(),
+    ]);
+    return { operations, analytics };
+  },
   component: AdminDashboard,
 });
 
@@ -167,11 +175,12 @@ function AccountContext(props: Readonly<{
 
 function AdminDashboard(): React.JSX.Element {
   const data = Route.useLoaderData();
-  const metrics = data.metrics;
+  const operations = data.operations;
+  const metrics = operations.metrics;
   return (
     <div className="k-page k-dashboard">
       <PageHead
-        title={data.store.name}
+        title={operations.store.name}
         description="Visão operacional da loja, com o que merece atenção primeiro."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
@@ -181,19 +190,20 @@ function AdminDashboard(): React.JSX.Element {
         revenuePeriodCents={metrics.revenuePeriodCents}
         averageTicketCents={metrics.averageTicketCents}
       />
+      <StorefrontAnalyticsPanel analytics={data.analytics} />
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
-          <RecentOperations activity={data.activity} />
+          <RecentOperations activity={operations.activity} />
           <QuickLinksSection />
         </main>
         <AccountContext
-          tenantStatus={data.store.tenantStatus}
-          trialEndsAt={data.store.trialEndsAt}
-          planName={data.plan?.name ?? null}
-          planSlug={data.plan?.slug ?? null}
+          tenantStatus={operations.store.tenantStatus}
+          trialEndsAt={operations.store.trialEndsAt}
+          planName={operations.plan?.name ?? null}
+          planSlug={operations.plan?.slug ?? null}
           customers={metrics.customers}
-          layout={data.layout}
+          layout={operations.layout}
         />
       </div>
     </div>

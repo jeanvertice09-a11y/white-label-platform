@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { MerchantStoreSettingsForm } from "../features/store-admin/merchant-store-settings-form.tsx";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { PublicCatalogActions } from "../features/store-admin/public-catalog-actions.tsx";
+import { StoreDataExport } from "../features/store-admin/store-data-export.tsx";
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
 import { getMerchantSettingsOverview } from "../lib/server/merchant-settings.functions.ts";
 import { statusLabel } from "../lib/ui-labels.ts";
@@ -90,6 +91,11 @@ function SettingsPage(): React.JSX.Element {
           </dl>
           <p className="k-muted">Estes dados vêm da conta autenticada. A edição de credenciais não é simulada nesta tela porque não existe um fluxo próprio seguro de perfil no backend atual.</p>
         </div>
+      </section>
+
+      <section className="k-workspace-section">
+        <header className="k-section-head"><div><span className="k-section-kicker">Dados e privacidade</span><h2>Portabilidade da loja</h2><p>A exportação usa exclusivamente o tenant e a loja resolvidos no servidor para a sessão atual.</p></div></header>
+        <StoreDataExport />
       </section>
     </div>
   );
