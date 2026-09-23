@@ -117,11 +117,32 @@ async function processMedia(sql: WorkerSql,job: OperationalJob): Promise<void> {
   }
 }
 
+
+async function reconcileStorePayment(sql:WorkerSql,job:OperationalJob):Promise<void>{
+ await assertJobScopeOperational(sql,job);const paymentId=required(job,"paymentId");
+ const rows=await sql.query(`select p.id::text,p.gateway_account_id::text,p.provider_payment_id,p.status,ga.provider from public.payments p join public.gateway_accounts ga on ga.id=p.gateway_account_id where p.id=$1::uuid and p.tenant_id=$2::uuid and p.store_id=$3::uuid and p.level='store_checkout' limit 1`,[paymentId,job.tenantId,job.storeId]);
+ const row=rows.at(0);if(!row)throw new Error("Pagamento da loja fora do escopo do job.");if(!["pending","authorized"].includes(String(row["status"])))return;
+ const gatewayId=rowText(row,"gateway_account_id"),providerPaymentId=rowText(row,"provider_payment_id"),provider=providerName(row["provider"]);
+ const loaded=await loadGatewayProvider(sql,createCredentialVaultFromEnv(),provider,gatewayId,{writesEnabled:false,asaasBaseUrl:asaasBaseUrl()});
+ if(loaded.level!=="store_checkout"||loaded.tenantId!==job.tenantId||loaded.storeId!==job.storeId)throw new Error("Gateway incompatível com a loja.");
+ const result=await reconcilePaymentStatus(sql,paymentId,gatewayId,loaded.provider,providerPaymentId as ProviderPaymentId);
+ if(result.status==="pending"||result.status==="authorized")throw new Error(`Pagamento ainda pendente: ${result.status}`);
+}
+async function recoverShipment(sql:WorkerSql,job:OperationalJob):Promise<void>{
+ await assertJobScopeOperational(sql,job);const shipmentId=required(job,"shipmentId"),orderId=required(job,"orderId");
+ const rows=await sql.query(`select sh.status,o.payment_status from public.order_shipments sh join public.orders o on o.tenant_id=sh.tenant_id and o.store_id=sh.store_id and o.id=sh.order_id where sh.id=$1::uuid and sh.tenant_id=$2::uuid and sh.store_id=$3::uuid and sh.order_id=$4::uuid limit 1`,[shipmentId,job.tenantId,job.storeId,orderId]);
+ const row=rows.at(0);if(!row)throw new Error("Envio fora do escopo do job.");if(row["payment_status"]!=="paid"||!["quoted","error"].includes(String(row["status"])))return;
+ await sql.query(`update public.order_shipments set status='error',updated_at=now() where id=$1::uuid and tenant_id=$2::uuid and store_id=$3::uuid`,[shipmentId,job.tenantId,job.storeId]);
+ throw new Error("Etiqueta paga aguarda intervenção do lojista para nova geração segura.");
+}
+
 export async function dispatchOperationalJob(sql: WorkerSql,job: OperationalJob): Promise<void> {
   switch(job.kind){
     case "domain.verify": return verifyDomain(sql,job);
     case "billing.reconcile": return reconcileBilling(sql,job);
     case "media.process": return processMedia(sql,job);
+    case "store_payment.reconcile": return reconcileStorePayment(sql,job);
+    case "shipment.recover": return recoverShipment(sql,job);
     case "email.send": throw new Error("email.send indisponível: nenhum provider de e-mail foi configurado.");
   }
 }

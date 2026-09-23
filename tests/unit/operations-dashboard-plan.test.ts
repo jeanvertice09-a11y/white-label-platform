@@ -40,6 +40,7 @@ describe("operations dashboard activity", () => {
       [{ id: "order-a", order_number: 42, customer_name: "Cliente", status: "pending", total_cents: 1990, created_at: "2026-09-22T12:00:00Z" }],
       [{ id: "task-a", title: "Separar pedido", priority: "high", due_at: "2026-09-23T12:00:00Z" }],
       [{ product_id: "product-a", variant_id: null, product_name: "Produto", variant_name: null, quantity: 2 }],
+      [],
     ];
     const activity = await loadMerchantDashboardActivity({
       query(sql, params = []) {
@@ -51,7 +52,7 @@ describe("operations dashboard activity", () => {
     expect(activity.recentOrders[0]?.orderNumber).toBe(42);
     expect(activity.taskAlerts[0]?.priority).toBe("high");
     expect(activity.stockAlerts[0]?.quantity).toBe(2);
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
     for (const call of calls) {
       expect(call.sql).toContain("tenant_id=$1");
       expect(call.sql).toContain("store_id=$2");

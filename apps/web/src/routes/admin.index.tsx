@@ -130,6 +130,8 @@ function QuickLinksSection(): React.JSX.Element {
   );
 }
 
+function RecoveryCenter(props:Readonly<{alerts:Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"]["recoveryAlerts"]}>):React.JSX.Element{if(!props.alerts.length)return <></>;return <section className="k-workspace-section"><header className="k-section-head"><div><span className="k-section-kicker">Recuperação automática</span><h2>Pendências técnicas</h2><p>Falhas que o sistema está tentando recuperar ou que precisam de uma ação sua.</p></div></header><div className="k-config-list">{props.alerts.map(alert=>alert.orderId?<Link className="k-config-row" key={alert.id} to="/admin/orders/$id" params={{id:alert.orderId}}><span><strong>{alert.title}</strong><small>{alert.detail}</small></span><b>{alert.status==="dead_letter"?"Intervir":"Tentando"}</b></Link>:<div className="k-config-row" key={alert.id}><span><strong>{alert.title}</strong><small>{alert.detail}</small></span><b>{alert.status==="dead_letter"?"Intervir":"Tentando"}</b></div>)}</div></section>}
+
 function RecentOperations(props: Readonly<{
   activity: Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"];
 }>): React.JSX.Element {
@@ -228,6 +230,7 @@ function AdminDashboard(): React.JSX.Element {
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
+          <RecoveryCenter alerts={operations.activity.recoveryAlerts} />
           {data.analytics ? <StorefrontAnalyticsPanel analytics={data.analytics} /> : null}
           <RecentOperations activity={operations.activity} />
           <QuickLinksSection />

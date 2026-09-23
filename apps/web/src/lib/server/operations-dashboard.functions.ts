@@ -37,10 +37,13 @@ export interface DashboardStockAlert {
   quantity: number;
 }
 
+export interface DashboardRecoveryAlert { id:string; kind:string; status:string; title:string; detail:string; orderId:string|null; createdAt:string; }
+
 export interface MerchantDashboardActivity {
   recentOrders: DashboardRecentOrder[];
   taskAlerts: DashboardTaskAlert[];
   stockAlerts: DashboardStockAlert[];
+  recoveryAlerts: DashboardRecoveryAlert[];
 }
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -184,6 +187,8 @@ const TASK_ALERTS_SQL = `select id::text,title,priority,due_at::text
     case priority when 'high' then 0 when 'normal' then 1 else 2 end,
     created_at desc limit 5`;
 
+const RECOVERY_ALERTS_SQL=`select j.id::text,j.kind,j.status,j.last_error,j.created_at::text,(j.payload->>'orderId') order_id from public.operational_jobs j where j.tenant_id=$1::uuid and j.store_id=$2::uuid and j.kind in ('store_payment.reconcile','shipment.recover') and j.status in ('retry','dead_letter') order by case when j.status='dead_letter' then 0 else 1 end,j.updated_at desc limit 8`;
+
 const STOCK_ALERTS_SQL = `with inventory_rows as (
   select p.id as product_id,v.id as variant_id,p.name as product_name,
     v.name as variant_name,coalesce(sum(sm.delta),0)::integer as quantity
@@ -218,10 +223,11 @@ export async function loadMerchantDashboardActivity(
   scope: MerchantScope,
 ): Promise<MerchantDashboardActivity> {
   const params = [scope.tenantId, scope.storeId];
-  const [orders, tasks, stock] = await Promise.all([
+  const [orders, tasks, stock, recovery] = await Promise.all([
     sql.query(RECENT_ORDERS_SQL, params),
     sql.query(TASK_ALERTS_SQL, params),
     sql.query(STOCK_ALERTS_SQL, params),
+    sql.query(RECOVERY_ALERTS_SQL,params),
   ]);
   return {
     recentOrders: orders.map((row) => ({
@@ -238,6 +244,7 @@ export async function loadMerchantDashboardActivity(
       priority: requiredText(row["priority"], "task.priority"),
       dueAt: optionalText(row["due_at"]),
     })),
+    recoveryAlerts: recovery.map((row)=>({id:requiredText(row["id"],"recovery.id"),kind:requiredText(row["kind"],"recovery.kind"),status:requiredText(row["status"],"recovery.status"),title:row["kind"]==="shipment.recover"?"Etiqueta precisa de atenção":"Pagamento em recuperação",detail:optionalText(row["last_error"])??"A recuperação automática está em andamento.",orderId:optionalText(row["order_id"]),createdAt:requiredText(row["created_at"],"recovery.created_at")})),
     stockAlerts: stock.map((row) => ({
       productId: requiredText(row["product_id"], "stock.product_id"),
       variantId: optionalText(row["variant_id"]),

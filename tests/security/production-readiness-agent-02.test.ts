@@ -269,3 +269,10 @@ describe("end-to-end logistics", () => {
  test("checkout collects a complete shipping recipient instead of blank address fields",()=>{const cart=source("apps/web/src/features/storefront/cart-panel.tsx");expect(cart).toContain("Endereço de entrega");expect(cart).toContain("document:recipientDocument,address:address.trim(),number:number.trim()");expect(cart).not.toContain('document:"",address:"",number:""');});
  test("merchant can configure dispatch and operate a paid order shipment",()=>{const card=source("apps/web/src/features/store-admin/melhor-envio-card.tsx"),order=source("apps/web/src/routes/admin.orders.$id.tsx");expect(card).toContain("saveMelhorEnvioProfile");expect(order).toContain("generateOrderShipment");expect(order).toContain("Abrir etiqueta");});
 });
+
+
+describe("automatic operational recovery",()=>{
+ test("worker schedules store payment and shipment recovery with scoped idempotency",()=>{const scheduler=source("apps/worker/src/jobs/scheduler.ts");expect(scheduler).toContain('kind:"store_payment.reconcile"');expect(scheduler).toContain('kind:"shipment.recover"');expect(scheduler).toContain("p.tenant_id::text,p.store_id::text");});
+ test("worker reconciles store checkout payment through its scoped gateway",()=>{const handlers=source("apps/worker/src/jobs/handlers.ts");expect(handlers).toContain('loaded.level!=="store_checkout"');expect(handlers).toContain("reconcileStorePayment");});
+ test("merchant dashboard surfaces retry and dead-letter recovery alerts",()=>{const server=source("apps/web/src/lib/server/operations-dashboard.functions.ts"),ui=source("apps/web/src/routes/admin.index.tsx");expect(server).toContain("RECOVERY_ALERTS_SQL");expect(server).toContain("'retry','dead_letter'");expect(ui).toContain("Recuperação automática");expect(ui).toContain("Pendências técnicas");});
+});

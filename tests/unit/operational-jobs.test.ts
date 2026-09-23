@@ -33,6 +33,7 @@ describe("operational worker", () => {
       [{ id: "d1", tenant_id: "t1", store_id: null, verification_token: "token" }],
       [{ id: "p1", tenant_id: "t1", store_id: "s1", level: "tenant_billing" }],
       [{ id: "m1", tenant_id: "t1", store_id: "s1", status: "failed" }],
+      [], [],
       [{ id: "j1" }], [{ id: "j2" }], [{ id: "j3" }],
     ]);
     expect(await scheduleOperationalJobs(sql)).toBe(3);
