@@ -74,8 +74,8 @@ function AttentionSection(props: Readonly<{
       <header className="k-section-head">
         <div>
           <span className="k-section-kicker">Prioridades</span>
-          <h2>Atenção operacional</h2>
-          <p>Itens que podem exigir ação da equipe agora.</p>
+          <h2>O que precisa da sua atenção</h2>
+          <p>Pendências importantes para manter sua loja funcionando bem.</p>
         </div>
       </header>
       <div className="k-attention-list">
@@ -100,13 +100,13 @@ function QuickLinksSection(): React.JSX.Element {
   return (
     <section className="k-workspace-section">
       <header className="k-section-head">
-        <div><span className="k-section-kicker">Atalhos</span><h2>Rotinas da loja</h2></div>
+        <div><span className="k-section-kicker">Atalhos</span><h2>Acessos rápidos</h2></div>
       </header>
       <div className="k-quick-list">
-        <QuickLink to="/admin/products" icon="products" label="Produtos" detail="Catálogo, preço e publicação" />
-        <QuickLink to="/admin/orders" icon="orders" label="Pedidos" detail="Venda, status e atendimento" />
-        <QuickLink to="/admin/customers" icon="customers" label="Clientes" detail="CRM e histórico de compras" />
-        <QuickLink to="/admin/inventory" icon="inventory" label="Estoque" detail="Saldos e movimentações" />
+        <QuickLink to="/admin/products" icon="products" label="Produtos" detail="Cadastre, edite preços e publique" />
+        <QuickLink to="/admin/orders" icon="orders" label="Pedidos" detail="Acompanhe vendas e atualize pedidos" />
+        <QuickLink to="/admin/customers" icon="customers" label="Clientes" detail="Veja seus clientes e compras anteriores" />
+        <QuickLink to="/admin/inventory" icon="inventory" label="Estoque" detail="Confira quantidades e movimentações" />
       </div>
     </section>
   );
@@ -119,7 +119,7 @@ function RecentOperations(props: Readonly<{
   return (
     <section className="k-workspace-section">
       <header className="k-section-head">
-        <div><span className="k-section-kicker">Tempo real</span><h2>Operação recente</h2><p>Pedidos, tarefas e itens críticos derivados do banco da loja.</p></div>
+        <div><span className="k-section-kicker">Tempo real</span><h2>Últimas movimentações</h2><p>Acompanhe o que aconteceu recentemente na sua operação.</p></div>
       </header>
       <div className="k-dashboard-activity">
         <div className="k-card">
@@ -164,14 +164,14 @@ function AccountContext(props: Readonly<{
 }>): React.JSX.Element {
   return (
     <aside className="k-dashboard-context">
-      <header><span className="k-section-kicker">Contexto</span><h2>Conta e loja</h2></header>
+      <header><span className="k-section-kicker">Contexto</span><h2>Sua conta</h2></header>
       <dl>
         <div><dt>Conta</dt><dd>{accountStatus(props.tenantStatus, props.trialEndsAt)}</dd></div>
         <div><dt>Plano</dt><dd>{props.planName ?? props.planSlug ?? "Não identificado"}</dd></div>
         <div><dt>Clientes</dt><dd>{props.customers}</dd></div>
         <div><dt>Layout</dt><dd>{props.layout === "modern" ? "Modern" : "Classic"}</dd></div>
       </dl>
-      <Link className="k-text-action" to="/admin/store">Configurar Minha Loja →</Link>
+      <Link className="k-text-action" to="/admin/store">Configurar minha loja →</Link>
     </aside>
   );
 }
@@ -184,12 +184,12 @@ function AdminDashboard(): React.JSX.Element {
     <div className="k-page k-dashboard">
       <PageHead
         title={operations.store.name}
-        description="Visão operacional da loja, com o que merece atenção primeiro."
+        description="Acompanhe vendas, pedidos, estoque e tudo o que precisa da sua atenção hoje."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
       <section className="k-workspace-section" id="primeiros-passos">
         <header className="k-section-head">
-          <div><span className="k-section-kicker">Configuração guiada</span><h2>Primeiros passos</h2><p>Do cadastro da loja até o catálogo pronto, usando somente recursos reais da operação.</p></div>
+          <div><span className="k-section-kicker">Comece por aqui</span><h2>Deixe sua loja pronta para vender</h2><p>Complete os itens abaixo para publicar sua loja e começar a receber pedidos.</p></div>
         </header>
         <OnboardingChecklist data={data.onboarding} />
       </section>

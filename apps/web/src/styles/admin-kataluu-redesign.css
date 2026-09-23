@@ -1,0 +1,78 @@
+/* Kataluu merchant admin — white, calm and task-oriented. Loaded last on /admin. */
+.k-admin {
+  --merchant-bg:#fff;
+  --merchant-surface:#fff;
+  --merchant-sidebar-bg:#fff;
+  --merchant-ink:#18181b;
+  --merchant-muted:#71717a;
+  --merchant-soft:#f7f5fa;
+  --merchant-line:#eceaf0;
+  --merchant-line-strong:#ded9e7;
+  --merchant-accent:#74549d;
+  --merchant-accent-2:#9b7cc1;
+  --merchant-success:#24734d;
+  --merchant-danger:#b33c4a;
+  --merchant-warning:#946b20;
+  --merchant-sidebar:264px;
+  background:#fff;
+  color:var(--merchant-ink);
+}
+.k-admin__sidebar{padding:22px 14px 18px;background:#fff;border-right:1px solid #eeeaf2;}
+.k-admin__brand{padding:2px 10px 20px;margin-bottom:10px;border-bottom:1px solid #f0edf3;}
+.k-admin__brand-mark{width:36px;height:36px;border:0;border-radius:10px;background:#74549d;color:#fff;box-shadow:none;}
+.k-admin__brand-copy strong{font-size:15px;color:#211b28;}
+.k-admin__brand-copy small{font-size:11px;color:#8a8490;}
+.k-admin__nav{gap:17px;}
+.k-admin__nav-label{padding:0 10px 5px;color:#a09aa5;font-size:9px;letter-spacing:.12em;}
+.k-admin__nav a{min-height:38px;padding:8px 10px;border-radius:9px;color:#66606b;font-size:13px;font-weight:580;}
+.k-admin__nav a::before{display:none;}
+.k-admin__nav a:hover{background:#faf8fb;color:#342c3b;}
+.k-admin__nav a[data-status="active"]{background:#f3eef7;color:#67468f;font-weight:720;}
+.k-admin__nav a[data-status="active"] svg{color:#74549d;}
+.k-admin__sidebar-foot{gap:10px;padding:14px 8px 0;border-top:1px solid #f0edf3;}
+.k-admin__store-link{display:flex!important;align-items:center;justify-content:center;min-height:38px;padding:8px 10px;border:1px solid #e4deea;border-radius:9px;background:#fff;color:#5d4a6f!important;font-weight:680!important;}
+.k-admin__account{border:0;padding-top:8px;}
+.k-admin__avatar{border:0;background:#f3eef7;color:#74549d;}
+.k-admin__content{width:min(100%,1440px);padding:38px clamp(24px,4vw,58px) 72px;}
+.k-page{gap:28px;}
+.k-page__head{align-items:center;padding-bottom:2px;}
+.k-page__head h1{font-size:clamp(27px,3vw,36px);font-weight:720;color:#1f1a23;}
+.k-page__head p{margin-top:7px;font-size:13.5px;color:#7b7480;}
+.k-section-kicker{color:#9b929f!important;font-size:9.5px!important;font-weight:760!important;letter-spacing:.1em!important;text-transform:uppercase;}
+.k-button{min-height:40px;border-radius:9px;border-color:#e1dde5;color:#504957;}
+.k-button:hover{background:#faf9fb;border-color:#d2cbd8;}
+.k-button--primary{border-color:#74549d;background:#74549d;color:#fff;box-shadow:none;}
+.k-button--primary:hover{border-color:#624587;background:#624587;}
+.k-card,.k-table-wrap,.k-preview{border:1px solid #ece9ef;border-radius:12px;background:#fff;box-shadow:none!important;}
+.k-workspace-section{padding:0;}
+.k-section-head{margin-bottom:12px;}
+.k-section-head h2{color:#27222b;font-size:16px;font-weight:700;}
+.k-section-head p{color:#817a85;font-size:12.5px;}
+.k-dashboard-strip{overflow:hidden;border:1px solid #ece9ef;border-radius:12px;background:#fff;}
+.k-dashboard-strip>div{padding:18px!important;border:0!important;}
+.k-dashboard-strip>div+div{border-left:1px solid #eeeaf1!important;}
+.k-dashboard-strip span{font-size:11px;color:#8a838e;}
+.k-dashboard-strip strong{font-size:24px;color:#262129;}
+.k-dashboard-layout{gap:32px;}
+.k-dashboard-context{padding:18px;border:1px solid #ece9ef;border-radius:12px;background:#fff;}
+.k-dashboard-context h2{font-size:16px;}
+.k-attention-list,.k-quick-list,.k-config-list{border:1px solid #ece9ef;border-radius:12px;overflow:hidden;background:#fff;}
+.k-attention-list a,.k-quick-row,.k-config-row{padding:13px 15px;border:0!important;}
+.k-attention-list a+a,.k-quick-row+.k-quick-row,.k-config-row+.k-config-row{border-top:1px solid #f0edf2!important;}
+.k-attention-list a:hover,.k-quick-row:hover,.k-config-row:hover{background:#fbfafc;}
+.k-dashboard-activity{gap:14px;}
+.k-dashboard-activity .k-card{padding:16px;}
+.k-toolbar{padding:12px;border:1px solid #ece9ef;border-radius:12px;background:#fff;}
+.k-field input,.k-field textarea,.k-field select,.k-toolbar input,.k-toolbar select,.k-inline-editor input,.k-inline-editor select{border-color:#ded9e2;border-radius:9px;background:#fff;}
+.k-field input:focus,.k-field textarea:focus,.k-field select:focus,.k-toolbar input:focus,.k-toolbar select:focus,.k-inline-editor input:focus,.k-inline-editor select:focus{border-color:#9b7cc1;box-shadow:0 0 0 3px rgba(116,84,157,.1);}
+.k-table-wrap{border-radius:12px;}
+.k-table th{background:#fbfafc!important;color:#8c8491!important;}
+.k-table tbody tr:hover{background:#fcfbfd!important;}
+.k-record-editor,.k-composer{border-color:#ece9ef;}
+.k-editor-aside,.k-document-aside,.k-store-configurator__preview{border-left-color:#ece9ef;}
+.k-admin__mobilebar{background:rgba(255,255,255,.96);border-bottom-color:#ece9ef;}
+.k-admin__mobile-nav{background:#fff!important;border-top-color:#ece9ef!important;}
+.k-admin__mobile-nav a[data-status="active"]{background:#f3eef7!important;color:#74549d!important;}
+@media(max-width:979px){.k-admin__sidebar{box-shadow:18px 0 50px rgba(44,34,52,.12)}}
+@media(max-width:820px){.k-admin__content{padding:24px 16px 84px}.k-dashboard-context{padding:16px}.k-dashboard-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.k-dashboard-strip>div:nth-child(3){border-top:1px solid #eeeaf1!important}.k-dashboard-strip>div:nth-child(even){border-left:1px solid #eeeaf1!important}}
+@media(max-width:520px){.k-page__head h1{font-size:27px}.k-dashboard-strip{grid-template-columns:1fr}.k-dashboard-strip>div+div{border-left:0!important;border-top:1px solid #eeeaf1!important}}
