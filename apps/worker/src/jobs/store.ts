@@ -7,7 +7,7 @@ function text(row: Record<string, unknown>, key: string): string | null {
 }
 
 function kind(value: unknown): JobKind {
-  if (value === "email.send" || value === "media.process" || value === "billing.reconcile" || value === "domain.verify") return value;
+  if (value === "email.send" || value === "media.process" || value === "billing.reconcile" || value === "domain.verify" || value === "store_payment.reconcile" || value === "shipment.recover") return value;
   throw new Error("Operational job kind inválido.");
 }
 
