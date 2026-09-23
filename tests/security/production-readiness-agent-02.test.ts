@@ -180,3 +180,26 @@ describe("admin request-context performance boundary", () => {
     }
   });
 });
+
+
+describe("merchant admin visual and navigation contract", () => {
+  test("admin uses a white modern workspace and indigo interaction palette", () => {
+    const css = source("apps/web/src/styles/admin-kataluu-redesign.css");
+    expect(css).toContain("--merchant-bg:#fff");
+    expect(css).toContain("--merchant-accent:#4f46e5");
+    expect(css).toContain('"Segoe UI Variable"');
+    expect(css).toContain(".k-dashboard-layout");
+  });
+
+  test("completed onboarding does not dominate the operational dashboard", () => {
+    const dashboard = source("apps/web/src/routes/admin.index.tsx");
+    expect(dashboard).toContain("data.onboarding.progress.percent < 100");
+    expect(dashboard.indexOf("<DashboardStrip")).toBeLessThan(dashboard.indexOf("<AttentionSection"));
+  });
+
+  test("onboarding actions use SPA navigation instead of document reloads", () => {
+    const onboarding = source("apps/web/src/features/store-admin/onboarding-checklist.tsx");
+    expect(onboarding).toContain('import { Link } from "@tanstack/react-router"');
+    expect(onboarding).not.toContain("href={step.href}");
+  });
+});
