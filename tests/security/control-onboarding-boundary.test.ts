@@ -24,12 +24,13 @@ describe("control onboarding boundary", () => {
     expect(read).not.toContain("setup_completed");
   });
 
-  test("login preserva submit real, MFA e onboarding autenticado com destino canônico", () => {
+  test("login preserva submit real e onboarding autenticado com destino canônico", () => {
     const route = source("apps/web/src/routes/login.tsx");
     const mfa = source("apps/web/src/routes/mfa.tsx");
     expect(route).toContain("validateSearch: parseLoginSearch");
     expect(route).toContain("postLoginLocation(data.destination)");
-    expect(route).toContain('window.location.assign(`/mfa?next=${encodeURIComponent(next)}`)');
+    expect(route).toContain("window.location.assign(next)");
+    expect(route).not.toContain("/mfa?next=");
     expect(mfa).toContain('"/login?onboarding=true"');
     expect(route).toContain("getControlOnboarding");
     expect(route).toContain("await signInWithPassword(email, password)");

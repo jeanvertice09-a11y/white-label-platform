@@ -110,3 +110,18 @@ describe("store admin production authentication boundary", () => {
     expect(migration).toContain("d.type = 'store_admin'");
   });
 });
+
+
+describe("HML authentication flow", () => {
+  test("password login does not force TOTP enrollment while HML MFA is disabled", () => {
+    const login = source("apps/web/src/routes/login.tsx");
+    const context = source("apps/web/src/lib/server/route-context.server.ts");
+    const mfa = source("apps/web/src/routes/mfa.tsx");
+
+    expect(login).not.toContain("/mfa?next=");
+    expect(login).toContain("window.location.assign(next)");
+    expect(context).toContain("Intentionally disabled during HML");
+    expect(mfa).not.toContain("auth.mfa.enroll");
+    expect(mfa).not.toContain("challengeAndVerify");
+  });
+});

@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { getBrowserClient, signOut } from "../lib/supabase-client.ts";
 import "../styles/public.css";
 import "../styles/auth-responsive.css";
 
 export const Route = createFileRoute("/mfa")({
-  head: () => ({ meta: [{ title: "Verificação em duas etapas | Kataluu" }, { name: "robots", content: "noindex,nofollow" }] }),
-  component: MfaPage,
+  head: () => ({
+    meta: [
+      { title: "Acesso | Kataluu" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
+  component: MfaBypassPage,
 });
 
 const ALLOWED_NEXT = new Set(["/master", "/control", "/admin", "/login?onboarding=true"]);
-interface PreparedMfa { factorId: string; qrCode: string | null; message: string; }
 
 function safeNext(): string {
   if (typeof window === "undefined") return "/";
@@ -18,73 +21,20 @@ function safeNext(): string {
   return ALLOWED_NEXT.has(value) ? value : "/";
 }
 
-async function prepareMfa(): Promise<PreparedMfa | null> {
-  const client = getBrowserClient();
-  const user = await client.auth.getUser();
-  if (user.error) {
-    window.location.assign("/login");
-    return null;
-  }
-  const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (assurance.error) throw new Error("Não foi possível validar o nível de autenticação.");
-  if (assurance.data.currentLevel === "aal2") {
-    window.location.assign(safeNext());
-    return null;
-  }
-  const factors = await client.auth.mfa.listFactors();
-  if (factors.error) throw new Error(factors.error.message);
-  const verified = factors.data.totp.at(0);
-  if (verified) return {
-    factorId: verified.id,
-    qrCode: null,
-    message: "Digite o código de 6 dígitos do seu aplicativo autenticador.",
-  };
-  const enrollment = await client.auth.mfa.enroll({ factorType: "totp", friendlyName: "Kataluu" });
-  if (enrollment.error) throw new Error(enrollment.error.message);
-  return {
-    factorId: enrollment.data.id,
-    qrCode: enrollment.data.totp.qr_code,
-    message: "Escaneie o QR Code no seu aplicativo autenticador e confirme com o código de 6 dígitos.",
-  };
-}
-
-async function verifyMfa(factorId: string, code: string): Promise<void> {
-  const client = getBrowserClient();
-  const result = await client.auth.mfa.challengeAndVerify({ factorId, code });
-  if (result.error) throw new Error(result.error.message);
-  const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (assurance.error || assurance.data.currentLevel !== "aal2") {
-    throw new Error("A sessão ainda não atingiu o nível MFA exigido.");
-  }
-}
-
-function MfaPage(): React.JSX.Element {
-  const [factorId, setFactorId] = useState<string | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [message, setMessage] = useState("Preparando verificação segura…");
-  const [busy, setBusy] = useState(true);
+function MfaBypassPage(): React.JSX.Element {
   useEffect(() => {
-    let active = true;
-    void prepareMfa().then((prepared) => {
-      if (!active || !prepared) return;
-      setFactorId(prepared.factorId); setQrCode(prepared.qrCode); setMessage(prepared.message);
-    }).catch((error: unknown) => {
-      if (active) setMessage(error instanceof Error ? error.message : "Falha ao preparar MFA.");
-    }).finally(() => { if (active) setBusy(false); });
-    return () => { active = false; };
+    window.location.replace(safeNext());
   }, []);
-  async function verify(event: React.SyntheticEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault(); if (!factorId) return;
-    const value = new FormData(event.currentTarget).get("code");
-    const code = typeof value === "string" ? value.replace(/\s/g, "") : "";
-    if (!/^\d{6}$/.test(code)) { setMessage("Digite um código válido de 6 dígitos."); return; }
-    setBusy(true); setMessage("");
-    try { await verifyMfa(factorId, code); window.location.assign(safeNext()); }
-    catch (error) { setMessage(error instanceof Error ? error.message : "Código inválido."); }
-    finally { setBusy(false); }
-  }
-  async function leave(): Promise<void> {
-    setBusy(true); try { await signOut(); } finally { window.location.assign("/login"); }
-  }
-  return <main className="public-auth"><section className="public-auth__card" aria-labelledby="mfa-title"><div className="public-auth__intro"><span className="public-eyebrow">Segurança</span><h1 id="mfa-title">Verificação em duas etapas</h1><p>O segundo fator é fornecido pelo Supabase Auth. A aplicação não armazena o segredo TOTP.</p></div>{qrCode ? <div className="public-auth__notice"><strong>Cadastre seu autenticador</strong><p>Escaneie este QR Code antes de confirmar.</p><img src={qrCode} alt="QR Code para cadastro do autenticador" width="220" height="220" /></div> : null}<form onSubmit={(event) => { void verify(event); }}><fieldset disabled={busy || !factorId}><label htmlFor="mfa-code">Código do autenticador</label><input id="mfa-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /><button className="public-button public-button--primary" type="submit">{busy ? "Validando…" : "Confirmar código"}</button></fieldset></form>{message ? <p className="public-auth__message" role="status">{message}</p> : null}<button className="public-button public-button--quiet" type="button" disabled={busy} onClick={() => { void leave(); }}>Sair e trocar de usuário</button></section></main>;
+
+  return (
+    <main className="public-auth">
+      <section className="public-auth__card">
+        <div className="public-auth__intro">
+          <span className="public-eyebrow">Ambiente de testes</span>
+          <h1>Redirecionando…</h1>
+          <p>A verificação em duas etapas está temporariamente desativada neste ambiente.</p>
+        </div>
+      </section>
+    </main>
+  );
 }
