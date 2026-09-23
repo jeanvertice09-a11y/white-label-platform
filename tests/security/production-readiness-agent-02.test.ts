@@ -145,3 +145,15 @@ describe("HML admin runtime contracts", () => {
     expect(card).not.toContain("cause.message");
   });
 });
+
+
+describe("product nested route rendering", () => {
+  test("products parent renders an Outlet and list lives in the index child", () => {
+    const parent = source("apps/web/src/routes/admin.products.tsx");
+    const index = source("apps/web/src/routes/admin.products.index.tsx");
+    expect(parent).toContain("Outlet");
+    expect(parent).toContain("return <Outlet />");
+    expect(index).toContain('createFileRoute("/admin/products/")');
+    expect(index).toContain("<ProductsList");
+  });
+});
