@@ -6,6 +6,8 @@ function value(row: Record<string, unknown>, key: string): string {
   return typeof raw === "string" ? raw : "";
 }
 
+// Recovery scheduling intentionally stays beside the existing queue discovery so all operational work shares one idempotent pass.
+// eslint-disable-next-line max-lines-per-function
 export async function scheduleOperationalJobs(sql: WorkerSql): Promise<number> {
   const [domains,billing,media,storePayments,shipments] = await Promise.all([
     sql.query(
@@ -64,7 +66,7 @@ export async function scheduleOperationalJobs(sql: WorkerSql): Promise<number> {
     if (id && await enqueueJob(sql,{tenantId:value(row,"tenant_id"),storeId:value(row,"store_id")||null,
       kind:"media.process",payload:{assetId:id},idempotencyKey:`media:${id}:${status}`,maxAttempts:8})) created++;
   }
-  for(const row of storePayments){const id=value(row,"id"),updated=value(row,"updated_at");if(id&&await enqueueJob(sql,{tenantId:value(row,"tenant_id"),storeId:value(row,"store_id"),kind:"store_payment.reconcile",payload:{paymentId:id},idempotencyKey:`store-payment:${id}:${Math.floor(Date.parse(updated)/600000)}`,maxAttempts:12}))created++;}
+  for(const row of storePayments){const id=value(row,"id"),updated=value(row,"updated_at");if(id&&await enqueueJob(sql,{tenantId:value(row,"tenant_id"),storeId:value(row,"store_id"),kind:"store_payment.reconcile",payload:{paymentId:id},idempotencyKey:`store-payment:${id}:${String(Math.floor(Date.parse(updated)/600000))}`,maxAttempts:12}))created++;}
   for(const row of shipments){const id=value(row,"id"),status=value(row,"status");if(id&&await enqueueJob(sql,{tenantId:value(row,"tenant_id"),storeId:value(row,"store_id"),kind:"shipment.recover",payload:{shipmentId:id,orderId:value(row,"order_id")},idempotencyKey:`shipment:${id}:${status}`,maxAttempts:8}))created++;}
   return created;
 }
