@@ -5,6 +5,7 @@ export interface ControlTeamTenantMember {
   email: string | null;
   role: TenantRole;
   createdAt: string;
+  invitePending: boolean;
 }
 
 export interface ControlTeamStoreMember {
@@ -14,6 +15,7 @@ export interface ControlTeamStoreMember {
   storeName: string;
   role: StoreRole;
   createdAt: string;
+  invitePending: boolean;
 }
 
 export interface ControlTeamStoreOption {

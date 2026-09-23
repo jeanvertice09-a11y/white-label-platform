@@ -21,7 +21,7 @@ export async function loadControlTeamWorkspace(
 ): Promise<ControlTeamWorkspace> {
   const [tenantRows, storeRows, stores] = await Promise.all([
     sql.query(
-      `select tm.user_id::text, u.email::text, tm.role, tm.created_at::text
+      `select tm.user_id::text,u.email::text,u.email_confirmed_at::text,tm.role,tm.created_at::text
        from public.tenant_members tm
        left join auth.users u on u.id=tm.user_id
        where tm.tenant_id=$1::uuid
@@ -29,8 +29,8 @@ export async function loadControlTeamWorkspace(
       [tenantId],
     ),
     sql.query(
-      `select sm.user_id::text,u.email::text,sm.store_id::text,s.name store_name,
-              sm.role,sm.created_at::text
+      `select sm.user_id::text,u.email::text,u.email_confirmed_at::text,sm.store_id::text,
+              s.name store_name,sm.role,sm.created_at::text
        from public.store_members sm
        join public.stores s on s.tenant_id=sm.tenant_id and s.id=sm.store_id
        left join auth.users u on u.id=sm.user_id
@@ -39,9 +39,7 @@ export async function loadControlTeamWorkspace(
       [tenantId],
     ),
     sql.query(
-      `select id::text,name from public.stores
-       where tenant_id=$1::uuid
-       order by name,id`,
+      `select id::text,name from public.stores where tenant_id=$1::uuid order by name,id`,
       [tenantId],
     ),
   ]);
@@ -53,6 +51,7 @@ export async function loadControlTeamWorkspace(
       email: nullableText(row, "email"),
       role: text(row, "role") as TenantRole,
       createdAt: text(row, "created_at"),
+      invitePending: nullableText(row, "email_confirmed_at") === null,
     })),
     storeMembers: storeRows.map((row) => ({
       userId: text(row, "user_id"),
@@ -61,6 +60,7 @@ export async function loadControlTeamWorkspace(
       storeName: text(row, "store_name"),
       role: text(row, "role") as StoreRole,
       createdAt: text(row, "created_at"),
+      invitePending: nullableText(row, "email_confirmed_at") === null,
     })),
     stores: stores.map((row) => ({ id: text(row, "id"), name: text(row, "name") })),
   };
