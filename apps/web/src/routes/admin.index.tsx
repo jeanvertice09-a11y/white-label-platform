@@ -11,8 +11,8 @@ import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
   loader: async () => {
-    const [operations, analytics, onboarding] = await Promise.all([
-      getMerchantOperationsDashboard(),
+    const operations = await getMerchantOperationsDashboard();
+    const [analytics, onboarding] = await Promise.all([
       getCurrentStorefrontAnalytics(),
       getMerchantOnboarding(),
     ]);
