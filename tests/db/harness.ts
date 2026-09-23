@@ -55,6 +55,7 @@ const MIGRATIONS = [
   "0039_tenant_billing_gateway_invariant.sql",
   "0040_melhor_envio_shipping.sql",
   "0041_authenticated_store_admin_resolution.sql",
+  "0042_operational_recovery.sql",
   "0043_authenticated_store_admin_destination.sql",
   "0044_membership_self_read_operational_scope.sql",
 ];
