@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/orders/")({
   loader: async () => {
     const [orders, products] = await Promise.all([
       listMerchantOrders({ data: { page: 1, pageSize: 20 } }),
-      listMerchantProducts({ data: { page: 1, pageSize: 100, sort: "name" } }),
+      listMerchantProducts({ data: { page: 1, pageSize: 48, sort: "name" } }),
     ]);
     return { orders, products };
   },
