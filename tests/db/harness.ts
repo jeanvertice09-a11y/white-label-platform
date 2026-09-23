@@ -54,6 +54,7 @@ const MIGRATIONS = [
   "0038_tenant_billing_checkout.sql",
   "0039_tenant_billing_gateway_invariant.sql",
   "0040_melhor_envio_shipping.sql",
+  "0041_authenticated_store_admin_resolution.sql",
 ];
 
 class PGliteDb implements TestDb {
