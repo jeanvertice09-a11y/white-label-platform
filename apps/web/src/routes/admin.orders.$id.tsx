@@ -9,6 +9,7 @@ import { getMerchantOrderDetail } from "../lib/server/operations-orders.function
 interface OrderDetailData {
   order: Order;
   timeline: OrderTimelineEntry[];
+  payment: { paymentId:string; status:string; providerPaymentId:string|null; checkout:{expiresAt:string|null} } | null;
 }
 
 async function loadDetail(id: string): Promise<OrderDetailData> {
@@ -109,17 +110,19 @@ function OrderSidebar({ order }: Readonly<{ order: Order }>): React.JSX.Element 
 }
 
 function OrderDetailPage(): React.JSX.Element {
-  const { order, timeline } = Route.useLoaderData();
+  const { order, timeline, payment } = Route.useLoaderData();
   return (
     <div className="k-page">
       <PageHead
         title={`Pedido ${formatOrderNumber(order.orderNumber)}`}
         description={`${new Date(order.createdAt).toLocaleString("pt-BR")} · ${order.origin}`}
-        action={<OrderActions orderId={order.id} status={order.status} />}
+        action={<OrderActions orderId={order.id} status={order.status} paymentStatus={order.paymentStatus} />}
       />
       <div className="k-document-meta">
         <span>Status</span>
         <strong>{order.status}</strong>
+        <span>Pagamento</span><strong>{order.paymentStatus}</strong>
+        {payment ? <><span>Gateway</span><strong>Mercado Pago · {payment.status}</strong></> : null}
       </div>
       <div className="k-document-layout">
         <main className="k-document-main">
