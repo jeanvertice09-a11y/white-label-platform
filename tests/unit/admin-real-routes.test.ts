@@ -29,6 +29,8 @@ describe("admin real routes lot 3", () => {
     expect(dashboard).toContain("Promise.allSettled");
     expect(dashboard).toContain('analyticsResult.status === "fulfilled"');
     expect(dashboard).toContain('onboardingResult.status === "fulfilled"');
+    expect(dashboard).toContain('operationsResult.status === "fulfilled"');
+    expect(dashboard).toContain("Indicadores temporariamente indisponíveis");
     expect(dashboard).toContain("Checklist temporariamente indisponível.");
     expect(dashboard).toContain("Analytics temporariamente indisponível.");
   });
