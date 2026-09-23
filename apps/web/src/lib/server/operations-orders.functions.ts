@@ -5,6 +5,7 @@ import { createOrderRepository } from "@white-label/orders";
 import { normalizeCustomerPhone } from "@white-label/customers";
 import { createMerchantOperationsContext } from "./operations-context.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
+import { getStoreOrderPayment, refundStoreOrderPayment } from "./mercadopago-store-payment.server.ts";
 
 const uuid = z.string().uuid();
 const idSchema = z.object({ id: z.string().uuid() });
@@ -97,8 +98,11 @@ export const getMerchantOrderDetail = createServerFn({ method: "GET" })
     const current = await context();
     const order = await current.repository.getById(current.scope, data.id);
     if (!order) return null;
-    const timeline = await current.repository.getTimeline(current.scope, data.id);
-    return { order, timeline };
+    const [timeline, payment] = await Promise.all([
+      current.repository.getTimeline(current.scope, data.id),
+      getStoreOrderPayment(current.scope, data.id),
+    ]);
+    return { order, timeline, payment };
   });
 
 export const confirmMerchantOrder = createServerFn({ method: "POST" })
@@ -125,4 +129,19 @@ export const advanceMerchantOrder = createServerFn({ method: "POST" })
       data.status,
       current.userId,
     );
+  });
+
+export const refundMerchantOrderPayment = createServerFn({ method: "POST" })
+  .validator(idSchema)
+  .handler(async ({ data }) => {
+    const current = await context();
+    const order = await current.repository.getById(current.scope, data.id);
+    if (!order) throw new Error("Pedido não encontrado.");
+    const result = await refundStoreOrderPayment(current.scope, data.id);
+    await current.sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       values($1::uuid,$2::uuid,$3::uuid,'payment.refund_requested','order',$4,jsonb_build_object('payment_id',$5))`,
+      [current.userId,current.scope.tenantId,current.scope.storeId,data.id,result.paymentId],
+    );
+    return result;
   });
