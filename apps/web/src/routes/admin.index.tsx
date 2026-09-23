@@ -11,12 +11,17 @@ import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
   loader: async () => {
-    const operations = await getMerchantOperationsDashboard();
-    const [analytics, onboarding] = await Promise.all([
+    const [operationsResult, analyticsResult, onboardingResult] = await Promise.allSettled([
+      getMerchantOperationsDashboard(),
       getCurrentStorefrontAnalytics(),
       getMerchantOnboarding(),
     ]);
-    return { operations, analytics, onboarding };
+    if (operationsResult.status === "rejected") throw operationsResult.reason;
+    return {
+      operations: operationsResult.value,
+      analytics: analyticsResult.status === "fulfilled" ? analyticsResult.value : null,
+      onboarding: onboardingResult.status === "fulfilled" ? onboardingResult.value : null,
+    };
   },
   component: AdminDashboard,
 });
@@ -191,7 +196,7 @@ function AdminDashboard(): React.JSX.Element {
         <header className="k-section-head">
           <div><span className="k-section-kicker">Comece por aqui</span><h2>Deixe sua loja pronta para vender</h2><p>Complete os itens abaixo para publicar sua loja e começar a receber pedidos.</p></div>
         </header>
-        <OnboardingChecklist data={data.onboarding} />
+        {data.onboarding ? <OnboardingChecklist data={data.onboarding} /> : <p className="k-muted">Checklist temporariamente indisponível.</p>}
       </section>
       <DashboardStrip
         ordersToday={metrics.ordersToday}
@@ -199,7 +204,7 @@ function AdminDashboard(): React.JSX.Element {
         revenuePeriodCents={metrics.revenuePeriodCents}
         averageTicketCents={metrics.averageTicketCents}
       />
-      <StorefrontAnalyticsPanel analytics={data.analytics} />
+      {data.analytics ? <StorefrontAnalyticsPanel analytics={data.analytics} /> : <section className="k-workspace-section"><p className="k-muted">Analytics temporariamente indisponível.</p></section>}
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
