@@ -47,7 +47,7 @@ describe("security production hardening boundary", () => {
     expect(webhookStoreSource).toContain("where gateway_account_id=$1::uuid and provider_payment_id=$2");
     expect(lifecycleSource).toContain("public.payments.id=pc.id and public.payments.gateway_account_id=$2::uuid");
     expect(webhookStoreSource).toContain("on conflict (provider,gateway_account_id,external_event_id) do nothing");
-    expect(lifecycleSource).toContain("$4::timestamptz >= provider_updated_at");
+    expect(lifecycleSource).toContain("$4::timestamptz >= public.payments.provider_updated_at");
   });
 
   test("refund inseguro Asaas continua fechado e Mercado Pago mantém idempotência", () => {
