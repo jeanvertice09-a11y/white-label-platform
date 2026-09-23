@@ -1,21 +1,23 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { formatOrderNumber } from "@white-label/orders";
 import type { Order, OrderTimelineEntry } from "@white-label/orders";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
 import { OrderActions } from "../features/store-admin/order-actions.tsx";
+import { getOrderShipment, generateOrderShipment } from "../lib/server/melhor-envio.functions.ts";
 import { getMerchantOrderDetail } from "../lib/server/operations-orders.functions.ts";
 
 interface OrderDetailData {
   order: Order;
   timeline: OrderTimelineEntry[];
   payment: { paymentId:string; status:string; providerPaymentId:string|null; checkout:{expiresAt:string|null} } | null;
+  shipment: {serviceName:string;companyName:string;quotedPriceCents:number;quotedDeliveryDays:number;status:string;providerShipmentId:string|null;labelUrl:string|null;trackingCode:string|null}|null;
 }
 
 async function loadDetail(id: string): Promise<OrderDetailData> {
   const detail = await getMerchantOrderDetail({ data: { id } });
   if (!detail) throw new Error("Pedido não encontrado");
-  return detail;
+  const shipment=await getOrderShipment({data:{orderId:id}});return {...detail,shipment};
 }
 
 export const Route = createFileRoute("/admin/orders/$id")({
@@ -110,7 +112,7 @@ function OrderSidebar({ order }: Readonly<{ order: Order }>): React.JSX.Element 
 }
 
 function OrderDetailPage(): React.JSX.Element {
-  const { order, timeline, payment } = Route.useLoaderData();
+  const { order, timeline, payment, shipment } = Route.useLoaderData();const router=useRouter();
   return (
     <div className="k-page">
       <PageHead
@@ -127,6 +129,7 @@ function OrderDetailPage(): React.JSX.Element {
       <div className="k-document-layout">
         <main className="k-document-main">
           <OrderItems order={order} />
+          {shipment?<section className="k-document-section"><header className="k-document-section__head"><h2>Entrega</h2><span>{shipment.companyName} · {shipment.serviceName}</span></header><div className="k-document-meta"><span>Status</span><strong>{shipment.status}</strong><span>Prazo</span><strong>{shipment.quotedDeliveryDays} dia(s)</strong>{shipment.trackingCode?<><span>Rastreio</span><strong>{shipment.trackingCode}</strong></>:null}</div><div className="k-actions">{!shipment.providerShipmentId&&order.paymentStatus==="paid"?<button className="k-button k-button--primary" type="button" onClick={()=>{void generateOrderShipment({data:{orderId:order.id}}).then(()=>router.invalidate());}}>Gerar etiqueta</button>:null}{shipment.labelUrl?<a className="k-button" href={shipment.labelUrl} target="_blank" rel="noreferrer">Abrir etiqueta</a>:null}</div></section>:null}
           <Timeline items={timeline} />
         </main>
         <OrderSidebar order={order} />

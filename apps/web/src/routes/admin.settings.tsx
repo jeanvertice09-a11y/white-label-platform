@@ -88,7 +88,7 @@ function SettingsPage(): React.JSX.Element {
 
       <section className="k-workspace-section">
         <header className="k-section-head"><div><span className="k-section-kicker">Entregas</span><h2>Frete e logística</h2><p>Conecte o Melhor Envio uma vez para cotar e operar as entregas da loja.</p></div></header>
-        <MelhorEnvioCard connected={data.melhorEnvio.connected} enabled={data.melhorEnvio.enabled} postalCode={data.melhorEnvio.postalCode} />
+        <MelhorEnvioCard connected={data.melhorEnvio.connected} enabled={data.melhorEnvio.enabled} postalCode={data.melhorEnvio.postalCode} shipperName={data.melhorEnvio.shipperName} />
       </section>
 
       <section className="k-workspace-section">
