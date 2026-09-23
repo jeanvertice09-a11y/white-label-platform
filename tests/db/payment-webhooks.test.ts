@@ -125,7 +125,7 @@ describe("fase 11 payment webhooks", () => {
     expect(rows.at(0)?.["total"]).toBe(1);
   });
 
-  test("dois workers concorrentes aplicam pagamento uma única vez e não tocam Inventory", async () => {
+  test("dois workers concorrentes aplicam pagamento uma única vez e fecham pedido online", async () => {
     currentStatus = "captured";
     const event = await persist("evt-concurrent");
     const stockBefore = await h.db.query(
@@ -147,7 +147,7 @@ describe("fase 11 payment webhooks", () => {
       [orderId],
     );
     expect(order.at(0)?.["payment_status"]).toBe("paid");
-    expect(order.at(0)?.["status"]).toBe("pending");
+    expect(order.at(0)?.["status"]).toBe("confirmed");
     const stockAfter = await h.db.query(
       "select count(*)::int total from public.stock_movements",
     );
