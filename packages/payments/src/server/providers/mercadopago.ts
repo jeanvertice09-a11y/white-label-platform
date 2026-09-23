@@ -16,7 +16,7 @@ export class MercadoPagoProvider implements PaymentProvider {
       transaction_amount: centsToDecimal(input.amountCents), description: input.description ?? "Pagamento", payment_method_id: "pix",
       external_reference: input.externalReference, payer: { email: input.payerEmail },
     }) });
-    const body = await readJson(response); return { providerPaymentId: asProviderPaymentId(body["id"]) };
+    const body = await readJson(response); const providerPaymentId=asProviderPaymentId(body["id"]); const checkout=paymentCheckout(body); return { providerPaymentId, ...(checkout?{checkout}:{}) };
   }
   private async createStorePixOrder(input: CreatePaymentIntentInput, key: string): Promise<CreatePaymentIntentResult> {
     const amount = centsToDecimal(input.amountCents).toFixed(2);
@@ -30,6 +30,11 @@ export class MercadoPagoProvider implements PaymentProvider {
       qrCode: textOrNull(method["qr_code"]), qrCodeBase64: textOrNull(method["qr_code_base64"]),
       ticketUrl: textOrNull(method["ticket_url"]), expiresAt: textOrNull(payment["expiration_time"]),
     } };
+  }
+  async getCheckoutData(providerPaymentId: ProviderPaymentId) {
+    const response=await this.http(`${BASE_URL}/v1/${providerPaymentId.startsWith("ORD")?"orders":"payments"}/${encodeURIComponent(providerPaymentId)}`,{headers:this.headers()});
+    const body=await readJson(response); if(providerPaymentId.startsWith("ORD")){const p=firstPayment(body),m=objectBody(p["payment_method"]);return {qrCode:textOrNull(m["qr_code"]),qrCodeBase64:textOrNull(m["qr_code_base64"]),ticketUrl:textOrNull(m["ticket_url"]),expiresAt:textOrNull(p["expiration_time"])};}
+    return paymentCheckout(body);
   }
   async fetchStatus(providerPaymentId: ProviderPaymentId): Promise<PaymentStatus> {
     const isOrder = providerPaymentId.startsWith("ORD");
@@ -71,3 +76,5 @@ function signatureValue(signature:string,key:string):string|null{for(const part 
 function textValue(value:unknown):string{return typeof value==="string"||typeof value==="number"?String(value):"";}
 function textOrNull(value:unknown):string|null{return typeof value==="string"&&value?value:null;}
 function objectBody(value:unknown):Record<string,unknown>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:{};}
+
+function paymentCheckout(body:Record<string,unknown>){const poi=objectBody(body["point_of_interaction"]),tx=objectBody(poi["transaction_data"]);const qr=textOrNull(tx["qr_code"]),img=textOrNull(tx["qr_code_base64"]),url=textOrNull(tx["ticket_url"]);if(!qr&&!img&&!url)return null;return {qrCode:qr,qrCodeBase64:img,ticketUrl:url,expiresAt:textOrNull(body["date_of_expiration"])};}

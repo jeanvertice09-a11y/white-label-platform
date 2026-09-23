@@ -99,6 +99,8 @@ export interface RefundPaymentInput {
   idempotencyKey?: string;
 }
 
+export interface ProviderCustomerInput { name: string; taxId: string; email: string; externalReference: string; }
+
 export interface PaymentProvider {
   readonly name: PaymentProviderName;
   createIntent(
@@ -107,6 +109,8 @@ export interface PaymentProvider {
   fetchStatus(providerPaymentId: ProviderPaymentId): Promise<PaymentStatus>;
   verifyWebhook(input: ProviderWebhookInput): Promise<boolean>;
   normalizeWebhook(payload: unknown): Promise<NormalizedProviderEvent>;
+  ensureCustomer?(input: ProviderCustomerInput): Promise<string>;
+  getCheckoutData?(providerPaymentId: ProviderPaymentId): Promise<PaymentCheckoutData | null>;
   refund(
     input: RefundPaymentInput,
   ): Promise<{ providerPaymentId: ProviderPaymentId }>;

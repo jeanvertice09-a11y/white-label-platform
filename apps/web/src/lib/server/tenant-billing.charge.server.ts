@@ -1,8 +1,12 @@
+/* eslint-disable max-lines */
 import { createHash } from "node:crypto";
 import type {
   GatewayAccountId,
   PaymentProviderName,
   PaymentStatus,
+  PaymentCheckoutData,
+  PaymentProvider,
+  ProviderPaymentId,
 } from "@white-label/payments";
 import type { ControlSql } from "./control-merchants.shared.server.ts";
 import type { TenantProviderLoader } from "./tenant-billing.provider.server.ts";
@@ -19,6 +23,9 @@ interface ChargeTarget {
   trialEndsAt: string | null;
   currentPeriodEndsAt: string | null;
   ownerEmail: string | null;
+  billingName: string | null;
+  billingTaxId: string | null;
+  billingEmail: string | null;
   gatewayId: string;
   provider: PaymentProviderName;
 }
@@ -36,6 +43,7 @@ export interface TenantChargeResult {
   provider: PaymentProviderName;
   providerPaymentId: string | null;
   created: boolean;
+  checkout?: PaymentCheckoutData;
 }
 
 export async function createTenantMerchantCharge(
@@ -52,7 +60,11 @@ export async function createTenantMerchantCharge(
   const key = chargeKey(target);
   const reserved = await reservePayment(sql, target, key);
   assertReservedGateway(reserved, target.gatewayId);
-  if (reserved.providerPaymentId) return existingResult(reserved, target.provider);
+  if (reserved.providerPaymentId) {
+    const provider = await providers.load({ id: target.gatewayId, provider: target.provider, tenantId: target.tenantId });
+    const checkout = provider.getCheckoutData ? await provider.getCheckoutData(reserved.providerPaymentId as ProviderPaymentId) : null;
+    return { ...existingResult(reserved, target.provider), ...(checkout ? { checkout } : {}) };
+  }
   const claimed = await claimProviderCreate(sql, reserved.id);
   if (!claimed) return existingResult(reserved, target.provider);
   try {
@@ -61,6 +73,10 @@ export async function createTenantMerchantCharge(
       provider: target.provider,
       tenantId: target.tenantId,
     });
+    let providerCustomerId: string | undefined;
+    if (target.provider === "asaas") {
+      providerCustomerId = await resolveAsaasCustomer(sql, provider, target);
+    }
     const created = await provider.createIntent({
       level: "tenant_billing",
       tenantId: target.tenantId,
@@ -72,6 +88,8 @@ export async function createTenantMerchantCharge(
       externalReference: `tenant-subscription:${target.subscriptionId}`,
       payerEmail: target.ownerEmail ?? undefined,
       paymentMethod: "pix",
+      providerCustomerId,
+      dueDate: target.provider === "asaas" ? now.toISOString().slice(0, 10) : undefined,
     });
     await finalizePayment(sql, actorUserId, reserved.id, created.providerPaymentId);
     return {
@@ -80,6 +98,7 @@ export async function createTenantMerchantCharge(
       provider: target.provider,
       providerPaymentId: created.providerPaymentId,
       created: true,
+      ...(created.checkout ? { checkout: created.checkout } : {}),
     };
   } catch (error) {
     await releaseProviderCreate(sql, reserved.id);
@@ -111,8 +130,8 @@ function assertChargeReady(target: ChargeTarget, now: Date): void {
   if (target.provider === "mercadopago" && !target.ownerEmail) {
     throw new Error("Lojista sem e-mail para cobrança Mercado Pago.");
   }
-  if (target.provider === "asaas") {
-    throw new Error("Asaas tenant_billing requer customer mapping server-side ainda não definido.");
+  if (target.provider === "asaas" && (!target.billingName || !target.billingTaxId || !target.billingEmail)) {
+    throw new Error("Asaas customer mapping indisponível: preencha nome/razão social, CPF/CNPJ e e-mail de cobrança.");
   }
 }
 
@@ -156,6 +175,9 @@ function mapChargeTarget(row: Record<string, unknown>, gateway: Record<string, u
     trialEndsAt: nullableText(row, "trial_ends_at"),
     currentPeriodEndsAt: nullableText(row, "current_period_ends_at"),
     ownerEmail: nullableText(row, "owner_email"),
+    billingName: nullableText(row, "billing_name"),
+    billingTaxId: nullableText(row, "billing_tax_id"),
+    billingEmail: nullableText(row, "billing_email"),
     gatewayId: requiredText(gateway, "id"),
     provider: requiredText(gateway, "provider") as PaymentProviderName,
   };
@@ -240,6 +262,15 @@ async function finalizePayment(
   if (!rows.at(0)) throw new Error("Cobrança tenant_billing não pôde ser vinculada ao provider.");
 }
 
+async function resolveAsaasCustomer(sql: ControlSql, provider: PaymentProvider, target: ChargeTarget): Promise<string> {
+  const rows=await sql.query(`select provider_customer_id from private.tenant_billing_provider_customers where gateway_account_id=$1::uuid and tenant_id=$2::uuid and store_id=$3::uuid limit 1`,[target.gatewayId,target.tenantId,target.storeId]);
+  const existing=rows[0]?.["provider_customer_id"]; if(typeof existing==="string"&&existing)return existing;
+  if(!provider.ensureCustomer||!target.billingName||!target.billingTaxId||!target.billingEmail) throw new Error("Cadastro Asaas do pagador indisponível.");
+  const id=await provider.ensureCustomer({name:target.billingName,taxId:target.billingTaxId,email:target.billingEmail,externalReference:`kataluu-store:${target.storeId}`});
+  await sql.query(`insert into private.tenant_billing_provider_customers(gateway_account_id,tenant_id,store_id,provider,provider_customer_id) values($1::uuid,$2::uuid,$3::uuid,'asaas',$4) on conflict(gateway_account_id,store_id) do update set provider_customer_id=excluded.provider_customer_id,updated_at=now()`,[target.gatewayId,target.tenantId,target.storeId,id]);
+  return id;
+}
+
 function mapReserved(row: Record<string, unknown>): ReservedPayment {
   return {
     id: requiredText(row, "id"),
@@ -284,10 +315,12 @@ function safeInteger(row: Record<string, unknown>, key: string): number {
 
 const CHARGE_TARGET_SQL = `select s.id::text as subscription_id,s.tenant_id::text,s.store_id::text,
   s.status,s.started_at::text,s.trial_ends_at::text,s.current_period_ends_at::text,
-  p.name as plan_name,p.price_cents,p.billing_interval,owner.email as owner_email
+  p.name as plan_name,p.price_cents,p.billing_interval,owner.email as owner_email,
+  bp.legal_name as billing_name,bp.tax_id as billing_tax_id,bp.billing_email
 from public.store_subscriptions s
 join public.tenant_plans p
   on p.tenant_id=s.tenant_id and p.id=s.tenant_plan_id and p.active=true
+left join public.store_billing_profiles bp on bp.tenant_id=s.tenant_id and bp.store_id=s.store_id
 left join lateral (
   select u.email from public.store_members sm
   join auth.users u on u.id=sm.user_id

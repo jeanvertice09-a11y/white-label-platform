@@ -127,7 +127,7 @@ export function ControlGatewayManager({
         <header>
           <span>Meios de pagamento</span>
           <h2>Configuração de cobrança</h2>
-          <p>Credenciais ficam protegidas no servidor. Cobranças reais permanecem desativadas nesta fase.</p>
+          <p>Credenciais ficam protegidas no servidor. A conta ativa recebe diretamente as cobranças dos planos dos lojistas; mantenha somente uma configuração ativa.</p>
         </header>
         {initial.canManage ? (
           <>

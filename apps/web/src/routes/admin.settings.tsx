@@ -4,6 +4,8 @@ import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { PublicCatalogActions } from "../features/store-admin/public-catalog-actions.tsx";
 import { StoreDataExport } from "../features/store-admin/store-data-export.tsx";
 import { MercadoPagoConnectCard } from "../features/store-admin/mercadopago-connect-card.tsx";
+import { MerchantSubscriptionBilling } from "../features/store-admin/merchant-subscription-billing.tsx";
+import { getMerchantSubscriptionBilling } from "../lib/server/merchant-subscription-billing.functions.ts";
 import { getMerchantMercadoPagoConnection } from "../lib/server/mercadopago-oauth.functions.ts";
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
 import { getMerchantSettingsOverview } from "../lib/server/merchant-settings.functions.ts";
@@ -11,12 +13,13 @@ import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/settings")({
   loader: async () => {
-    const [settings, storefront, mercadoPago] = await Promise.all([
+    const [settings, storefront, mercadoPago, subscriptionBilling] = await Promise.all([
       getMerchantSettingsOverview(),
       getMerchantStorefrontStatus(),
       getMerchantMercadoPagoConnection(),
+      getMerchantSubscriptionBilling(),
     ]);
-    return { settings, storefront, mercadoPago };
+    return { settings, storefront, mercadoPago, subscriptionBilling };
   },
   component: SettingsPage,
 });
@@ -82,6 +85,7 @@ function SettingsPage(): React.JSX.Element {
 
       <section className="k-workspace-section">
         <header className="k-section-head"><div><span className="k-section-kicker">Conta e plano</span><h2>Seu acesso e assinatura atual</h2><p>Informações somente de leitura; alterações de plano continuam no fluxo administrativo/billing existente.</p></div></header>
+        <MerchantSubscriptionBilling data={data.subscriptionBilling} />
         <div className="k-card">
           <h3>Plano atual</h3>
           {plan ? <dl className="k-detail-list">

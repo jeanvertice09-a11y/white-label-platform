@@ -146,7 +146,7 @@ export async function createStoreSubscription(
        tenant_id,store_id,tenant_plan_id,status
      )
      select $1,$2,p.id,
-       case when $4::boolean and p.trial_enabled then 'trialing' else 'active' end
+       case when p.price_cents=0 then 'active' when $4::boolean and p.trial_enabled then 'trialing' else 'past_due' end
      from public.tenant_plans p
      join public.stores s on s.tenant_id=p.tenant_id and s.id=$2
      where p.tenant_id=$1 and p.id=$3 and p.active=true
