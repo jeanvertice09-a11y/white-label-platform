@@ -2,7 +2,9 @@ export type JobKind =
   | "email.send"
   | "media.process"
   | "billing.reconcile"
-  | "domain.verify";
+  | "domain.verify"
+  | "store_payment.reconcile"
+  | "shipment.recover";
 
 export interface OperationalJob {
   id: string;
