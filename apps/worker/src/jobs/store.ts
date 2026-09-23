@@ -30,6 +30,40 @@ export async function enqueueJob(sql: WorkerSql, input: EnqueueJob): Promise<str
 }
 
 
+export interface OperationalQueueHealth {
+  queued: number;
+  retry: number;
+  running: number;
+  deadLetter: number;
+  expiredLeases: number;
+  oldestReadyAgeSeconds: number | null;
+}
+
+export async function getOperationalQueueHealth(sql: WorkerSql): Promise<OperationalQueueHealth> {
+  const rows = await sql.query(
+    `select
+       count(*) filter (where status='queued')::integer as queued,
+       count(*) filter (where status='retry')::integer as retry,
+       count(*) filter (where status='running')::integer as running,
+       count(*) filter (where status='dead_letter')::integer as dead_letter,
+       count(*) filter (where status='running' and lease_expires_at < now())::integer as expired_leases,
+       extract(epoch from (now()-min(created_at) filter (
+         where status in ('queued','retry') and available_at <= now()
+       )))::integer as oldest_ready_age_seconds
+     from public.operational_jobs`,
+    [],
+  );
+  const row=rows[0] ?? {};
+  const age=row["oldest_ready_age_seconds"];
+  return {
+    queued:Number(row["queued"] ?? 0),
+    retry:Number(row["retry"] ?? 0),
+    running:Number(row["running"] ?? 0),
+    deadLetter:Number(row["dead_letter"] ?? 0),
+    expiredLeases:Number(row["expired_leases"] ?? 0),
+    oldestReadyAgeSeconds:age === null || age === undefined ? null : Number(age),
+  };
+}
 
 export async function purgeCompletedJobs(sql: WorkerSql): Promise<number> {
   const rows = await sql.query(
