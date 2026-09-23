@@ -1,5 +1,5 @@
 import { createCredentialVaultFromEnv, createPaymentProvider } from "@white-label/payments/server";
-import type { GatewayAccountId, PaymentCheckoutData } from "@white-label/payments";
+import type { GatewayAccountId, PaymentCheckoutData, ProviderPaymentId } from "@white-label/payments";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 const MP_TOKEN_URL="https://api.mercadopago.com/oauth/token";
 type Scope={tenantId:string;storeId:string}; type Gateway={id:string;accessCipher:string;refreshCipher:string;expiresAt:string|null};
@@ -65,6 +65,6 @@ export async function refundStoreOrderPayment(scope:Scope,orderId:string):Promis
  const providerPaymentId=row["provider_payment_id"],gatewayAccountId=row["gateway_account_id"];if(typeof providerPaymentId!=="string"||typeof gatewayAccountId!=="string")throw new Error("Pagamento sem referência do Mercado Pago.");
  await ensureMercadoPagoGatewayAccessToken(gatewayAccountId);const loaded=await gateway(scope);if(loaded.id!==gatewayAccountId)throw new Error("Gateway do pagamento não pertence à loja.");
  const token=await accessToken(loaded),provider=createPaymentProvider("mercadopago",{credentials:token,webhookSecret:null},{writesEnabled:true});
- await provider.refund({providerPaymentId:providerPaymentId as import("@white-label/payments").ProviderPaymentId,idempotencyKey:`refund-order-${orderId}`});
+ await provider.refund({providerPaymentId:providerPaymentId as ProviderPaymentId,idempotencyKey:`refund-order-${orderId}`});
  return{paymentId:String(row["id"]),status:"refund_requested"};
 }
