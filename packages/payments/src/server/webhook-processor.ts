@@ -67,6 +67,7 @@ export async function processWebhookEvent(
       event.gatewayAccountId,
       status,
       normalized.occurredAt,
+      target.orderId !== null,
     );
     await applyFinancialEffects(sql, target.id, status);
     await markWebhookDone(sql, event.id, "processed", target.id, status);
@@ -101,6 +102,7 @@ export async function reconcilePaymentStatus(
     gatewayAccountId,
     status,
     null,
+    target.orderId !== null,
   );
   await applyFinancialEffects(sql, target.id, status);
   await sql.query(

@@ -139,12 +139,14 @@ export async function applyPaymentStatus(
   gatewayAccountId: string,
   status: PaymentStatus,
   occurredAt: string | null,
+  applyOrderLifecycle = false,
 ): Promise<boolean> {
   const rows = await sql.query(APPLY_STATUS_SQL, [
     paymentId,
     gatewayAccountId,
     status,
     occurredAt,
+    applyOrderLifecycle,
   ]);
   return rows.at(0)?.["changed"] === true;
 }
@@ -207,48 +209,4 @@ function providerName(value: unknown): PaymentProviderName {
   throw new Error("Provider persistido inválido.");
 }
 
-const APPLY_STATUS_SQL = `with changed as (
-  update public.payments
-  set status=$3,
-      provider_updated_at=coalesce($4::timestamptz,provider_updated_at,now()),
-      updated_at=now()
-  where id=$1::uuid and gateway_account_id=$2::uuid
-    and status is distinct from $3
-    and (
-      (status='pending' and $3 in ('authorized','captured','failed','refunded','chargeback'))
-      or (status='authorized' and $3 in ('captured','failed','refunded','chargeback'))
-      or (status='captured' and $3 in ('refunded','chargeback'))
-    )
-    and (
-      $4::timestamptz is null
-      or provider_updated_at is null
-      or $4::timestamptz >= provider_updated_at
-    )
-  returning id,tenant_id,store_id,order_id,status
-), order_change as (
-  update public.orders o
-  set payment_status=case
-    when c.status='captured' then 'paid'
-    when c.status in ('failed','chargeback') then 'failed'
-    when c.status='refunded' then 'refunded'
-    else o.payment_status end,
-    updated_at=now()
-  from changed c
-  where c.order_id is not null
-    and o.id=c.order_id and o.tenant_id=c.tenant_id and o.store_id=c.store_id
-    and c.status in ('captured','failed','chargeback','refunded')
-    and o.payment_status is distinct from case
-      when c.status='captured' then 'paid'
-      when c.status in ('failed','chargeback') then 'failed'
-      when c.status='refunded' then 'refunded'
-      else o.payment_status end
-  returning o.id
-), audit as (
-  insert into public.audit_logs(
-    actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata
-  )
-  select null,tenant_id,store_id,'payment.status_changed','payment',id::text,
-    jsonb_build_object('status',status,'source','provider_reconciliation')
-  from changed returning id
-)
-select exists(select 1 from changed) changed`;
+import { APPLY_STATUS_SQL } from "./store-checkout-lifecycle.sql.ts";
