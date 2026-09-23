@@ -1,26 +1,27 @@
 import { test, expect } from "@playwright/test";
 
-// Visitante não autenticado: rotas protegidas negam (fail closed).
-// O conteúdo placeholder NUNCA é exibido sem contexto válido.
-test("visitante NÃO acessa /master", async ({ page }) => {
-  await page.goto("/master");
-  await expect(page.getByRole("heading", { name: /negado|necessária/i })).toBeVisible();
-  await expect(page.getByText(/Tenants \(placeholder\)/)).toHaveCount(0);
+async function expectGuestRedirect(page: import("@playwright/test").Page, path: string): Promise<void> {
+  await page.goto(path);
+  await expect(page).toHaveURL(/\/login(?:\?|$)/);
+  await expect(page.locator("body")).not.toContainText("Tenants (placeholder)");
+}
+
+test("visitante é redirecionado para login ao acessar /master", async ({ page }) => {
+  await expectGuestRedirect(page, "/master");
 });
 
-test("visitante NÃO acessa /control", async ({ page }) => {
-  await page.goto("/control");
-  await expect(page.getByRole("heading", { name: /negado|necessária|não resolv/i })).toBeVisible();
+test("visitante é redirecionado para login ao acessar /control", async ({ page }) => {
+  await expectGuestRedirect(page, "/control");
 });
 
-test("visitante NÃO acessa /admin", async ({ page }) => {
-  await page.goto("/admin");
-  await expect(page.getByRole("heading", { name: /negado|necessária|não resolv/i })).toBeVisible();
+test("visitante é redirecionado para login ao acessar /admin", async ({ page }) => {
+  await expectGuestRedirect(page, "/admin");
 });
 
-test("home pública renderiza fundação", async ({ page }) => {
+test("home pública local renderiza a experiência Kataluu", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /White Label Platform/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Venda uma plataforma completa sem começar do zero/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Acessar painel/i }).first()).toBeVisible();
 });
 
 test("/login renderiza experiência pública de acesso", async ({ page }) => {
