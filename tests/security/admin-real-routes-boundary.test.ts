@@ -38,7 +38,8 @@ describe("admin real routes lot 3 security boundary", () => {
 
   test("contexto de operações continua reconstruído server-side pelo host autenticado", () => {
     const context = source("apps/web/src/lib/server/operations-context.server.ts");
-    expect(context).toContain("const deps = await createRealDeps();");
+    expect(context).toContain("const deps = await createStoreAdminRequestDeps();");
+    expect(context).not.toContain("createRealDeps");
     expect(context).toContain("const auth = await loadStoreAdmin({ host }, deps);");
     expect(context).toContain("tenantId: String(auth.tenantId)");
     expect(context).toContain("storeId: String(auth.storeId)");
