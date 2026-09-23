@@ -62,6 +62,32 @@ export const defaultDeps: RouteDeps = {
 };
 
 /** Sessão/memberships usam Supabase SSR; domínios e status usam fonte autoritativa server-side. */
+export async function createStoreAdminRequestDeps(): Promise<RouteDeps> {
+  const { createRequestMembershipReader } = await import("./request-memberships.server.ts");
+  const { createRequestSupabaseClient } = await import("./supabase-server.server.ts");
+  const memberships = createRequestMembershipReader();
+  const client = createRequestSupabaseClient();
+  return {
+    resolveSession: resolveSessionFromRequest,
+    memberships,
+    resolveTenantForHost: async (host: string) => {
+      const { data, error } = await client.rpc("resolve_my_store_admin_domain", {
+        p_hostname: normalizeRoutingHost(host),
+      });
+      if (error) throw new Error(`Falha ao resolver domínio administrativo: ${error.message}`);
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row || typeof row !== "object") return null;
+      const tenantId = (row as Record<string, unknown>)["tenant_id"];
+      const storeId = (row as Record<string, unknown>)["store_id"];
+      if (typeof tenantId !== "string" || typeof storeId !== "string") return null;
+      return { tenantId: asTenantId(tenantId), storeId: asStoreId(storeId), type: "store_admin" };
+    },
+    getTenantStatus: async () => "active",
+    getStoreStatus: async () => "active",
+  };
+}
+
+/** Service-role deps remain for system-level contexts that require cross-tenant resolution. */
 export async function createRealDeps(): Promise<RouteDeps> {
   const domainResolver = new DomainResolver(createServiceDomainStore());
   const serviceClient = createServiceSupabaseClient();
