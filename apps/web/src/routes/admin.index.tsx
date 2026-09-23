@@ -16,9 +16,8 @@ export const Route = createFileRoute("/admin/")({
       getCurrentStorefrontAnalytics(),
       getMerchantOnboarding(),
     ]);
-    if (operationsResult.status === "rejected") throw operationsResult.reason;
     return {
-      operations: operationsResult.value,
+      operations: operationsResult.status === "fulfilled" ? operationsResult.value : null,
       analytics: analyticsResult.status === "fulfilled" ? analyticsResult.value : null,
       onboarding: onboardingResult.status === "fulfilled" ? onboardingResult.value : null,
     };
@@ -184,6 +183,20 @@ function AccountContext(props: Readonly<{
 function AdminDashboard(): React.JSX.Element {
   const data = Route.useLoaderData();
   const operations = data.operations;
+  if (!operations) {
+    return (
+      <div className="k-page k-dashboard">
+        <PageHead title="Painel da loja" description="Sua loja está acessível, mas os indicadores operacionais estão temporariamente indisponíveis." />
+        <section className="k-workspace-section">
+          <div className="k-card">
+            <h2>Indicadores temporariamente indisponíveis</h2>
+            <p className="k-muted">Você ainda pode acessar produtos, pedidos, clientes, estoque e configurações pelo menu.</p>
+          </div>
+          {data.onboarding ? <OnboardingChecklist data={data.onboarding} /> : null}
+        </section>
+      </div>
+    );
+  }
   const metrics = operations.metrics;
   return (
     <div className="k-page k-dashboard">
