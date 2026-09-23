@@ -136,11 +136,13 @@ async function requireSession(_input: RouteInput, deps: RouteDeps): Promise<Sess
   return session;
 }
 
-/** Painéis privilegiados e suas server functions exigem sessão Supabase em AAL2. */
-export function requireMfaAssurance(session: Session): void {
-  if (session.assuranceLevel !== "aal2") {
-    throw new HttpError(403, "Confirme o segundo fator para continuar", "MFA_REQUIRED");
-  }
+/**
+ * MFA is intentionally not enforced while the platform is in HML/testing.
+ * Authentication and authorization remain mandatory; this removes only the
+ * second-factor gate until MFA enrollment is re-enabled for production rollout.
+ */
+export function requireMfaAssurance(_session: Session): void {
+  // Intentionally disabled during HML.
 }
 
 const FORBIDDEN_TENANT_CONTEXT_CODES = new Set(["TENANT_FORBIDDEN", "STORE_FORBIDDEN", "CROSS_TENANT_DENIED", "CROSS_STORE_DENIED"]);
