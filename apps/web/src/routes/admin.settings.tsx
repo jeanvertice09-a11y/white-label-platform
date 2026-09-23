@@ -4,7 +4,9 @@ import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { PublicCatalogActions } from "../features/store-admin/public-catalog-actions.tsx";
 import { StoreDataExport } from "../features/store-admin/store-data-export.tsx";
 import { MercadoPagoConnectCard } from "../features/store-admin/mercadopago-connect-card.tsx";
+import { MelhorEnvioCard } from "../features/store-admin/melhor-envio-card.tsx";
 import { MerchantSubscriptionBilling } from "../features/store-admin/merchant-subscription-billing.tsx";
+import { getMelhorEnvioSettings } from "../lib/server/melhor-envio.functions.ts";
 import { getMerchantSubscriptionBilling } from "../lib/server/merchant-subscription-billing.functions.ts";
 import { getMerchantMercadoPagoConnection } from "../lib/server/mercadopago-oauth.functions.ts";
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
@@ -13,13 +15,14 @@ import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/settings")({
   loader: async () => {
-    const [settings, storefront, mercadoPago, subscriptionBilling] = await Promise.all([
+    const [settings, storefront, mercadoPago, subscriptionBilling, melhorEnvio] = await Promise.all([
       getMerchantSettingsOverview(),
       getMerchantStorefrontStatus(),
       getMerchantMercadoPagoConnection(),
       getMerchantSubscriptionBilling(),
+      getMelhorEnvioSettings(),
     ]);
-    return { settings, storefront, mercadoPago, subscriptionBilling };
+    return { settings, storefront, mercadoPago, subscriptionBilling, melhorEnvio };
   },
   component: SettingsPage,
 });
@@ -81,6 +84,11 @@ function SettingsPage(): React.JSX.Element {
       <section className="k-workspace-section">
         <header className="k-section-head"><div><span className="k-section-kicker">Pagamentos</span><h2>Recebimentos do catálogo</h2><p>O checkout online da loja usa exclusivamente Mercado Pago conectado por OAuth.</p></div></header>
         <MercadoPagoConnectCard connected={data.mercadoPago.connected} mercadoPagoUserId={data.mercadoPago.mercadoPagoUserId} updatedAt={data.mercadoPago.updatedAt} available={data.mercadoPago.available} />
+      </section>
+
+      <section className="k-workspace-section">
+        <header className="k-section-head"><div><span className="k-section-kicker">Entregas</span><h2>Frete e logística</h2><p>Conecte o Melhor Envio uma vez para cotar e operar as entregas da loja.</p></div></header>
+        <MelhorEnvioCard connected={data.melhorEnvio.connected} enabled={data.melhorEnvio.enabled} postalCode={data.melhorEnvio.postalCode} />
       </section>
 
       <section className="k-workspace-section">
