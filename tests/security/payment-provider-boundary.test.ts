@@ -35,7 +35,7 @@ describe("payment provider server boundary", () => {
 
 describe("store checkout payment lifecycle", () => {
   test("captured store payment confirms order and consumes inventory", () => {
-    const store = source("packages/payments/src/server/webhook-store.ts");
+    const store = source("packages/payments/src/server/store-checkout-lifecycle.sql.ts");
     expect(store).toContain("c.status='captured' and ol.status='pending'");
     expect(store).toContain("then 'confirmed'");
     expect(store).toContain("'Pagamento aprovado','sale','order'");
@@ -43,7 +43,7 @@ describe("store checkout payment lifecycle", () => {
   });
 
   test("failed chargeback or refunded payment cancels open order and restores consumed inventory", () => {
-    const store = source("packages/payments/src/server/webhook-store.ts");
+    const store = source("packages/payments/src/server/store-checkout-lifecycle.sql.ts");
     expect(store).toContain("c.status in ('failed','chargeback','refunded')");
     expect(store).toContain("then 'cancelled'");
     expect(store).toContain("'Pagamento cancelado/reembolsado','cancellation','order'");
@@ -51,7 +51,7 @@ describe("store checkout payment lifecycle", () => {
   });
 
   test("stock effects remain idempotent by order reference", () => {
-    const store = source("packages/payments/src/server/webhook-store.ts");
+    const store = source("packages/payments/src/server/store-checkout-lifecycle.sql.ts");
     expect(store.match(/on conflict do nothing/g)?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(store).toContain("reference_type,reference_id");
   });
