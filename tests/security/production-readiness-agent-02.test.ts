@@ -92,6 +92,6 @@ describe("browser production smoke boundary", () => {
   test("Playwright exercises the built web server", () => {
     const playwright = source("playwright.config.ts");
     expect(playwright).toContain("bun run --cwd apps/web preview");
-    expect(playwright).toContain("http://127.0.0.1:5173/login");
+    expect(playwright).toContain("port: 5173");
   });
 });
