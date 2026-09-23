@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { workerSql } from "../database.ts";
 import { dispatchOperationalJob } from "./handlers.ts";
 import { scheduleOperationalJobs } from "./scheduler.ts";
-import { claimJobs, completeJob, failJob, purgeCompletedJobs, reapExhaustedLeases } from "./store.ts";
+import { claimJobs, completeJob, failJob, getOperationalQueueHealth, purgeCompletedJobs, reapExhaustedLeases } from "./store.ts";
 
 const workerId=`worker-${randomUUID()}`;
 
@@ -23,5 +23,11 @@ export async function operationalTick(): Promise<{ scheduled:number;processed:nu
       }
     }
   }));
+  const health=await getOperationalQueueHealth(sql);
+  if(health.deadLetter>0 || health.expiredLeases>0) {
+    console.error(JSON.stringify({level:"error",message:"worker.queue.unhealthy",...health}));
+  } else if((health.oldestReadyAgeSeconds ?? 0)>300) {
+    console.warn(JSON.stringify({level:"warn",message:"worker.queue.delayed",...health}));
+  }
   return {scheduled,processed:jobs.length};
 }
