@@ -11,12 +11,16 @@ import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
   loader: async () => {
-    const operations = await getMerchantOperationsDashboard();
-    const [analytics, onboarding] = await Promise.all([
+    const [operationsResult, analyticsResult, onboardingResult] = await Promise.allSettled([
+      getMerchantOperationsDashboard(),
       getCurrentStorefrontAnalytics(),
       getMerchantOnboarding(),
     ]);
-    return { operations, analytics, onboarding };
+    return {
+      operations: operationsResult.status === "fulfilled" ? operationsResult.value : null,
+      analytics: analyticsResult.status === "fulfilled" ? analyticsResult.value : null,
+      onboarding: onboardingResult.status === "fulfilled" ? onboardingResult.value : null,
+    };
   },
   component: AdminDashboard,
 });
@@ -179,6 +183,20 @@ function AccountContext(props: Readonly<{
 function AdminDashboard(): React.JSX.Element {
   const data = Route.useLoaderData();
   const operations = data.operations;
+  if (!operations) {
+    return (
+      <div className="k-page k-dashboard">
+        <PageHead title="Painel da loja" description="Sua loja está acessível, mas os indicadores operacionais estão temporariamente indisponíveis." />
+        <section className="k-workspace-section">
+          <div className="k-card">
+            <h2>Indicadores temporariamente indisponíveis</h2>
+            <p className="k-muted">Você ainda pode acessar produtos, pedidos, clientes, estoque e configurações pelo menu.</p>
+          </div>
+          {data.onboarding ? <OnboardingChecklist data={data.onboarding} /> : null}
+        </section>
+      </div>
+    );
+  }
   const metrics = operations.metrics;
   return (
     <div className="k-page k-dashboard">
@@ -191,7 +209,7 @@ function AdminDashboard(): React.JSX.Element {
         <header className="k-section-head">
           <div><span className="k-section-kicker">Comece por aqui</span><h2>Deixe sua loja pronta para vender</h2><p>Complete os itens abaixo para publicar sua loja e começar a receber pedidos.</p></div>
         </header>
-        <OnboardingChecklist data={data.onboarding} />
+        {data.onboarding ? <OnboardingChecklist data={data.onboarding} /> : <p className="k-muted">Checklist temporariamente indisponível.</p>}
       </section>
       <DashboardStrip
         ordersToday={metrics.ordersToday}
@@ -199,7 +217,7 @@ function AdminDashboard(): React.JSX.Element {
         revenuePeriodCents={metrics.revenuePeriodCents}
         averageTicketCents={metrics.averageTicketCents}
       />
-      <StorefrontAnalyticsPanel analytics={data.analytics} />
+      {data.analytics ? <StorefrontAnalyticsPanel analytics={data.analytics} /> : <section className="k-workspace-section"><p className="k-muted">Analytics temporariamente indisponível.</p></section>}
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />

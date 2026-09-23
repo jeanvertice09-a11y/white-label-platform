@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { WorkerSql } from "../../apps/worker/src/database.ts";
 import { dispatchOperationalJob } from "../../apps/worker/src/jobs/handlers.ts";
 import { scheduleOperationalJobs } from "../../apps/worker/src/jobs/scheduler.ts";
+import { getOperationalQueueHealth } from "../../apps/worker/src/jobs/store.ts";
 import type { OperationalJob } from "../../apps/worker/src/jobs/types.ts";
 
 class FakeSql implements WorkerSql {
@@ -40,6 +41,18 @@ describe("operational worker", () => {
     expect(inserts[0]?.params).toContain("domain:d1:token");
     expect(inserts[1]?.params).toContain("billing:p1");
     expect(inserts[2]?.params).toContain("media:m1:failed");
+  });
+
+  test("queue health normalizes counts and oldest ready age", async () => {
+    const sql = new FakeSql([[{
+      queued: 3, retry: 2, running: 1, dead_letter: 4, expired_leases: 1,
+      oldest_ready_age_seconds: 91,
+    }]]);
+    expect(await getOperationalQueueHealth(sql)).toEqual({
+      queued: 3, retry: 2, running: 1, deadLetter: 4, expiredLeases: 1,
+      oldestReadyAgeSeconds: 91,
+    });
+    expect(sql.calls[0]?.sql).toContain("expired_leases");
   });
 
   test("email is unavailable until a real provider exists", async () => {

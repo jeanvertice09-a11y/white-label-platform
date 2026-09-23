@@ -24,6 +24,17 @@ describe("admin real routes lot 3", () => {
     }
   });
 
+  test("dashboard principal tolera falha de widgets secundários", () => {
+    const dashboard = source("apps/web/src/routes/admin.index.tsx");
+    expect(dashboard).toContain("Promise.allSettled");
+    expect(dashboard).toContain('analyticsResult.status === "fulfilled"');
+    expect(dashboard).toContain('onboardingResult.status === "fulfilled"');
+    expect(dashboard).toContain('operationsResult.status === "fulfilled"');
+    expect(dashboard).toContain("Indicadores temporariamente indisponíveis");
+    expect(dashboard).toContain("Checklist temporariamente indisponível.");
+    expect(dashboard).toContain("Analytics temporariamente indisponível.");
+  });
+
   test("menu aponta diretamente para as novas rotas sem hash", () => {
     const shell = source("apps/web/src/features/store-admin/admin-shell.tsx");
     for (const [, path] of routes) expect(shell).toContain(`to: "${path}"`);
