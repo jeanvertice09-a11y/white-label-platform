@@ -9,7 +9,7 @@ import { createPublicCatalogContext } from "./catalog-context.server.ts";
 import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 import { enforceRateLimit } from "./rate-limit.server.ts";
-import { createStorePixPayment } from "./mercadopago-store-payment.server.ts";
+import { createStorePixPayment, getStoreOrderPayment } from "./mercadopago-store-payment.server.ts";
 import { shippingAddressSchema } from "./storefront-shipping.functions.ts";
 import { saveOrderShipping } from "./order-shipping.server.ts";
 
@@ -19,6 +19,7 @@ const cartItemSchema = z.object({
   quantity: z.number().int().min(1).max(999),
 });
 const refreshCartSchema = z.object({ items: z.array(cartItemSchema).max(100) });
+const publicPaymentStatusSchema = z.object({ orderId: z.string().uuid(), idempotencyKey: z.string().trim().min(8).max(120) });
 const checkoutSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(120),
   customerName: z.string().trim().max(160).nullable(),
@@ -157,4 +158,19 @@ export const refreshPublicCart = createServerFn({ method: "POST" }).validator(re
     subtotalCents: items.reduce((total, item) => total + item.unitPriceCents * item.quantity, 0),
     minimumOrderCents: advanced.minimumOrderCents,
   };
+});
+
+export const getOnlinePixOrderStatus = createServerFn({ method: "POST" }).validator(publicPaymentStatusSchema).handler(async ({ data }) => {
+  const catalog = await createPublicCatalogContext(getRequestHost());
+  const sql = createAdminSqlExecutor();
+  await enforceRateLimit(sql, `checkout:status:${catalog.scope.tenantId}:${catalog.scope.storeId}`, 90, 60);
+  const rows = await sql.query(
+    `select id::text,status,payment_status from public.orders
+     where tenant_id=$1::uuid and store_id=$2::uuid and id=$3::uuid and idempotency_key=$4 and origin='online' limit 1`,
+    [catalog.scope.tenantId,catalog.scope.storeId,data.orderId,data.idempotencyKey],
+  );
+  const order=rows.at(0);
+  if(!order) throw new Error("Pedido não encontrado.");
+  const payment=await getStoreOrderPayment(catalog.scope,data.orderId);
+  return { orderStatus:String(order["status"]), paymentStatus:String(order["payment_status"]), gatewayStatus:payment?.status ?? null, expiresAt:payment?.checkout.expiresAt ?? null };
 });
