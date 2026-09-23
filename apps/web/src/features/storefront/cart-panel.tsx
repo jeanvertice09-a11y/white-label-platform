@@ -72,7 +72,7 @@ export function CartPanel(props:Readonly<{cart:CartState;whatsappEnabled:boolean
     setMessage("O subtotal atual ainda não atingiu o pedido mínimo desta loja.");
     return;
    }
-   if (kind === "pix" && shipping && (!name.trim()||!phone.trim()||!email.trim()||![11,14].includes(document.replace(/\D/g,"").length)||!address.trim()||!number.trim()||!district.trim()||!city.trim()||stateAbbr.trim().length!==2)) { setMessage("Preencha os dados completos de entrega antes de pagar."); return; }
+   if (kind === "pix" && shipping && (!name.trim()||!phone.trim()||!email.trim()||(document.replace(/\D/g,"").length!==11&&document.replace(/\D/g,"").length!==14)||!address.trim()||!number.trim()||!district.trim()||!city.trim()||stateAbbr.trim().length!==2)) { setMessage("Preencha os dados completos de entrega antes de pagar."); return; }
    if (kind === "pix" && !email.trim().includes("@")) {
     setMessage("Informe um e-mail válido para gerar o Pix.");
     return;
