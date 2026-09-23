@@ -262,3 +262,10 @@ describe("merchant shipping operations", () => {
     expect(shipping).toContain("shipping.label_generated");
   });
 });
+
+
+describe("end-to-end logistics", () => {
+ test("Melhor Envio OAuth has a real callback completion route",()=>{const route=source("apps/web/src/routes/oauth.melhor-envio.callback.tsx"),fn=source("apps/web/src/lib/server/melhor-envio.functions.ts");expect(route).toContain("completeMelhorEnvioConnection");expect(fn).toContain("finishMelhorEnvioOAuth");});
+ test("checkout collects a complete shipping recipient instead of blank address fields",()=>{const cart=source("apps/web/src/features/storefront/cart-panel.tsx");expect(cart).toContain("Endereço de entrega");expect(cart).toContain("document,address:address.trim(),number:number.trim()");expect(cart).not.toContain('document:"",address:"",number:""');});
+ test("merchant can configure dispatch and operate a paid order shipment",()=>{const card=source("apps/web/src/features/store-admin/melhor-envio-card.tsx"),order=source("apps/web/src/routes/admin.orders.$id.tsx");expect(card).toContain("saveMelhorEnvioProfile");expect(order).toContain("generateOrderShipment");expect(order).toContain("Abrir etiqueta");});
+});
