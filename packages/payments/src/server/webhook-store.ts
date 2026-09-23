@@ -139,12 +139,14 @@ export async function applyPaymentStatus(
   gatewayAccountId: string,
   status: PaymentStatus,
   occurredAt: string | null,
+  applyOrderLifecycle = false,
 ): Promise<boolean> {
   const rows = await sql.query(APPLY_STATUS_SQL, [
     paymentId,
     gatewayAccountId,
     status,
     occurredAt,
+    applyOrderLifecycle,
   ]);
   return rows.at(0)?.["changed"] === true;
 }
