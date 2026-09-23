@@ -95,3 +95,18 @@ describe("browser production smoke boundary", () => {
     expect(playwright).toContain("port: 5173");
   });
 });
+
+
+describe("store admin production authentication boundary", () => {
+  test("admin context uses authenticated RPC instead of service-role domain resolution", () => {
+    const contextFunctions = source("apps/web/src/lib/server/context.functions.ts");
+    const routeContext = source("apps/web/src/lib/server/route-context.server.ts");
+    const migration = source("supabase/migrations/0041_authenticated_store_admin_resolution.sql");
+
+    expect(contextFunctions).toContain("createStoreAdminRequestDeps()");
+    expect(routeContext).toContain('client.rpc("resolve_my_store_admin_domain"');
+    expect(migration).toContain("sm.user_id = auth.uid()");
+    expect(migration).toContain("grant execute on function public.resolve_my_store_admin_domain(text) to authenticated");
+    expect(migration).toContain("d.type = 'store_admin'");
+  });
+});
