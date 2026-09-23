@@ -248,3 +248,17 @@ describe("public Pix lifecycle", () => {
     expect(checkout).toContain("checkout.payment_data_missing");
   });
 });
+
+
+describe("merchant shipping operations", () => {
+  test("settings exposes Melhor Envio as a first-class merchant integration", () => {
+    const settings = source("apps/web/src/routes/admin.settings.tsx");
+    expect(settings).toContain("getMelhorEnvioSettings()");
+    expect(settings).toContain("<MelhorEnvioCard");
+  });
+  test("shipment actions remain tenant/store scoped and audited", () => {
+    const shipping = source("apps/web/src/lib/server/melhor-envio.functions.ts");
+    expect(shipping).toContain("tenant_id=$1::uuid and store_id=$2::uuid and order_id=$3::uuid");
+    expect(shipping).toContain("shipping.label_generated");
+  });
+});
