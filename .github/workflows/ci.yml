@@ -30,7 +30,7 @@ jobs:
       - run: bun run build
       - name: Upload browser failure diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-failure-${{ github.run_id }}
           path: |
