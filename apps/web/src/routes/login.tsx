@@ -68,7 +68,7 @@ function LoginPage(): React.JSX.Element {
       const { data: sessionData } = await getBrowserClient().auth.getSession();
       if (!sessionData.session) throw new Error("Sessão não foi persistida. Tente novamente.");
       const next = postLoginLocation(data.destination);
-      window.location.assign(`/mfa?next=${encodeURIComponent(next)}`);
+      window.location.assign(next);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao entrar.");
     } finally { setBusy(false); }
