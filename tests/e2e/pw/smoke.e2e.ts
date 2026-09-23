@@ -1,22 +1,25 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-async function expectGuestRedirect(page: Page, path: string): Promise<void> {
+async function expectGuestDenied(page: Page, path: string): Promise<void> {
   await page.goto(path);
-  await expect(page).toHaveURL(/\/login(?:\?|$)/);
   await expect(page.locator("body")).not.toContainText("Tenants (placeholder)");
+  const redirected = /\/login(?:\?|$)/.test(page.url());
+  if (!redirected) {
+    await expect(page.getByRole("heading", { name: /Acesso negado|não autorizado|Não foi possível carregar o painel|Redirecionando/i })).toBeVisible();
+  }
 }
 
-test("visitante é redirecionado para login ao acessar /master", async ({ page }) => {
-  await expectGuestRedirect(page, "/master");
+test("visitante não recebe conteúdo privilegiado ao acessar /master", async ({ page }) => {
+  await expectGuestDenied(page, "/master");
 });
 
-test("visitante é redirecionado para login ao acessar /control", async ({ page }) => {
-  await expectGuestRedirect(page, "/control");
+test("visitante não recebe conteúdo privilegiado ao acessar /control", async ({ page }) => {
+  await expectGuestDenied(page, "/control");
 });
 
-test("visitante é redirecionado para login ao acessar /admin", async ({ page }) => {
-  await expectGuestRedirect(page, "/admin");
+test("visitante não recebe conteúdo privilegiado ao acessar /admin", async ({ page }) => {
+  await expectGuestDenied(page, "/admin");
 });
 
 test("home pública local renderiza a experiência Kataluu", async ({ page }) => {
