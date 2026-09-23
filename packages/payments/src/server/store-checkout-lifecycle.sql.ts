@@ -26,7 +26,7 @@ export const APPLY_STATUS_SQL = `with payment_candidate as (
 ), order_locked as materialized (
   select o.id,o.tenant_id,o.store_id,o.status,o.payment_status
   from public.orders o join changed c
-    on c.order_id=o.id and c.tenant_id=o.tenant_id and c.store_id=o.store_id
+    on $5::boolean and c.order_id=o.id and c.tenant_id=o.tenant_id and c.store_id=o.store_id
   where c.order_id is not null
   for update of o
 ), stock_needs as (
