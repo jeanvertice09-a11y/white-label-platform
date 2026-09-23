@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CatalogAdvancedSettings, CartState } from "@white-label/catalog";
 import { cartTotalCents, clearCart, removeCartItem, setCartItemQuantity } from "@white-label/catalog";
-import { createOnlinePixOrder, createWhatsappOrder, refreshPublicCart } from "../../lib/server/storefront-checkout.functions.ts";
+import { createOnlinePixOrder, createWhatsappOrder, getOnlinePixOrderStatus, refreshPublicCart } from "../../lib/server/storefront-checkout.functions.ts";
 import { storefrontMoney } from "./format.ts";
 import { trackStorefrontEvent } from "./storefront-tracking.tsx";
 import { quotePublicShipping } from "../../lib/server/storefront-shipping.functions.ts";
@@ -34,9 +34,13 @@ function CheckoutFields(props:Readonly<{settings:CheckoutSettings;onlineEnabled:
  {props.settings.checkoutAskNotes?<label className="sf__field"><span>Observação <small>opcional</small></span><textarea value={props.notes} maxLength={1000} onChange={e=>{props.onNotes(e.target.value);}}/></label>:null}</div>;
 }
 function WhatsappSuccess({result,showPrice}:Readonly<{result:WhatsappResult;showPrice:boolean}>):React.JSX.Element{return <div className="sf__success"><h3>{result.displayNumber}</h3><p>Pedido registrado. Continue o atendimento pelo WhatsApp.</p>{showPrice?<strong>{storefrontMoney(result.totalCents)}</strong>:null}<a className="sf__primary" href={result.whatsappUrl}>Continuar no WhatsApp</a></div>;}
-function PixSuccess({result}:Readonly<{result:PixResult}>):React.JSX.Element{
- const [copied,setCopied]=useState(false);async function copy():Promise<void>{if(!result.pix.qrCode)return;await navigator.clipboard.writeText(result.pix.qrCode);setCopied(true);}
- return <div className="sf__success"><div className="sf__confirmation-head"><span className="sf__success-mark" aria-hidden="true">✓</span><div><span className="sf__eyebrow">Pedido criado</span><h3>{result.displayNumber}</h3><p>Finalize o pagamento via Pix. A confirmação é atualizada automaticamente pelo Mercado Pago.</p></div></div>
+function PixSuccess({result,idempotencyKey}:Readonly<{result:PixResult;idempotencyKey:string}>):React.JSX.Element{
+ const [copied,setCopied]=useState(false),[paymentStatus,setPaymentStatus]=useState(result.paymentStatus),[expired,setExpired]=useState(false);
+ async function copy():Promise<void>{if(!result.pix.qrCode)return;await navigator.clipboard.writeText(result.pix.qrCode);setCopied(true);}
+ useEffect(()=>{let active=true;async function poll():Promise<void>{try{const status=await getOnlinePixOrderStatus({data:{orderId:result.orderId,idempotencyKey}});if(!active)return;setPaymentStatus(status.paymentStatus);if(status.expiresAt&&Date.parse(status.expiresAt)<=Date.now()&&status.paymentStatus==="pending")setExpired(true);}catch{}}
+ void poll();const timer=window.setInterval(()=>{void poll();},5000);return()=>{active=false;window.clearInterval(timer);};},[idempotencyKey,result.orderId]);
+ const paid=paymentStatus==="paid";
+ return <div className="sf__success"><div className="sf__confirmation-head"><span className="sf__success-mark" aria-hidden="true">{paid?"✓":"⌁"}</span><div><span className="sf__eyebrow">{paid?"Pagamento confirmado":"Aguardando pagamento"}</span><h3>{result.displayNumber}</h3><p>{paid?"Pagamento confirmado. Seu pedido já entrou em processamento.":expired?"Este Pix expirou. Feche esta confirmação e faça um novo pedido para gerar outro código.":"Pague via Pix. Esta tela verifica a confirmação automaticamente."}</p></div></div>
  <div className="sf__summary"><div className="sf__summary-row sf__summary-row--total"><span>Total</span><strong>{storefrontMoney(result.totalCents)}</strong></div></div>
  {result.pix.qrCodeBase64?<img src={`data:image/png;base64,${result.pix.qrCodeBase64}`} alt="QR Code Pix" style={{maxWidth:240,width:"100%",margin:"0 auto"}}/>:null}
  {result.pix.qrCode?<><label className="sf__field"><span>Pix Copia e Cola</span><textarea readOnly value={result.pix.qrCode}/></label><button className="sf__primary" type="button" onClick={()=>{void copy();}}>{copied?"Código copiado":"Copiar código Pix"}</button></>:null}
@@ -100,7 +104,7 @@ export function CartPanel(props:Readonly<{cart:CartState;whatsappEnabled:boolean
   }
  }
  let body: React.JSX.Element;
- if(pixSuccess) body=<PixSuccess result={pixSuccess}/>;
+ if(pixSuccess) body=<PixSuccess result={pixSuccess} idempotencyKey={key.current ?? ""}/>;
  else if(whatsappSuccess) body=<WhatsappSuccess result={whatsappSuccess} showPrice={showPrice}/>;
  else body=<><CartRows cart={props.cart} showPrice={showPrice} quantityEnabled={quantityEnabled} onChange={props.onChange}/>{props.cart.items.length?<div className="sf__checkout">
   {props.onlineEnabled?<div className="sf__checkout-fields"><div className="sf__checkout-section-head"><span>Entrega</span><small>Calcule o frete pelo CEP.</small></div><label className="sf__field"><span>CEP</span><input value={postalCode} inputMode="numeric" onChange={e=>setPostalCode(e.target.value)} /></label><button type="button" className="sf__text-button" onClick={()=>{void quotePublicShipping({data:{items:refreshInput(props.cart),destinationPostalCode:postalCode}}).then(value=>{setQuotes(value);}).catch(e=>setMessage(safeCheckoutMessage(e)));}}>Calcular frete</button>{quotes.map(q=><button key={q.serviceId} type="button" className="sf__text-button" onClick={()=>setShipping({...q,recipient:{postalCode,name,phone,email,document:"",address:"",number:"",complement:null,district:"",city:"",stateAbbr:""}})}>{q.companyName} · {q.serviceName} · {storefrontMoney(q.priceCents)} · até {q.deliveryDays} dias</button>)}</div>:null}<CheckoutFields settings={props.checkoutSettings} onlineEnabled={props.onlineEnabled} name={name} phone={phone} email={email} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onEmail={setEmail} onCoupon={setCoupon} onNotes={setNotes}/>
