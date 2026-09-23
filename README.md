@@ -1,6 +1,6 @@
-# White Label Platform — Fundação
+# Kataluu — White Label Platform
 
-Plataforma SaaS White-Label Multi-Tenant (modular monolith).
+Plataforma SaaS White-Label Multi-Tenant em evolução para operação de produção (modular monolith).
 
 Modelo: `PLATFORM -> TENANT -> STORE -> RESOURCE`. Invariante absoluta:
 **Tenant A jamais lê/altera/exclui/opera recurso do Tenant B.**
@@ -31,7 +31,7 @@ cp .env.example .env   # nunca commite .env
 | `bun run test:db` | **PostgreSQL REAL** (PGlite em-processo por padrão; `TEST_DATABASE_URL` p/ servidor) |
 | `bun run test:security` | **isolamento tenant/store — bloqueante p/ produção** |
 | `bun run test:e2e` | smoke E2E (sem browser) |
-| `bunx playwright test` | E2E com navegador (requer browsers) |
+| `bun run test:e2e:browser` | E2E com navegador (Playwright/Chromium) |
 
 ## Arquitetura resumida
 
