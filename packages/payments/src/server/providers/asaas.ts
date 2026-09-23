@@ -109,7 +109,7 @@ export class AsaasProvider implements PaymentProvider {
       providerPaymentId: payment["id"] === undefined
         ? null
         : asProviderPaymentId(payment["id"]),
-      status: normalizeCommonStatus(rawStatus),
+      status: rawStatus ? asaasStatus(rawStatus) : null,
       occurredAt: typeof body["dateCreated"] === "string"
         ? body["dateCreated"]
         : null,
