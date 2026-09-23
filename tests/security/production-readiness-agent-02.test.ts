@@ -86,3 +86,14 @@ describe("SSR dependency boundary", () => {
     expect(vite).not.toContain('"react-dom",');
   });
 });
+
+
+describe("application health boundary", () => {
+  test("readiness uses a dependency-free no-store endpoint", () => {
+    const health = source("apps/web/src/routes/api.health.ts");
+    const playwright = source("playwright.config.ts");
+    expect(health).toContain('{ status: "ok" }');
+    expect(health).toContain('"Cache-Control": "no-store"');
+    expect(playwright).toContain("http://127.0.0.1:5173/api/health");
+  });
+});
