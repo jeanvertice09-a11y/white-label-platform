@@ -80,7 +80,7 @@ describe("responsive merchant/storefront final QA", () => {
     expect(cart).toContain('document.body.style.overflow = "hidden"');
     expect(cart).toContain('event.key === "Escape"');
     expect(cart).toContain('event.key !== "Tab"');
-    expect(cart).toContain("previousFocus?.focus()");
+    expect(cart).toContain("previousFocus.focus()");
     expect(cart).toContain("ref={dialogRef}");
     expect(cart).toContain("refreshPublicCart");
     expect(cart).toContain("createWhatsappOrder");
