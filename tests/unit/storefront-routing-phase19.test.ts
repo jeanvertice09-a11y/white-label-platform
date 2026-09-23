@@ -5,7 +5,7 @@ import {
   storefrontCategoryPath,
   storefrontProductPath,
 } from "../../apps/web/src/lib/storefront-paths.ts";
-import { isStorefrontDomainType, rootTargetForDomainType } from "../../apps/web/src/lib/routing-targets.ts";
+import { isStorefrontDomainType, rootTargetForDomainType, systemTargetForHost } from "../../apps/web/src/lib/routing-targets.ts";
 
 describe("fase 19 storefront routing", () => {
   test("store_catalog usa / como home sem transformar outros domínios em storefront", () => {
@@ -13,6 +13,12 @@ describe("fase 19 storefront routing", () => {
     expect(rootTargetForDomainType("store_catalog")).toBeNull();
     expect(isStorefrontDomainType("tenant_site")).toBe(false);
     expect(isStorefrontDomainType("store_admin")).toBe(false);
+  });
+
+  test("hosts loopback são públicos locais e nunca disparam resolução de domínio", () => {
+    expect(systemTargetForHost("localhost")).toBeNull();
+    expect(systemTargetForHost("127.0.0.1")).toBeNull();
+    expect(systemTargetForHost("unknown.example")).toBeUndefined();
   });
 
   test("produto e categoria usam slug real e nunca label concatenada", () => {
