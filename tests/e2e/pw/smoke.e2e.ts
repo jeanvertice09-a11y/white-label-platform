@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
-async function expectGuestRedirect(page: import("@playwright/test").Page, path: string): Promise<void> {
+async function expectGuestRedirect(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await expect(page).toHaveURL(/\/login(?:\?|$)/);
   await expect(page.locator("body")).not.toContainText("Tenants (placeholder)");
