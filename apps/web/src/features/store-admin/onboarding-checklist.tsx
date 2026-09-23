@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { OnboardingStep } from "../../lib/onboarding-progress.ts";
 
 export interface OnboardingData {
@@ -25,7 +26,7 @@ export function OnboardingChecklist({ data }: Readonly<{ data: OnboardingData }>
               {step.id === "categories" ? <small>{data.facts.categoryCount} categoria(s) cadastrada(s)</small> : null}
               {step.id === "products" ? <small>{data.facts.productCount} produto(s) cadastrado(s)</small> : null}
             </div>
-            <a className="k-button k-button--ghost" href={step.href}>{step.complete ? "Revisar" : "Continuar"}</a>
+            <Link className="k-button k-button--ghost" to={step.href as never}>{step.complete ? "Revisar" : "Continuar"}</Link>
           </article>
         ))}
       </section>
