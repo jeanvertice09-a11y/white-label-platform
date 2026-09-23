@@ -14,7 +14,7 @@ export function normalizeRoutingHost(rawHost: string | null): string {
 export function systemTargetForHost(host: string): RootTarget | undefined {
   if (host === "control.geral.kataluu.com.br") return "/master";
   if (host === "app.kataluu.com.br") return "/control";
-  if (host === "kataluu.com.br" || host === "www.kataluu.com.br" || host === "") {
+  if (host === "kataluu.com.br" || host === "www.kataluu.com.br" || host === "" || host === "localhost" || host === "127.0.0.1") {
     return null;
   }
   return undefined;

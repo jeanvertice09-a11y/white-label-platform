@@ -55,10 +55,13 @@ describe("security production hardening boundary", () => {
     expect(mercadoPagoSource).toContain('"X-Idempotency-Key"');
   });
 
-  test("headers defensivos não introduzem CSP que quebraria tracking/storefront", () => {
+  test("headers defensivos incluem CSP compatível com storefront e Supabase", () => {
     expect(vercelSource).toContain("X-Content-Type-Options");
     expect(vercelSource).toContain("Referrer-Policy");
     expect(vercelSource).toContain("Permissions-Policy");
-    expect(vercelSource).not.toContain("Content-Security-Policy");
+    expect(vercelSource).toContain("Content-Security-Policy");
+    expect(vercelSource).toContain("connect-src 'self' https://*.supabase.co");
+    expect(vercelSource).toContain("img-src 'self' data: https:");
+    expect(vercelSource).toContain("frame-ancestors 'none'");
   });
 });

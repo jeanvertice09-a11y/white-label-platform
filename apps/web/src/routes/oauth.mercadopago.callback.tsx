@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { completeMerchantMercadoPagoOAuth } from "../lib/server/mercadopago-oauth.functions.ts";
 const searchSchema=z.object({code:z.string().optional(),state:z.string().optional(),error:z.string().optional()});
-// @ts-expect-error routeTree.gen.ts is regenerated during build for this new route.
 export const Route=createFileRoute("/oauth/mercadopago/callback")({validateSearch:searchSchema,component:MercadoPagoCallback});
 function MercadoPagoCallback():React.JSX.Element{
  const[message,setMessage]=useState("Concluindo conexão com Mercado Pago…");

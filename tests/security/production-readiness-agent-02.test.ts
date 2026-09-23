@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+function source(path: string): string { return readFileSync(join(ROOT, path), "utf8"); }
 
 const analyticsSource = readFileSync(new URL("../../apps/web/src/lib/server/storefront-analytics.functions.ts", import.meta.url), "utf8");
 const trackingSource = readFileSync(new URL("../../apps/web/src/features/storefront/storefront-tracking.tsx", import.meta.url), "utf8");
@@ -53,5 +57,41 @@ describe("production readiness agent 02 boundaries", () => {
   test("produção continua sem injetar cache de domínio em memória", () => {
     expect(domainContext).toContain("new DomainResolver(createServiceDomainStore())");
     expect(domainContext).not.toContain("new InMemoryDomainCache");
+  });
+});
+
+
+describe("Vercel production configuration", () => {
+  test("keeps a single authoritative vercel.json with baseline security headers", () => {
+    const root = source("vercel.json");
+    expect(root).toContain('"framework": "tanstack-start"');
+    expect(root).toContain("Content-Security-Policy");
+    expect(root).toContain("X-Frame-Options");
+    expect(root).toContain("Strict-Transport-Security");
+    expect(existsSync(join(ROOT, "apps/web/vercel.json"))).toBe(false);
+  });
+
+  test("admin dashboard emits structured telemetry for partial loader failures", () => {
+    const dashboard = source("apps/web/src/routes/admin.index.tsx");
+    expect(dashboard).toContain("admin.dashboard.partial_failure");
+    expect(dashboard).toContain("durationMs");
+  });
+});
+
+
+describe("SSR dependency boundary", () => {
+  test("React is not force-inlined into the Vite SSR module runner", () => {
+    const vite = source("apps/web/vite.config.ts");
+    expect(vite).not.toContain('"react",');
+    expect(vite).not.toContain('"react-dom",');
+  });
+});
+
+
+describe("browser production smoke boundary", () => {
+  test("Playwright exercises the built web server", () => {
+    const playwright = source("playwright.config.ts");
+    expect(playwright).toContain("bun run --cwd apps/web preview");
+    expect(playwright).toContain("port: 5173");
   });
 });
