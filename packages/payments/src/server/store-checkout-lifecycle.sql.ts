@@ -11,18 +11,18 @@ export const APPLY_STATUS_SQL = `with payment_candidate as (
       updated_at=now()
   from payment_candidate pc
   where public.payments.id=pc.id and public.payments.gateway_account_id=$2::uuid
-    and status is distinct from $3
+    and public.payments.status is distinct from $3
     and (
-      (status='pending' and $3 in ('authorized','captured','failed','refunded','chargeback'))
-      or (status='authorized' and $3 in ('captured','failed','refunded','chargeback'))
-      or (status='captured' and $3 in ('refunded','chargeback'))
+      (public.payments.status='pending' and $3 in ('authorized','captured','failed','refunded','chargeback'))
+      or (public.payments.status='authorized' and $3 in ('captured','failed','refunded','chargeback'))
+      or (public.payments.status='captured' and $3 in ('refunded','chargeback'))
     )
     and (
       $4::timestamptz is null
-      or provider_updated_at is null
-      or $4::timestamptz >= provider_updated_at
+      or public.payments.provider_updated_at is null
+      or $4::timestamptz >= public.payments.provider_updated_at
     )
-  returning id,tenant_id,store_id,order_id,status
+  returning public.payments.id,public.payments.tenant_id,public.payments.store_id,public.payments.order_id,public.payments.status
 ), order_locked as materialized (
   select o.id,o.tenant_id,o.store_id,o.status,o.payment_status
   from public.orders o join changed c
