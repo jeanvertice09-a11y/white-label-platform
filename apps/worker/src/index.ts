@@ -21,7 +21,7 @@ if (import.meta.main) {
   if (!process.env["SUPABASE_DB_URL"]) {
     console.warn(JSON.stringify({level:"warn",message:"worker.disabled",reason:"SUPABASE_DB_URL missing"}));
   } else {
-    console.info(JSON.stringify({level:"info",message:"worker.online",pollMs:interval}));
+    console.warn(JSON.stringify({level:"info",message:"worker.online",pollMs:interval}));
     void tick();
     setInterval(() => void tick(), interval);
   }
