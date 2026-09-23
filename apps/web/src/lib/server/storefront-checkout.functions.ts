@@ -108,10 +108,27 @@ export const createOnlinePixOrder = createServerFn({ method: "POST" }).validator
     couponCode: data.couponCode, notes, shippingCents: data.shipping?.priceCents ?? 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
   });
   if(data.shipping) await saveOrderShipping(catalog.scope,order.id,data.shipping);
-  const payment = await createStorePixPayment(catalog.scope, {
-    orderId: order.id, orderNumber: order.orderNumber, amountCents: order.totalCents, payerEmail: data.payerEmail,
-  });
-  if (!payment.checkout.qrCode && !payment.checkout.ticketUrl) throw new Error("Mercado Pago não retornou os dados do Pix.");
+  let payment;
+  try {
+    payment = await createStorePixPayment(catalog.scope, {
+      orderId: order.id, orderNumber: order.orderNumber, amountCents: order.totalCents, payerEmail: data.payerEmail,
+    });
+  } catch (error) {
+    await sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       values(null,$1::uuid,$2::uuid,'checkout.payment_creation_failed','order',$3,jsonb_build_object('provider','mercadopago'))`,
+      [catalog.scope.tenantId,catalog.scope.storeId,order.id],
+    );
+    throw error;
+  }
+  if (!payment.checkout.qrCode && !payment.checkout.ticketUrl) {
+    await sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       values(null,$1::uuid,$2::uuid,'checkout.payment_data_missing','order',$3,jsonb_build_object('provider','mercadopago'))`,
+      [catalog.scope.tenantId,catalog.scope.storeId,order.id],
+    );
+    throw new Error("Mercado Pago não retornou os dados do Pix.");
+  }
   return {
     orderId: order.id, orderNumber: order.orderNumber, displayNumber: formatOrderNumber(order.orderNumber),
     paymentId: payment.paymentId, status: order.status, paymentStatus: order.paymentStatus,
