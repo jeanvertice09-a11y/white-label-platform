@@ -219,24 +219,19 @@ function AdminDashboard(): React.JSX.Element {
         description="Acompanhe vendas, pedidos, estoque e tudo o que precisa da sua atenção hoje."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
-      <section className="k-workspace-section" id="primeiros-passos">
-        <header className="k-section-head">
-          <div><span className="k-section-kicker">Comece por aqui</span><h2>Deixe sua loja pronta para vender</h2><p>Complete os itens abaixo para publicar sua loja e começar a receber pedidos.</p></div>
-        </header>
-        {data.onboarding ? <OnboardingChecklist data={data.onboarding} /> : <p className="k-muted">Checklist temporariamente indisponível.</p>}
-      </section>
       <DashboardStrip
         ordersToday={metrics.ordersToday}
         pendingOrders={metrics.pendingOrders}
         revenuePeriodCents={metrics.revenuePeriodCents}
         averageTicketCents={metrics.averageTicketCents}
       />
-      {data.analytics ? <StorefrontAnalyticsPanel analytics={data.analytics} /> : <section className="k-workspace-section"><p className="k-muted">Analytics temporariamente indisponível.</p></section>}
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
+          {data.analytics ? <StorefrontAnalyticsPanel analytics={data.analytics} /> : null}
           <RecentOperations activity={operations.activity} />
           <QuickLinksSection />
+          {data.onboarding && data.onboarding.progress.percent < 100 ? <section className="k-workspace-section k-onboarding-panel" id="primeiros-passos"><header className="k-section-head"><div><span className="k-section-kicker">Configuração</span><h2>Finalize sua loja</h2><p>Faltam alguns passos antes de deixar tudo pronto para vender.</p></div></header><OnboardingChecklist data={data.onboarding} /></section> : null}
         </main>
         <AccountContext
           tenantStatus={operations.store.tenantStatus}
