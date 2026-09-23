@@ -10,7 +10,7 @@ import type {
 import { DomainResolver } from "@white-label/domains";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 import { createServiceDomainStore } from "./supabase-domain-store.server.ts";
-import { createRealDeps, loadStoreAdmin } from "./route-context.server.ts";
+import { createStoreAdminRequestDeps, loadStoreAdmin } from "./route-context.server.ts";
 
 export interface CatalogServerContext {
   scope: CatalogScope;
@@ -54,7 +54,7 @@ export async function createMerchantCatalogContext(
   rawHost: string | null,
 ): Promise<CatalogServerContext> {
   const hostname = requireHost(rawHost);
-  const deps = await createRealDeps();
+  const deps = await createStoreAdminRequestDeps();
   const auth = await loadStoreAdmin({ host: hostname }, deps);
   if (!auth.storeId) throw new Error("Loja não resolvida");
   const scope = { tenantId: String(auth.tenantId), storeId: String(auth.storeId) };
