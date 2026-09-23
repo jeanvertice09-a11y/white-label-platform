@@ -77,7 +77,7 @@ describe("fase 09 secure gateway accounts", () => {
   test("create cifra segredo e leitura segura nunca devolve segredo/ciphertext", async () => {
     const credential = "fixture-credential-create";
     const webhook = "fixture-webhook-create";
-    const created = await createGatewayAccount(h.db, vault, actor, tenantA, {
+    const created = await createGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       provider: "mercadopago",
       label: "MP Tenant A",
       publicIdentifier: "public-fixture-a",
@@ -169,7 +169,7 @@ describe("fase 09 secure gateway accounts", () => {
     const enabled = await setGatewayAccountStatus(h.db, actor, storeA, configured.id, "active");
     expect(enabled.status).toBe("active");
 
-    const empty = await createGatewayAccount(h.db, vault, actor, tenantA, {
+    const empty = await createGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       provider: "mercadopago",
       label: "Unconfigured",
       publicIdentifier: null,
@@ -254,7 +254,7 @@ describe("fase 09 secure gateway accounts", () => {
   });
 
   test("material descriptografado é server-only, scoped e exige conta ativa", async () => {
-    const account = await createGatewayAccount(h.db, vault, actor, tenantA, {
+    const account = await createGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       provider: "mercadopago",
       label: "Server material",
       publicIdentifier: "public-server-id",
@@ -264,7 +264,7 @@ describe("fase 09 secure gateway accounts", () => {
     const material = await loadGatewayCredentialMaterial(
       h.db,
       vault,
-      tenantA,
+      tenantAStoreGateway,
       account.id,
     );
     expect(material.credentials).toBe("fixture-server-material");
@@ -274,7 +274,7 @@ describe("fase 09 secure gateway accounts", () => {
       loadGatewayCredentialMaterial(h.db, vault, tenantB, account.id),
       "tenant B não descriptografa gateway A",
     );
-    await setGatewayAccountStatus(h.db, actor, tenantA, account.id, "disabled");
+    await setGatewayAccountStatus(h.db, actor, tenantAStoreGateway, account.id, "disabled");
     await expectReject(
       loadGatewayCredentialMaterial(h.db, vault, tenantA, account.id),
       "gateway desabilitado não pode ser utilizado",
@@ -284,7 +284,7 @@ describe("fase 09 secure gateway accounts", () => {
   test("auditoria registra ações sem plaintext, webhook secret ou ciphertext", async () => {
     const credential = "fixture-audit-credential";
     const webhook = "fixture-audit-webhook";
-    const account = await createGatewayAccount(h.db, vault, actor, tenantA, {
+    const account = await createGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       provider: "mercadopago",
       label: "Audit",
       publicIdentifier: null,
@@ -298,7 +298,7 @@ describe("fase 09 secure gateway accounts", () => {
       credentials: "fixture-audit-replaced",
       webhookSecret: "",
     });
-    await setGatewayAccountStatus(h.db, actor, tenantA, account.id, "disabled");
+    await setGatewayAccountStatus(h.db, actor, tenantAStoreGateway, account.id, "disabled");
 
     const audits = await h.db.query(
       `select action,metadata::text metadata from public.audit_logs
