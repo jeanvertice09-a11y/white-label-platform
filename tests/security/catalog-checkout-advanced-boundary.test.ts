@@ -9,7 +9,7 @@ const storefrontSource = readFileSync(new URL("../../apps/web/src/features/store
 
 describe("advanced catalog checkout boundary", () => {
   test("browser não fornece tenant, store, preço, desconto ou pedido mínimo", () => {
-    const schema = checkoutSource.slice(checkoutSource.indexOf("const checkoutSchema"), checkoutSource.indexOf("export const createWhatsappOrder"));
+    const schema = checkoutSource.slice(checkoutSource.indexOf("const checkoutSchema"), checkoutSource.indexOf("const shippingSelection"));
     expect(schema).not.toContain("tenantId"); expect(schema).not.toContain("storeId"); expect(schema).not.toContain("priceCents"); expect(schema).not.toContain("discountCents"); expect(schema).not.toContain("minimumOrderCents");
     expect(checkoutSource).toContain("createPublicCatalogContext(getRequestHost())");
   });

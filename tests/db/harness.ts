@@ -53,6 +53,7 @@ const MIGRATIONS = [
   "0037_suspension_public_helper_hardening.sql",
   "0038_tenant_billing_checkout.sql",
   "0039_tenant_billing_gateway_invariant.sql",
+  "0040_melhor_envio_shipping.sql",
 ];
 
 class PGliteDb implements TestDb {

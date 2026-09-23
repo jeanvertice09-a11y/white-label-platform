@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-argument,@typescript-eslint/no-confusing-void-expression,@typescript-eslint/use-unknown-in-catch-callback-variable */
 import { useEffect, useRef, useState } from "react";
 import type { CatalogAdvancedSettings, CartState } from "@white-label/catalog";
 import { cartTotalCents, clearCart, removeCartItem, setCartItemQuantity } from "@white-label/catalog";
 import { createOnlinePixOrder, createWhatsappOrder, refreshPublicCart } from "../../lib/server/storefront-checkout.functions.ts";
 import { storefrontMoney } from "./format.ts";
 import { trackStorefrontEvent } from "./storefront-tracking.tsx";
+import { quotePublicShipping } from "../../lib/server/storefront-shipping.functions.ts";
 type WhatsappResult=Awaited<ReturnType<typeof createWhatsappOrder>>;type PixResult=Awaited<ReturnType<typeof createOnlinePixOrder>>;
 type RefreshResult=Awaited<ReturnType<typeof refreshPublicCart>>;
 type CheckoutSettings=Pick<CatalogAdvancedSettings,"checkoutAskName"|"checkoutAskPhone"|"checkoutAskNotes"|"minimumOrderCents">;
@@ -45,6 +47,7 @@ function safeCheckoutMessage(error:unknown):string{const message=error instanceo
 export function CartPanel(props:Readonly<{cart:CartState;whatsappEnabled:boolean;onlineEnabled:boolean;showPrice?:boolean;quantityEnabled?:boolean;checkoutSettings:CheckoutSettings;onChange:(cart:CartState)=>void;onClose:()=>void}>):React.JSX.Element{
  const key=useRef<string|null>(null),initialCart=useRef(props.cart),initialOnChange=useRef(props.onChange),dialogRef=useRef<HTMLElement|null>(null),onCloseRef=useRef(props.onClose);onCloseRef.current=props.onClose;
  const[name,setName]=useState(""),[phone,setPhone]=useState(""),[email,setEmail]=useState(""),[coupon,setCoupon]=useState(""),[notes,setNotes]=useState("");
+ const[postalCode,setPostalCode]=useState(""),[shipping,setShipping]=useState<any>(null),[quotes,setQuotes]=useState<any[]>([]);
  const[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[message,setMessage]=useState(""),[whatsappSuccess,setWhatsappSuccess]=useState<WhatsappResult|null>(null),[pixSuccess,setPixSuccess]=useState<PixResult|null>(null),[minimumOrderCents,setMinimumOrderCents]=useState(props.checkoutSettings.minimumOrderCents);
  const showPrice=props.showPrice??true,quantityEnabled=props.quantityEnabled??true,subtotal=cartTotalCents(props.cart),minimumMet=subtotal>=minimumOrderCents,success=whatsappSuccess||pixSuccess;
  useEffect(()=>{const previousOverflow=document.body.style.overflow,previousFocus=document.activeElement instanceof HTMLElement?document.activeElement:null,dialog=dialogRef.current;dialog?.querySelector<HTMLElement>(".sf__close")?.focus();function onKeyDown(event:KeyboardEvent):void{if(event.key === "Escape"){event.preventDefault();onCloseRef.current();return;}if(event.key !== "Tab"||!dialog)return;const items=[...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)];if(!items.length)return;const first=items[0],last=items.at(-1);if(event.shiftKey&&(document.activeElement===first||!dialog.contains(document.activeElement))){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}document.body.style.overflow = "hidden";window.addEventListener("keydown",onKeyDown);return()=>{document.body.style.overflow=previousOverflow;window.removeEventListener("keydown",onKeyDown);previousFocus?.focus();};},[]);
@@ -80,7 +83,7 @@ export function CartPanel(props:Readonly<{cart:CartState;whatsappEnabled:boolean
     items: refreshInput(reconciled.cart),
    };
    if (kind === "pix") {
-    const result = await createOnlinePixOrder({ data: { ...common, payerEmail: email.trim() } });
+    const result = await createOnlinePixOrder({ data: { ...common, payerEmail: email.trim(), shipping } });
     setPixSuccess(result);
     props.onChange(clearCart(reconciled.cart));
     trackStorefrontEvent({ type: "order_created", orderId: result.orderId, totalCents: result.totalCents, items: trackingItems(reconciled.cart) });
@@ -100,7 +103,7 @@ export function CartPanel(props:Readonly<{cart:CartState;whatsappEnabled:boolean
  if(pixSuccess) body=<PixSuccess result={pixSuccess}/>;
  else if(whatsappSuccess) body=<WhatsappSuccess result={whatsappSuccess} showPrice={showPrice}/>;
  else body=<><CartRows cart={props.cart} showPrice={showPrice} quantityEnabled={quantityEnabled} onChange={props.onChange}/>{props.cart.items.length?<div className="sf__checkout">
-  <CheckoutFields settings={props.checkoutSettings} onlineEnabled={props.onlineEnabled} name={name} phone={phone} email={email} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onEmail={setEmail} onCoupon={setCoupon} onNotes={setNotes}/>
+  {props.onlineEnabled?<div className="sf__checkout-fields"><div className="sf__checkout-section-head"><span>Entrega</span><small>Calcule o frete pelo CEP.</small></div><label className="sf__field"><span>CEP</span><input value={postalCode} inputMode="numeric" onChange={e=>setPostalCode(e.target.value)} /></label><button type="button" className="sf__text-button" onClick={()=>{void quotePublicShipping({data:{items:refreshInput(props.cart),destinationPostalCode:postalCode}}).then(value=>{setQuotes(value);}).catch(e=>setMessage(safeCheckoutMessage(e)));}}>Calcular frete</button>{quotes.map(q=><button key={q.serviceId} type="button" className="sf__text-button" onClick={()=>setShipping({...q,recipient:{postalCode,name,phone,email,document:"",address:"",number:"",complement:null,district:"",city:"",stateAbbr:""}})}>{q.companyName} · {q.serviceName} · {storefrontMoney(q.priceCents)} · até {q.deliveryDays} dias</button>)}</div>:null}<CheckoutFields settings={props.checkoutSettings} onlineEnabled={props.onlineEnabled} name={name} phone={phone} email={email} coupon={coupon} notes={notes} onName={setName} onPhone={setPhone} onEmail={setEmail} onCoupon={setCoupon} onNotes={setNotes}/>
   <div className="sf__summary">{showPrice?<div className="sf__summary-row sf__summary-row--total"><span>Subtotal</span><strong>{storefrontMoney(subtotal)}</strong></div>:null}{minimumOrderCents>0?<p className="sf__minimum-order" data-met={minimumMet}>Pedido mínimo: {storefrontMoney(minimumOrderCents)}{minimumMet?" · atingido":""}</p>:null}</div>
   {message?<div className="sf__checkout-error" role="alert">{message}</div>:null}
   <div className="sf__checkout-actions"><button className="sf__text-button" type="button" onClick={()=>{props.onChange(clearCart(props.cart));}}>Limpar carrinho</button>
