@@ -237,28 +237,12 @@ const APPLY_STATUS_SQL = `with payment_candidate as (
     on c.order_id=o.id and c.tenant_id=o.tenant_id and c.store_id=o.store_id
   where c.order_id is not null
   for update of o
-), order_change as (
-  update public.orders o
-  set payment_status=case
-      when c.status='captured' then 'paid'
-      when c.status in ('failed','chargeback') then 'failed'
-      when c.status='refunded' then 'refunded'
-      else o.payment_status end,
-    status=case
-      when c.status='captured' and ol.status='pending' then 'confirmed'
-      when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then 'cancelled'
-      else o.status end,
-    confirmed_at=case when c.status='captured' and ol.status='pending' then coalesce(o.confirmed_at,now()) else o.confirmed_at end,
-    cancelled_at=case when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then coalesce(o.cancelled_at,now()) else o.cancelled_at end,
-    updated_at=now()
-  from changed c join order_locked ol on ol.id=c.order_id
-  where o.id=ol.id and o.tenant_id=ol.tenant_id and o.store_id=ol.store_id
-  returning o.id,o.tenant_id,o.store_id,ol.status previous_status,o.status,c.status payment_status
 ), stock_needs as (
   select oi.tenant_id,oi.store_id,oi.product_id,oi.variant_id,sum(oi.qty)::integer qty
-  from public.order_items oi join order_change oc on oc.id=oi.order_id
+  from public.order_items oi join changed c on c.order_id=oi.order_id
+  join order_locked ol on ol.id=c.order_id
   join public.products p on p.tenant_id=oi.tenant_id and p.store_id=oi.store_id and p.id=oi.product_id and p.track_inventory=true
-  where oc.payment_status='captured' and oc.previous_status='pending' and oi.product_id is not null
+  where c.status='captured' and ol.status='pending' and oi.product_id is not null
   group by oi.tenant_id,oi.store_id,oi.product_id,oi.variant_id
 ), stock_variant_targets as materialized (
   select n.*,v.stock_quantity::integer current_quantity from stock_needs n
@@ -274,6 +258,23 @@ stock_guard as (
     (select count(*) from stock_targets)=(select count(*) from stock_needs)
     and not exists(select 1 from stock_targets where current_quantity<qty)
   ) ok
+), order_change as (
+  update public.orders o
+  set payment_status=case
+      when c.status='captured' then 'paid'
+      when c.status in ('failed','chargeback') then 'failed'
+      when c.status='refunded' then 'refunded'
+      else o.payment_status end,
+    status=case
+      when c.status='captured' and ol.status='pending' then 'confirmed'
+      when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then 'cancelled'
+      else o.status end,
+    confirmed_at=case when c.status='captured' and ol.status='pending' then coalesce(o.confirmed_at,now()) else o.confirmed_at end,
+    cancelled_at=case when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then coalesce(o.cancelled_at,now()) else o.cancelled_at end,
+    updated_at=now()
+  from changed c join order_locked ol on ol.id=c.order_id cross join stock_guard sg
+  where o.id=ol.id and (c.status<>'captured' or ol.status<>'pending' or sg.ok) and o.tenant_id=ol.tenant_id and o.store_id=ol.store_id
+  returning o.id,o.tenant_id,o.store_id,ol.status previous_status,o.status,c.status payment_status
 ), stock_sales as (
   insert into public.stock_movements(tenant_id,store_id,product_id,variant_id,delta,reason,movement_type,reference_type,reference_id)
   select t.tenant_id,t.store_id,t.product_id,t.variant_id,-t.qty,'Pagamento aprovado','sale','order',oc.id
