@@ -5,6 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHost } from "@tanstack/react-start/server";
 import {
   createRealDeps,
+  createStoreAdminRequestDeps,
   loadControl,
   loadMaster,
   loadStoreAdmin,
@@ -21,6 +22,6 @@ export const getControlContext = createServerFn({ method: "GET" }).handler(async
 });
 
 export const getStoreAdminContext = createServerFn({ method: "GET" }).handler(async () => {
-  const deps = await createRealDeps();
+  const deps = await createStoreAdminRequestDeps();
   return loadStoreAdmin({ host: getRequestHost() }, deps);
 });
