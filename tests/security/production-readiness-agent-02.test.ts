@@ -203,3 +203,26 @@ describe("merchant admin visual and navigation contract", () => {
     expect(onboarding).not.toContain("href={step.href}");
   });
 });
+
+
+describe("store payment lifecycle operations", () => {
+  test("order detail exposes its store-scoped payment state", () => {
+    const orders = source("apps/web/src/lib/server/operations-orders.functions.ts");
+    expect(orders).toContain("getStoreOrderPayment(current.scope, data.id)");
+    expect(orders).toContain("return { order, timeline, payment }");
+  });
+
+  test("refund is restricted to captured store-checkout payments and audited", () => {
+    const payment = source("apps/web/src/lib/server/mercadopago-store-payment.server.ts");
+    const orders = source("apps/web/src/lib/server/operations-orders.functions.ts");
+    expect(payment).toContain("p.level='store_checkout'");
+    expect(payment).toContain('row["status"]!=="captured"');
+    expect(payment).toContain("provider.refund");
+    expect(orders).toContain("payment.refund_requested");
+  });
+
+  test("merchant refund uses provider idempotency", () => {
+    const payment = source("apps/web/src/lib/server/mercadopago-store-payment.server.ts");
+    expect(payment).toContain("refund-order-");
+  });
+});
