@@ -9,7 +9,7 @@ import { createPublicCatalogContext } from "./catalog-context.server.ts";
 import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 import { enforceRateLimit } from "./rate-limit.server.ts";
-import { createStorePixPayment } from "./mercadopago-store-payment.server.ts";
+import { createStorePixPayment, getStoreOrderPayment } from "./mercadopago-store-payment.server.ts";
 import { shippingAddressSchema } from "./storefront-shipping.functions.ts";
 import { saveOrderShipping } from "./order-shipping.server.ts";
 
@@ -19,6 +19,7 @@ const cartItemSchema = z.object({
   quantity: z.number().int().min(1).max(999),
 });
 const refreshCartSchema = z.object({ items: z.array(cartItemSchema).max(100) });
+const publicPaymentStatusSchema = z.object({ orderId: z.string().uuid(), idempotencyKey: z.string().trim().min(8).max(120) });
 const checkoutSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(120),
   customerName: z.string().trim().max(160).nullable(),
@@ -107,10 +108,27 @@ export const createOnlinePixOrder = createServerFn({ method: "POST" }).validator
     couponCode: data.couponCode, notes, shippingCents: data.shipping?.priceCents ?? 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
   });
   if(data.shipping) await saveOrderShipping(catalog.scope,order.id,data.shipping);
-  const payment = await createStorePixPayment(catalog.scope, {
-    orderId: order.id, orderNumber: order.orderNumber, amountCents: order.totalCents, payerEmail: data.payerEmail,
-  });
-  if (!payment.checkout.qrCode && !payment.checkout.ticketUrl) throw new Error("Mercado Pago não retornou os dados do Pix.");
+  let payment;
+  try {
+    payment = await createStorePixPayment(catalog.scope, {
+      orderId: order.id, orderNumber: order.orderNumber, amountCents: order.totalCents, payerEmail: data.payerEmail,
+    });
+  } catch (error) {
+    await sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       values(null,$1::uuid,$2::uuid,'checkout.payment_creation_failed','order',$3,jsonb_build_object('provider','mercadopago'))`,
+      [catalog.scope.tenantId,catalog.scope.storeId,order.id],
+    );
+    throw error;
+  }
+  if (!payment.checkout.qrCode && !payment.checkout.ticketUrl) {
+    await sql.query(
+      `insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+       values(null,$1::uuid,$2::uuid,'checkout.payment_data_missing','order',$3,jsonb_build_object('provider','mercadopago'))`,
+      [catalog.scope.tenantId,catalog.scope.storeId,order.id],
+    );
+    throw new Error("Mercado Pago não retornou os dados do Pix.");
+  }
   return {
     orderId: order.id, orderNumber: order.orderNumber, displayNumber: formatOrderNumber(order.orderNumber),
     paymentId: payment.paymentId, status: order.status, paymentStatus: order.paymentStatus,
@@ -157,4 +175,20 @@ export const refreshPublicCart = createServerFn({ method: "POST" }).validator(re
     subtotalCents: items.reduce((total, item) => total + item.unitPriceCents * item.quantity, 0),
     minimumOrderCents: advanced.minimumOrderCents,
   };
+});
+
+export const getOnlinePixOrderStatus = createServerFn({ method: "POST" }).validator(publicPaymentStatusSchema).handler(async ({ data }) => {
+  const catalog = await createPublicCatalogContext(getRequestHost());
+  const sql = createAdminSqlExecutor();
+  await enforceRateLimit(sql, `checkout:status:${catalog.scope.tenantId}:${catalog.scope.storeId}`, 90, 60);
+  const rows = await sql.query(
+    `select id::text,status,payment_status from public.orders
+     where tenant_id=$1::uuid and store_id=$2::uuid and id=$3::uuid and idempotency_key=$4 and origin='online' limit 1`,
+    [catalog.scope.tenantId,catalog.scope.storeId,data.orderId,data.idempotencyKey],
+  );
+  const order=rows.at(0);
+  if(!order) throw new Error("Pedido não encontrado.");
+  const payment=await getStoreOrderPayment(catalog.scope,data.orderId);
+  const paymentStatus = z.enum(["pending","paid","failed","refunded","cancelled"]).parse(order["payment_status"]);
+  return { orderStatus:String(order["status"]), paymentStatus, gatewayStatus:payment?.status ?? null, expiresAt:payment?.checkout.expiresAt ?? null };
 });

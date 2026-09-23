@@ -226,3 +226,25 @@ describe("store payment lifecycle operations", () => {
     expect(payment).toContain("refund-order-");
   });
 });
+
+
+describe("public Pix lifecycle", () => {
+  test("payment polling is bound to store, order and checkout idempotency key", () => {
+    const checkout = source("apps/web/src/lib/server/storefront-checkout.functions.ts");
+    expect(checkout).toContain("id=$3::uuid and idempotency_key=$4 and origin='online'");
+    expect(checkout).toContain("getStoreOrderPayment(catalog.scope,data.orderId)");
+  });
+
+  test("Pix confirmation polls payment status without exposing gateway credentials", () => {
+    const cart = source("apps/web/src/features/storefront/cart-panel.tsx");
+    expect(cart).toContain("getOnlinePixOrderStatus");
+    expect(cart).toContain("window.setInterval");
+    expect(cart).toContain("Pagamento confirmado");
+  });
+
+  test("checkout payment failures are auditable without provider error payloads", () => {
+    const checkout = source("apps/web/src/lib/server/storefront-checkout.functions.ts");
+    expect(checkout).toContain("checkout.payment_creation_failed");
+    expect(checkout).toContain("checkout.payment_data_missing");
+  });
+});
