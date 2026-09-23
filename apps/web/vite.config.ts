@@ -20,8 +20,6 @@ export default defineConfig({
   },
   ssr: {
     noExternal: [
-      "react",
-      "react-dom",
       "postgres",
       "@tanstack/react-router",
       "@tanstack/react-start",
