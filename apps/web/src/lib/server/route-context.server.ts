@@ -71,19 +71,26 @@ export async function createStoreAdminRequestDeps(): Promise<RouteDeps> {
     resolveSession: resolveSessionFromRequest,
     memberships,
     resolveTenantForHost: async (host: string) => {
-      const { data, error } = await client.rpc("resolve_my_store_admin_domain", {
+      const rpcResult: unknown = await client.rpc("resolve_my_store_admin_domain", {
         p_hostname: normalizeRoutingHost(host),
       });
-      if (error) throw new Error(`Falha ao resolver domínio administrativo: ${error.message}`);
-      const row = Array.isArray(data) ? data[0] : null;
+      if (typeof rpcResult !== "object" || rpcResult === null) {
+        throw new Error("Resposta inválida ao resolver domínio administrativo");
+      }
+      const result = rpcResult as { data?: unknown; error?: { message?: unknown } | null };
+      if (result.error) {
+        const detail = typeof result.error.message === "string" ? result.error.message : "erro desconhecido";
+        throw new Error(`Falha ao resolver domínio administrativo: ${detail}`);
+      }
+      const row: unknown = Array.isArray(result.data) ? result.data[0] : null;
       if (!row || typeof row !== "object") return null;
       const tenantId = (row as Record<string, unknown>)["tenant_id"];
       const storeId = (row as Record<string, unknown>)["store_id"];
       if (typeof tenantId !== "string" || typeof storeId !== "string") return null;
       return { tenantId: asTenantId(tenantId), storeId: asStoreId(storeId), type: "store_admin" };
     },
-    getTenantStatus: async () => "active",
-    getStoreStatus: async () => "active",
+    getTenantStatus: () => Promise.resolve("active"),
+    getStoreStatus: () => Promise.resolve("active"),
   };
 }
 
