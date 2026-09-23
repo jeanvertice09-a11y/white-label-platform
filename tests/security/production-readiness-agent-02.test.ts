@@ -55,3 +55,21 @@ describe("production readiness agent 02 boundaries", () => {
     expect(domainContext).not.toContain("new InMemoryDomainCache");
   });
 });
+
+
+describe("Vercel production configuration", () => {
+  test("keeps a single authoritative vercel.json with baseline security headers", () => {
+    const root = source("vercel.json");
+    expect(root).toContain('"framework": "tanstack-start"');
+    expect(root).toContain("Content-Security-Policy");
+    expect(root).toContain("X-Frame-Options");
+    expect(root).toContain("Strict-Transport-Security");
+    expect(existsSync(join(ROOT, "apps/web/vercel.json"))).toBe(false);
+  });
+
+  test("admin dashboard emits structured telemetry for partial loader failures", () => {
+    const dashboard = source("apps/web/src/routes/admin.index.tsx");
+    expect(dashboard).toContain("admin.dashboard.partial_failure");
+    expect(dashboard).toContain("durationMs");
+  });
+});
