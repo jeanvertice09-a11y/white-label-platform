@@ -9,6 +9,10 @@ const actions = readFileSync(
   new URL("../../apps/web/src/lib/server/control-team.functions.ts", import.meta.url),
   "utf8",
 );
+const invitations = readFileSync(
+  new URL("../../apps/web/src/lib/server/control-team-invite.server.ts", import.meta.url),
+  "utf8",
+);
 const guard = readFileSync(
   new URL("../../apps/web/src/lib/server/control-team-tenant-guard.server.ts", import.meta.url),
   "utf8",
@@ -36,7 +40,8 @@ describe("tenant owner serialization boundary", () => {
   });
 
   test("ServerFns de tenant team passam pelo boundary guardado", () => {
-    expect(actions).toContain("upsertTenantMemberGuarded");
+    expect(actions).toContain("inviteTenantMember");
+    expect(invitations).toContain("upsertTenantMemberGuarded");
     expect(actions).toContain("removeTenantMemberGuarded");
     expect(guard).toContain("public.control_upsert_tenant_member_guarded");
     expect(guard).toContain("public.control_remove_tenant_member_guarded");

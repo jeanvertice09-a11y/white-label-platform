@@ -51,7 +51,7 @@ function TenantMemberForm({ initial }: Readonly<{ initial: ControlTeamWorkspace 
     setBusy(true); setMessage("");
     try {
       await saveTenantMemberAction({ data: { email: text(form, "email"), role: tenantRole(text(form, "role")) } });
-      setMessage("Acesso da White Label salvo.");
+      setMessage("Acesso salvo. Se o e-mail ainda não tinha conta, o convite foi enviado.");
       event.currentTarget.reset();
       await router.invalidate();
     } catch (error) {
@@ -60,13 +60,13 @@ function TenantMemberForm({ initial }: Readonly<{ initial: ControlTeamWorkspace 
   }
   return <form className="k-form" onSubmit={(event) => { void submit(event); }}>
     <div className="k-form__grid">
-      <label>Usuário existente<input type="email" name="email" placeholder="usuario@empresa.com" required /></label>
+      <label>E-mail da pessoa<input type="email" name="email" placeholder="usuario@empresa.com" required /></label>
       <label>Perfil<select name="role" defaultValue="tenant_support">
         {TENANT_ROLES.filter((role) => role !== "tenant_owner" || initial.canManageOwners).map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}
       </select></label>
     </div>
     <button className="k-button" disabled={busy}>Salvar acesso</button>
-    <p className="k-muted">Somente usuários já existentes no Supabase Auth podem ser vinculados. Nenhum convite ou conta é criado aqui.</p>
+    <p className="k-muted">Pessoas sem conta recebem um convite seguro por e-mail. Usuários existentes são vinculados sem novo convite.</p>
     {message ? <p className="k-status" role="status">{message}</p> : null}
   </form>;
 }
@@ -86,7 +86,7 @@ function TenantMembers({ initial }: Readonly<{ initial: ControlTeamWorkspace }>)
     {initial.canManage ? <TenantMemberForm initial={initial} /> : <p className="k-muted">Somente Responsável principal ou Administrador pode alterar a equipe.</p>}
     <div className="console-compact-list">{initial.tenantMembers.map((member) => {
       const ownerLocked = member.role === "tenant_owner" && !initial.canManageOwners;
-      return <div className="console-compact-row" key={member.userId}><div><strong>{member.email ?? member.userId}</strong><small>{roleLabel(member.role)} · desde {date(member.createdAt)}</small></div>
+      return <div className="console-compact-row" key={member.userId}><div><strong>{member.email ?? member.userId}</strong><small>{roleLabel(member.role)} · {member.invitePending ? "convite pendente" : `desde ${date(member.createdAt)}`}</small></div>
         {initial.canManage && !ownerLocked ? <button className="k-button" type="button" onClick={() => {
           if (confirmDangerousAction(`Remover o acesso de ${member.email ?? member.userId}?`)) void remove(member.userId);
         }}>Remover</button> : null}
@@ -109,7 +109,7 @@ function StoreMemberForm({ initial }: Readonly<{ initial: ControlTeamWorkspace }
         email: text(form, "email"),
         role: storeRole(text(form, "role")),
       } });
-      setMessage("Acesso da loja salvo.");
+      setMessage("Acesso da loja salvo. Se necessário, o convite foi enviado por e-mail.");
       event.currentTarget.reset();
       await router.invalidate();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Não foi possível salvar o acesso da loja."); }
@@ -118,7 +118,7 @@ function StoreMemberForm({ initial }: Readonly<{ initial: ControlTeamWorkspace }
   return <form className="k-form" onSubmit={(event) => { void submit(event); }}>
     <div className="k-form__grid">
       <label>Loja<select name="storeId" required defaultValue=""><option value="" disabled>Selecione</option>{initial.stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}</select></label>
-      <label>Usuário existente<input type="email" name="email" required /></label>
+      <label>E-mail da pessoa<input type="email" name="email" required /></label>
       <label>Perfil<select name="role" defaultValue="store_staff">{STORE_ROLES.map((role) => <option key={role} value={role}>{roleLabel(role)}</option>)}</select></label>
     </div>
     <button className="k-button" disabled={busy}>Salvar acesso da loja</button>
@@ -139,7 +139,7 @@ function StoreMembers({ initial }: Readonly<{ initial: ControlTeamWorkspace }>):
   return <section className="control-editorial-section">
     <div className="control-editorial-section__header"><div><h2>Acesso às lojas</h2><p>O Responsável principal da loja permanece no fluxo dedicado do lojista.</p></div></div>
     {initial.canManage ? <StoreMemberForm initial={initial} /> : null}
-    <div className="console-compact-list">{initial.storeMembers.map((member) => <div className="console-compact-row" key={`${member.storeId}:${member.userId}`}><div><strong>{member.email ?? member.userId}</strong><small>{member.storeName} · {roleLabel(member.role)} · desde {date(member.createdAt)}</small></div>
+    <div className="console-compact-list">{initial.storeMembers.map((member) => <div className="console-compact-row" key={`${member.storeId}:${member.userId}`}><div><strong>{member.email ?? member.userId}</strong><small>{member.storeName} · {roleLabel(member.role)} · {member.invitePending ? "convite pendente" : `desde ${date(member.createdAt)}`}</small></div>
       {initial.canManage && member.role !== "store_owner" ? <button className="k-button" type="button" onClick={() => {
         if (confirmDangerousAction(`Remover este acesso de ${member.storeName}?`)) void remove(member.storeId, member.userId);
       }}>Remover</button> : null}
