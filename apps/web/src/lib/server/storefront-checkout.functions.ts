@@ -189,5 +189,6 @@ export const getOnlinePixOrderStatus = createServerFn({ method: "POST" }).valida
   const order=rows.at(0);
   if(!order) throw new Error("Pedido não encontrado.");
   const payment=await getStoreOrderPayment(catalog.scope,data.orderId);
-  return { orderStatus:String(order["status"]), paymentStatus:String(order["payment_status"]), gatewayStatus:payment?.status ?? null, expiresAt:payment?.checkout.expiresAt ?? null };
+  const paymentStatus = z.enum(["pending","paid","failed","refunded","cancelled"]).parse(order["payment_status"]);
+  return { orderStatus:String(order["status"]), paymentStatus, gatewayStatus:payment?.status ?? null, expiresAt:payment?.checkout.expiresAt ?? null };
 });
