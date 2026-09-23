@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+function source(path: string): string { return readFileSync(join(ROOT, path), "utf8"); }
 
 const analyticsSource = readFileSync(new URL("../../apps/web/src/lib/server/storefront-analytics.functions.ts", import.meta.url), "utf8");
 const trackingSource = readFileSync(new URL("../../apps/web/src/features/storefront/storefront-tracking.tsx", import.meta.url), "utf8");
