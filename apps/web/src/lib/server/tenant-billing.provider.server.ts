@@ -21,8 +21,7 @@ export interface TenantProviderLoader {
 export function tenantBillingWritesEnabled(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): boolean {
-  if (env["APP_ENV"] === "production" || env["NODE_ENV"] === "production") return false;
-  return env["TENANT_BILLING_SANDBOX_WRITES"] === "YES";
+  return env["TENANT_BILLING_WRITES"] === "YES" || env["TENANT_BILLING_SANDBOX_WRITES"] === "YES";
 }
 
 export function createTenantProviderLoader(sql: ControlSql): TenantProviderLoader {
@@ -35,7 +34,7 @@ export function createTenantProviderLoader(sql: ControlSql): TenantProviderLoade
         gateway.id,
         {
           writesEnabled: tenantBillingWritesEnabled(),
-          asaasBaseUrl: "https://api-sandbox.asaas.com/v3",
+          asaasBaseUrl: process.env["ASAAS_BASE_URL"] ?? ((process.env["APP_ENV"] === "production" || process.env["NODE_ENV"] === "production") ? "https://api.asaas.com/v3" : "https://api-sandbox.asaas.com/v3"),
         },
       );
       if (

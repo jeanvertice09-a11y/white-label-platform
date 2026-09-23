@@ -6,6 +6,8 @@ import type {
   ProviderPaymentId,
   ProviderWebhookInput,
   RefundPaymentInput,
+  ProviderCustomerInput,
+  PaymentCheckoutData,
 } from "../../types.ts";
 import {
   asProviderPaymentId,
@@ -55,7 +57,27 @@ export class AsaasProvider implements PaymentProvider {
       }),
     });
     const body = await readJson(response);
-    return { providerPaymentId: asProviderPaymentId(body["id"]) };
+    const providerPaymentId = asProviderPaymentId(body["id"]);
+    const checkout = input.paymentMethod === "pix" ? await this.getCheckoutData(providerPaymentId) : null;
+    return { providerPaymentId, ...(checkout ? { checkout } : {}) };
+  }
+
+  async ensureCustomer(input: ProviderCustomerInput): Promise<string> {
+    const query = new URLSearchParams({ externalReference: input.externalReference, limit: "1" });
+    const found = await readJson(await this.http(`${this.baseUrl}/customers?${query.toString()}`, { headers: this.headers() }));
+    const data = Array.isArray(found["data"]) ? found["data"] as Record<string, unknown>[] : [];
+    const existing = data[0]?.["id"];
+    if (typeof existing === "string" && existing) return existing;
+    this.assertWritesEnabled();
+    const created = await readJson(await this.http(`${this.baseUrl}/customers`, { method: "POST", headers: this.headers(), body: JSON.stringify({ name: input.name, cpfCnpj: input.taxId, email: input.email, externalReference: input.externalReference }) }));
+    const id = created["id"];
+    if (typeof id !== "string" || !id) throw new Error("Asaas não retornou o cliente criado.");
+    return id;
+  }
+
+  async getCheckoutData(providerPaymentId: ProviderPaymentId): Promise<PaymentCheckoutData | null> {
+    const body = await readJson(await this.http(`${this.baseUrl}/payments/${encodeURIComponent(providerPaymentId)}/pixQrCode`, { headers: this.headers() }));
+    return { qrCode: typeof body["payload"] === "string" ? body["payload"] : null, qrCodeBase64: typeof body["encodedImage"] === "string" ? body["encodedImage"] : null, ticketUrl: null, expiresAt: typeof body["expirationDate"] === "string" ? body["expirationDate"] : null };
   }
 
   async fetchStatus(providerPaymentId: ProviderPaymentId): Promise<PaymentStatus> {
@@ -65,8 +87,7 @@ export class AsaasProvider implements PaymentProvider {
     );
     const body = await readJson(response);
     const rawStatus = typeof body["status"] === "string" ? body["status"] : "";
-    const status = normalizeCommonStatus(rawStatus);
-    if (!status) throw new Error("Status Asaas desconhecido.");
+    const status = asaasStatus(rawStatus);
     return status;
   }
 
@@ -107,6 +128,7 @@ export class AsaasProvider implements PaymentProvider {
     return {
       access_token: this.options.apiKey,
       "Content-Type": "application/json",
+      "User-Agent": "Kataluu/1.0 (tenant-billing)",
     };
   }
 
@@ -131,3 +153,5 @@ function objectBody(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
 }
+
+function asaasStatus(raw:string): PaymentStatus {const value=raw.toUpperCase();if(value==="RECEIVED"||value==="RECEIVED_IN_CASH")return "captured";if(value==="CONFIRMED")return "authorized";const status=normalizeCommonStatus(raw);if(!status)throw new Error("Status Asaas desconhecido.");return status;}
