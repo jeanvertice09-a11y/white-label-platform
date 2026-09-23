@@ -67,6 +67,26 @@ function LoginPage(): React.JSX.Element {
       await signInWithPassword(email, password);
       const { data: sessionData } = await getBrowserClient().auth.getSession();
       if (!sessionData.session) throw new Error("Sessão não foi persistida. Tente novamente.");
+      if (data.destination === "/admin") {
+        const client = getBrowserClient();
+        const rpcResult: unknown = await client.rpc("resolve_my_store_admin_destination", {
+          p_hostname: window.location.hostname,
+        });
+        if (typeof rpcResult !== "object" || rpcResult === null) {
+          throw new Error("Não foi possível validar o acesso à loja. Tente novamente.");
+        }
+        const result = rpcResult as { data?: unknown; error?: unknown };
+        if (result.error) throw new Error("Não foi possível validar o acesso à loja. Tente novamente.");
+        const hostname = result.data;
+        if (typeof hostname !== "string" || hostname.length === 0) {
+          await client.auth.signOut();
+          throw new Error("Este usuário não possui acesso a uma loja disponível.");
+        }
+        const target = new URL("/admin", window.location.origin);
+        target.hostname = hostname;
+        window.location.assign(target.toString());
+        return;
+      }
       const next = postLoginLocation(data.destination);
       window.location.assign(next);
     } catch (error) {
