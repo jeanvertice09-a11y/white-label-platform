@@ -35,7 +35,7 @@ describe("payment state TS x SQL invariants", () => {
   });
 
   test("SQL também bloqueia evento fora de ordem e escopa a conta do gateway", () => {
-    expect(storeSource).toContain("$4::timestamptz >= provider_updated_at");
+    expect(storeSource).toContain("$4::timestamptz >= public.payments.provider_updated_at");
     expect(storeSource).toContain("public.payments.id=pc.id and public.payments.gateway_account_id=$2::uuid");
   });
 });
