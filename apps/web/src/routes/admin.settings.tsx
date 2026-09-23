@@ -80,7 +80,7 @@ function SettingsPage(): React.JSX.Element {
 
       <section className="k-workspace-section">
         <header className="k-section-head"><div><span className="k-section-kicker">Pagamentos</span><h2>Recebimentos do catálogo</h2><p>O checkout online da loja usa exclusivamente Mercado Pago conectado por OAuth.</p></div></header>
-        <MercadoPagoConnectCard connected={data.mercadoPago.connected} mercadoPagoUserId={data.mercadoPago.mercadoPagoUserId} updatedAt={data.mercadoPago.updatedAt} />
+        <MercadoPagoConnectCard connected={data.mercadoPago.connected} mercadoPagoUserId={data.mercadoPago.mercadoPagoUserId} updatedAt={data.mercadoPago.updatedAt} available={data.mercadoPago.available} />
       </section>
 
       <section className="k-workspace-section">
