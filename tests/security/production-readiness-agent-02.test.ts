@@ -77,3 +77,12 @@ describe("Vercel production configuration", () => {
     expect(dashboard).toContain("durationMs");
   });
 });
+
+
+describe("SSR dependency boundary", () => {
+  test("React is not force-inlined into the Vite SSR module runner", () => {
+    const vite = source("apps/web/vite.config.ts");
+    expect(vite).not.toContain('"react",');
+    expect(vite).not.toContain('"react-dom",');
+  });
+});
