@@ -8,6 +8,7 @@ const mfaSource = read("../../apps/web/src/routes/mfa.tsx");
 const checkoutSource = read("../../apps/web/src/lib/server/storefront-checkout.functions.ts");
 const webhookSource = read("../../apps/web/src/lib/server/payment-webhook.server.ts");
 const webhookStoreSource = read("../../packages/payments/src/server/webhook-store.ts");
+const lifecycleSource = read("../../packages/payments/src/server/store-checkout-lifecycle.sql.ts");
 const asaasSource = read("../../packages/payments/src/server/providers/asaas.ts");
 const mercadoPagoSource = read("../../packages/payments/src/server/providers/mercadopago.ts");
 const migrationSource = read("../../supabase/migrations/0027_security_rate_limits.sql");
@@ -44,9 +45,9 @@ describe("security production hardening boundary", () => {
 
   test("payment permanece preso ao gateway account e webhook é idempotente por conta", () => {
     expect(webhookStoreSource).toContain("where gateway_account_id=$1::uuid and provider_payment_id=$2");
-    expect(webhookStoreSource).toContain("where id=$1::uuid and gateway_account_id=$2::uuid");
+    expect(lifecycleSource).toContain("public.payments.id=pc.id and public.payments.gateway_account_id=$2::uuid");
     expect(webhookStoreSource).toContain("on conflict (provider,gateway_account_id,external_event_id) do nothing");
-    expect(webhookStoreSource).toContain("$4::timestamptz >= provider_updated_at");
+    expect(lifecycleSource).toContain("$4::timestamptz >= provider_updated_at");
   });
 
   test("refund inseguro Asaas continua fechado e Mercado Pago mantém idempotência", () => {
