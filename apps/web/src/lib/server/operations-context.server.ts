@@ -1,5 +1,5 @@
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
-import { createRealDeps, loadStoreAdmin } from "./route-context.server.ts";
+import { createStoreAdminRequestDeps, loadStoreAdmin } from "./route-context.server.ts";
 
 function requireHost(rawHost: string | null): string {
   if (!rawHost) throw new Error("Hostname não resolvido");
@@ -8,7 +8,7 @@ function requireHost(rawHost: string | null): string {
 
 export async function createMerchantOperationsContext(rawHost: string | null) {
   const host = requireHost(rawHost);
-  const deps = await createRealDeps();
+  const deps = await createStoreAdminRequestDeps();
   const auth = await loadStoreAdmin({ host }, deps);
   if (!auth.storeId) throw new Error("Loja não resolvida");
   return {

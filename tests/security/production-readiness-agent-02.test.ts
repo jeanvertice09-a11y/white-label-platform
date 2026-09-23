@@ -157,3 +157,26 @@ describe("product nested route rendering", () => {
     expect(index).toContain("<ProductsList");
   });
 });
+
+
+describe("admin request-context performance boundary", () => {
+  test("merchant catalog and operations do not repeat service-role domain resolution", () => {
+    const catalogContext = source("apps/web/src/lib/server/catalog-context.server.ts");
+    const operationsContext = source("apps/web/src/lib/server/operations-context.server.ts");
+    expect(catalogContext).toContain("createStoreAdminRequestDeps");
+    expect(operationsContext).toContain("createStoreAdminRequestDeps");
+    expect(catalogContext).not.toContain("createRealDeps");
+    expect(operationsContext).not.toContain("createRealDeps");
+  });
+
+  test("all nested admin route parents render outlets", () => {
+    for (const file of [
+      "apps/web/src/routes/admin.customers.tsx",
+      "apps/web/src/routes/admin.orders.tsx",
+      "apps/web/src/routes/admin.products.tsx",
+      "apps/web/src/routes/admin.store.tsx",
+    ]) {
+      expect(source(file)).toContain("Outlet");
+    }
+  });
+});
