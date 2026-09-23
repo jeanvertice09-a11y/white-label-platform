@@ -270,14 +270,15 @@ const APPLY_STATUS_SQL = `with payment_candidate as (
   order by p.id for update of p
 ), stock_targets as (select * from stock_variant_targets union all select * from stock_simple_targets),
 stock_guard as (
-  select case when exists(select 1 from stock_needs) and (
-    (select count(*) from stock_targets)<>(select count(*) from stock_needs)
-    or exists(select 1 from stock_targets where current_quantity<qty)
-  ) then 1/0 else 1 end ok
+  select not exists(select 1 from stock_needs) or (
+    (select count(*) from stock_targets)=(select count(*) from stock_needs)
+    and not exists(select 1 from stock_targets where current_quantity<qty)
+  ) ok
 ), stock_sales as (
   insert into public.stock_movements(tenant_id,store_id,product_id,variant_id,delta,reason,movement_type,reference_type,reference_id)
   select t.tenant_id,t.store_id,t.product_id,t.variant_id,-t.qty,'Pagamento aprovado','sale','order',oc.id
-  from stock_targets t join order_change oc on oc.tenant_id=t.tenant_id and oc.store_id=t.store_id cross join stock_guard
+  from stock_targets t join order_change oc on oc.tenant_id=t.tenant_id and oc.store_id=t.store_id cross join stock_guard g
+  where g.ok
   on conflict do nothing returning tenant_id,store_id,product_id,variant_id,delta
 ), variant_delta as (
   select tenant_id,store_id,product_id,variant_id,sum(delta)::integer delta from stock_sales where variant_id is not null group by 1,2,3,4
