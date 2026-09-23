@@ -13,6 +13,12 @@ const MP_TOKEN_URL="https://api.mercadopago.com/oauth/token";
 const callbackSchema=z.object({code:z.string().trim().min(8).max(4096),state:z.string().trim().min(32).max(512)});
 type OAuthState={tenantId:string;storeId:string;verifierCiphertext:string;returnUrl:string};
 type TokenSet={accessToken:string;refreshToken:string;userId:string;expiresIn:number};
+export type MercadoPagoOAuthAvailability={available:boolean;missing:string[]};
+function oauthAvailability():MercadoPagoOAuthAvailability{
+ const names=["MERCADOPAGO_CLIENT_ID","MERCADOPAGO_CLIENT_SECRET","MERCADOPAGO_OAUTH_REDIRECT_URI","MERCADOPAGO_WEBHOOK_SECRET","GATEWAY_CREDENTIAL_VAULT_KEYS"] as const;
+ const missing=names.filter((name)=>!process.env[name]?.trim());
+ return {available:missing.length===0,missing:[...missing]};
+}
 
 function requiredEnv(name:"MERCADOPAGO_CLIENT_ID"|"MERCADOPAGO_CLIENT_SECRET"|"MERCADOPAGO_OAUTH_REDIRECT_URI"|"MERCADOPAGO_WEBHOOK_SECRET"):string{
  const value=process.env[name]?.trim(); if(!value) throw new Error(`Configuração obrigatória ausente: ${name}`); return value;
@@ -74,17 +80,20 @@ async function saveConnection(state:OAuthState,tokens:TokenSet,actorUserId:strin
 }
 
 export const getMerchantMercadoPagoConnection=createServerFn({method:"GET"}).handler(async()=>{
+ const availability=oauthAvailability();
  const context=await createMerchantCatalogContext(getRequestHost()); const rows=await createAdminSqlExecutor().query(
   `select ga.id::text,ga.status,ga.public_identifier,ga.updated_at::text,(s.credentials_ciphertext is not null) connected
    from public.gateway_accounts ga join private.gateway_account_secrets s on s.gateway_account_id=ga.id
    where ga.level='store_checkout' and ga.provider='mercadopago' and ga.tenant_id=$1::uuid and ga.store_id=$2::uuid
    order by ga.updated_at desc limit 1`,[context.scope.tenantId,context.scope.storeId]);
  const row=rows.at(0); return row?{connected:row["connected"]===true&&row["status"]==="active",accountId:typeof row["id"]==="string"?row["id"]:null,
-  mercadoPagoUserId:typeof row["public_identifier"]==="string"?row["public_identifier"]:null,updatedAt:typeof row["updated_at"]==="string"?row["updated_at"]:null}
-  :{connected:false,accountId:null,mercadoPagoUserId:null,updatedAt:null};
+  mercadoPagoUserId:typeof row["public_identifier"]==="string"?row["public_identifier"]:null,updatedAt:typeof row["updated_at"]==="string"?row["updated_at"]:null,...availability}
+  :{connected:false,accountId:null,mercadoPagoUserId:null,updatedAt:null,...availability};
 });
 export const startMerchantMercadoPagoOAuth=createServerFn({method:"POST"}).handler(async()=>{
- const host=getRequestHost(); const context=await createMerchantCatalogContext(host); requiredEnv("MERCADOPAGO_CLIENT_SECRET"); requiredEnv("MERCADOPAGO_WEBHOOK_SECRET");
+ const host=getRequestHost(); const context=await createMerchantCatalogContext(host); const availability=oauthAvailability();
+ if(!availability.available) throw new Error("Integração Mercado Pago indisponível neste ambiente.");
+ requiredEnv("MERCADOPAGO_CLIENT_SECRET"); requiredEnv("MERCADOPAGO_WEBHOOK_SECRET");
  const verifier=randomBytes(64).toString("base64url").slice(0,86); const state=randomBytes(32).toString("base64url"); const vault=createCredentialVaultFromEnv();
  await createAdminSqlExecutor().query(`insert into private.mercadopago_oauth_states(state_hash,tenant_id,store_id,actor_user_id,code_verifier_ciphertext,return_url,expires_at)
   values ($1,$2::uuid,$3::uuid,$4::uuid,$5,$6,now()+interval '10 minutes')`,

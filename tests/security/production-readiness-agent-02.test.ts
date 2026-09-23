@@ -125,3 +125,23 @@ describe("HML authentication flow", () => {
     expect(mfa).not.toContain("challengeAndVerify");
   });
 });
+
+
+describe("HML admin runtime contracts", () => {
+  test("orders loader never exceeds catalog product page-size limit", () => {
+    const orders = source("apps/web/src/routes/admin.orders.index.tsx");
+    const catalog = source("apps/web/src/lib/server/catalog.functions.ts");
+    expect(catalog).toContain("max(48)");
+    expect(orders).toContain('pageSize: 48, sort: "name"');
+    expect(orders).not.toContain("pageSize: 100");
+  });
+
+  test("unconfigured Mercado Pago is a disabled capability, not a leaked env error", () => {
+    const oauth = source("apps/web/src/lib/server/mercadopago-oauth.functions.ts");
+    const card = source("apps/web/src/features/store-admin/mercadopago-connect-card.tsx");
+    expect(oauth).toContain("oauthAvailability()");
+    expect(oauth).toContain("Integração Mercado Pago indisponível neste ambiente.");
+    expect(card).toContain("disabled={busy||!props.available}");
+    expect(card).not.toContain("cause.message");
+  });
+});
