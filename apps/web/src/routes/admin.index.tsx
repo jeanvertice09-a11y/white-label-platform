@@ -11,11 +11,25 @@ import { statusLabel } from "../lib/ui-labels.ts";
 
 export const Route = createFileRoute("/admin/")({
   loader: async () => {
+    const startedAt = Date.now();
     const [operationsResult, analyticsResult, onboardingResult] = await Promise.allSettled([
       getMerchantOperationsDashboard(),
       getCurrentStorefrontAnalytics(),
       getMerchantOnboarding(),
     ]);
+    const failed = [
+      operationsResult.status === "rejected" ? "operations" : null,
+      analyticsResult.status === "rejected" ? "analytics" : null,
+      onboardingResult.status === "rejected" ? "onboarding" : null,
+    ].filter((value): value is string => value !== null);
+    if (failed.length > 0) {
+      console.error(JSON.stringify({
+        level: "error",
+        message: "admin.dashboard.partial_failure",
+        failed,
+        durationMs: Date.now() - startedAt,
+      }));
+    }
     return {
       operations: operationsResult.status === "fulfilled" ? operationsResult.value : null,
       analytics: analyticsResult.status === "fulfilled" ? analyticsResult.value : null,
