@@ -22,6 +22,7 @@ const tenantA: GatewayScope = {
   tenantId: ids.tenantA,
   storeId: null,
 };
+const tenantAStoreGateway: GatewayScope = { level: "store_checkout", tenantId: ids.tenantA, storeId: ids.storeA };
 const tenantB: GatewayScope = {
   level: "tenant_billing",
   tenantId: ids.tenantB,
@@ -106,7 +107,7 @@ describe("fase 09 secure gateway accounts", () => {
   });
 
   test("update vazio preserva credencial e troca explícita substitui ciphertext", async () => {
-    const created = await createGatewayAccount(h.db, vault, actor, tenantA, {
+    const created = await createGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       provider: "asaas",
       label: "Asaas Preserve",
       publicIdentifier: null,
@@ -118,7 +119,7 @@ describe("fase 09 secure gateway accounts", () => {
        from private.gateway_account_secrets where gateway_account_id=$1::uuid`,
       [created.id],
     );
-    await updateGatewayAccount(h.db, vault, actor, tenantA, {
+    await updateGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       gatewayAccountId: created.id,
       label: "Asaas Metadata",
       publicIdentifier: "safe-public-id",
@@ -132,7 +133,7 @@ describe("fase 09 secure gateway accounts", () => {
     );
     expect(preserved).toEqual(before);
 
-    await updateGatewayAccount(h.db, vault, actor, tenantA, {
+    await updateGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       gatewayAccountId: created.id,
       label: "Asaas Metadata",
       publicIdentifier: "safe-public-id",
@@ -183,7 +184,7 @@ describe("fase 09 secure gateway accounts", () => {
   });
 
   test("IDOR e cross-tenant/store não atravessam escopo", async () => {
-    const account = await createGatewayAccount(h.db, vault, actor, tenantA, {
+    const account = await createGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       provider: "asaas",
       label: "Tenant A Isolado",
       publicIdentifier: null,
@@ -290,7 +291,7 @@ describe("fase 09 secure gateway accounts", () => {
       credentials: credential,
       webhookSecret: webhook,
     });
-    await updateGatewayAccount(h.db, vault, actor, tenantA, {
+    await updateGatewayAccount(h.db, vault, actor, tenantAStoreGateway, {
       gatewayAccountId: account.id,
       label: "Audit Updated",
       publicIdentifier: null,
