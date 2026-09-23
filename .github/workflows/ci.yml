@@ -30,7 +30,7 @@ jobs:
         run: bun run test:e2e:browser
       - run: bun run build
       - name: Upload browser failure diagnostics
-        if: steps.browser_smoke.outcome == 'failure'
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: playwright-failure-${{ github.run_id }}
