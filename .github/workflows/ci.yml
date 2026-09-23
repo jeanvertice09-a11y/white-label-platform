@@ -26,10 +26,11 @@ jobs:
       - run: bun run test:security
       - run: bunx playwright install --with-deps chromium
       - run: bun run build:web
-      - run: bun run test:e2e:browser
+      - id: browser-smoke
+        run: bun run test:e2e:browser
       - run: bun run build
       - name: Upload browser failure diagnostics
-        if: failure()
+        if: steps.browser-smoke.outcome == 'failure'
         uses: actions/upload-artifact@v5
         with:
           name: playwright-failure-${{ github.run_id }}
