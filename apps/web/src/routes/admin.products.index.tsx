@@ -4,14 +4,16 @@ import { BulkImportPanel } from "../features/store-admin/bulk-import-panel.tsx";
 import { ProductsList } from "../features/store-admin/products-list.tsx";
 import { listMerchantCategories, listMerchantProducts } from "../lib/server/catalog.functions.ts";
 
+async function loadProductsPage() {
+  const [categories, products] = await Promise.all([
+    listMerchantCategories(),
+    listMerchantProducts({ data: { page: 1, pageSize: 20, sort: "position" } }),
+  ]);
+  return { categories, products };
+}
+
 export const Route = createFileRoute("/admin/products/")({
-  loader: async () => {
-    const [categories, products] = await Promise.all([
-      listMerchantCategories(),
-      listMerchantProducts({ data: { page: 1, pageSize: 20, sort: "position" } }),
-    ]);
-    return { categories, products };
-  },
+  loader: loadProductsPage,
   pendingComponent: ProductsPending,
   errorComponent: ProductsError,
   component: ProductsPage,
@@ -27,7 +29,8 @@ function ProductsError(props: Readonly<{ error: unknown }>): React.JSX.Element {
 }
 
 function ProductsPage(): React.JSX.Element {
-  const data = Route.useLoaderData();
+  const raw: unknown = Route.useLoaderData();
+  const data = raw as Awaited<ReturnType<typeof loadProductsPage>>;
   return (
     <div className="k-page">
       <PageHead title="Produtos" description="Cadastre, busque e gerencie produtos, preços, estoque e variantes da loja." action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>} />
