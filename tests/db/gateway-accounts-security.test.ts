@@ -22,6 +22,7 @@ const tenantA: GatewayScope = {
   tenantId: ids.tenantA,
   storeId: null,
 };
+
 const tenantB: GatewayScope = {
   level: "tenant_billing",
   tenantId: ids.tenantB,

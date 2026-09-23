@@ -52,6 +52,7 @@ const MIGRATIONS = [
   "0036_mercadopago_store_oauth.sql",
   "0037_suspension_public_helper_hardening.sql",
   "0038_tenant_billing_checkout.sql",
+  "0039_tenant_billing_gateway_invariant.sql",
 ];
 
 class PGliteDb implements TestDb {
