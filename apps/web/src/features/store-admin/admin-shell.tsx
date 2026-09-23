@@ -17,14 +17,14 @@ interface NavGroup {
 }
 
 const navigation: readonly NavGroup[] = [
-  { label: "Visão geral", items: [{ to: "/admin", label: "Início", exact: true, icon: "home" }] },
-  { label: "Vendas", items: [{ to: "/admin/orders", label: "Pedidos", exact: false, icon: "orders" }, { to: "/admin/customers", label: "Clientes", exact: false, icon: "customers" }] },
-  { label: "Catálogo", items: [{ to: "/admin/products", label: "Produtos", exact: false, icon: "products" }, { to: "/admin/categories", label: "Categorias", exact: false, icon: "categories" }, { to: "/admin/inventory", label: "Estoque", exact: false, icon: "inventory" }] },
-  { label: "Marketing", items: [{ to: "/admin/coupons", label: "Cupons", exact: true, icon: "marketing" }, { to: "/admin/campaigns", label: "Campanhas", exact: true, icon: "activity" }] },
-  { label: "Financeiro", items: [{ to: "/admin/finance", label: "Visão financeira", exact: true, icon: "revenue" }, { to: "/admin/purchases", label: "Compras", exact: true, icon: "orders" }, { to: "/admin/suppliers", label: "Fornecedores", exact: true, icon: "store" }] },
-  { label: "Organização", items: [{ to: "/admin/tasks", label: "Tarefas", exact: true, icon: "check" }, { to: "/admin/operations", label: "Relatórios e histórico", exact: true, icon: "activity" }] },
-  { label: "Minha loja", items: [{ to: "/admin/store", label: "Informações da loja", exact: true, icon: "store" }, { to: "/admin/store/appearance", label: "Aparência", exact: true, icon: "palette" }, { to: "/admin/store/banners", label: "Banners", exact: true, icon: "marketing" }, { to: "/admin/store/catalog", label: "Catálogo e checkout", exact: true, icon: "settings" }] },
-  { label: "Conta", items: [{ to: "/admin/settings", label: "Configurações", exact: true, icon: "settings" }] },
+  { label: "Principal", items: [{ to: "/admin", label: "Resumo da loja", exact: true, icon: "home" }] },
+  { label: "Vendas", items: [{ to: "/admin/orders", label: "Pedidos e vendas", exact: false, icon: "orders" }, { to: "/admin/customers", label: "Meus clientes", exact: false, icon: "customers" }] },
+  { label: "Produtos", items: [{ to: "/admin/products", label: "Meus produtos", exact: false, icon: "products" }, { to: "/admin/categories", label: "Categorias", exact: false, icon: "categories" }, { to: "/admin/inventory", label: "Controle de estoque", exact: false, icon: "inventory" }] },
+  { label: "Divulgação", items: [{ to: "/admin/coupons", label: "Cupons de desconto", exact: true, icon: "marketing" }, { to: "/admin/campaigns", label: "Campanhas", exact: true, icon: "activity" }] },
+  { label: "Financeiro", items: [{ to: "/admin/finance", label: "Entradas e resultados", exact: true, icon: "revenue" }, { to: "/admin/purchases", label: "Compras e despesas", exact: true, icon: "orders" }, { to: "/admin/suppliers", label: "Fornecedores", exact: true, icon: "store" }] },
+  { label: "Gestão", items: [{ to: "/admin/tasks", label: "Tarefas", exact: true, icon: "check" }, { to: "/admin/operations", label: "Relatórios e histórico", exact: true, icon: "activity" }] },
+  { label: "Loja online", items: [{ to: "/admin/store", label: "Dados da loja", exact: true, icon: "store" }, { to: "/admin/store/appearance", label: "Visual da loja", exact: true, icon: "palette" }, { to: "/admin/store/banners", label: "Banners da loja", exact: true, icon: "marketing" }, { to: "/admin/store/catalog", label: "Catálogo e formas de venda", exact: true, icon: "settings" }] },
+  { label: "Conta", items: [{ to: "/admin/settings", label: "Plano e configurações", exact: true, icon: "settings" }] },
 ];
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -47,7 +47,7 @@ function AdminSidebar(props: Readonly<{ open: boolean; onClose: () => void }>): 
             </div>
           ))}
         </nav>
-        <div className="k-admin__sidebar-foot"><div className="k-admin__account"><span className="k-admin__avatar" aria-hidden="true">L</span><div><strong>Conta da loja</strong><small>Operação do lojista</small></div></div></div>
+        <div className="k-admin__sidebar-foot"><a className="k-admin__store-link" href="/" target="_blank" rel="noreferrer">Ver minha loja online ↗</a><div className="k-admin__account"><span className="k-admin__avatar" aria-hidden="true">L</span><div><strong>Minha conta</strong><small>Administração da loja</small></div></div></div>
       </aside>
     </>
   );
@@ -97,7 +97,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>): Rea
       <div className="k-admin__main">
         <div className="k-admin__mobilebar">
           <button className="k-admin__menu" type="button" onClick={openMenu} aria-label="Abrir menu" aria-expanded={mobileOpen} aria-controls="merchant-navigation"><DashboardIcon name="menu" /></button>
-          <strong>Painel da loja</strong><Link to="/admin/store">Minha loja</Link>
+          <strong>Minha loja</strong><Link to="/admin/store">Configurar</Link>
         </div>
         <main className="k-admin__content" id="merchant-content">{children}</main>
       </div>
@@ -107,5 +107,5 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>): Rea
 }
 
 export function PageHead(props: Readonly<{ title: string; description: string; action?: ReactNode }>): React.JSX.Element {
-  return <header className="k-page__head"><div className="k-page__head-copy"><span className="k-section-kicker">Painel da loja / {props.title}</span><h1>{props.title}</h1><p>{props.description}</p></div>{props.action ? <div className="k-page__head-action">{props.action}</div> : null}</header>;
+  return <header className="k-page__head"><div className="k-page__head-copy"><span className="k-section-kicker">Minha loja / {props.title}</span><h1>{props.title}</h1><p>{props.description}</p></div>{props.action ? <div className="k-page__head-action">{props.action}</div> : null}</header>;
 }
