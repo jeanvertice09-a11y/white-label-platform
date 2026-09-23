@@ -1,5 +1,5 @@
 import { createCredentialVaultFromEnv, createPaymentProvider } from "@white-label/payments/server";
-import type { GatewayAccountId, PaymentCheckoutData } from "@white-label/payments";
+import type { GatewayAccountId, PaymentCheckoutData, ProviderPaymentId } from "@white-label/payments";
 import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 const MP_TOKEN_URL="https://api.mercadopago.com/oauth/token";
 type Scope={tenantId:string;storeId:string}; type Gateway={id:string;accessCipher:string;refreshCipher:string;expiresAt:string|null};
@@ -49,4 +49,22 @@ export async function createStorePixPayment(scope:Scope,input:{orderId:string;or
  checkout_expires_at=coalesce(public.payments.checkout_expires_at,excluded.checkout_expires_at),updated_at=now() returning id::text`,
  [scope.tenantId,scope.storeId,account.id,created.providerPaymentId,input.amountCents,input.orderId,checkout.qrCode,checkout.qrCodeBase64,checkout.ticketUrl,checkout.expiresAt]);
  const paymentId=rows.at(0)?.["id"];if(typeof paymentId!=="string")throw new Error("Não foi possível persistir o pagamento Pix.");return{paymentId,checkout};
+}
+
+export async function getStoreOrderPayment(scope:Scope,orderId:string):Promise<{paymentId:string;status:string;providerPaymentId:string|null;checkout:PaymentCheckoutData}|null>{
+ const rows=await createAdminSqlExecutor().query(`select id::text,status,provider_payment_id,checkout_qr_code,checkout_qr_code_base64,checkout_ticket_url,checkout_expires_at::text
+ from public.payments where level='store_checkout' and tenant_id=$1::uuid and store_id=$2::uuid and order_id=$3::uuid limit 1`,[scope.tenantId,scope.storeId,orderId]);
+ const row=rows.at(0);if(!row)return null;return{paymentId:String(row["id"]),status:String(row["status"]),providerPaymentId:typeof row["provider_payment_id"]==="string"?row["provider_payment_id"]:null,
+ checkout:{qrCode:typeof row["checkout_qr_code"]==="string"?row["checkout_qr_code"]:null,qrCodeBase64:typeof row["checkout_qr_code_base64"]==="string"?row["checkout_qr_code_base64"]:null,
+ ticketUrl:typeof row["checkout_ticket_url"]==="string"?row["checkout_ticket_url"]:null,expiresAt:typeof row["checkout_expires_at"]==="string"?row["checkout_expires_at"]:null}};
+}
+export async function refundStoreOrderPayment(scope:Scope,orderId:string):Promise<{paymentId:string;status:string}>{
+ const sql=createAdminSqlExecutor();const rows=await sql.query(`select p.id::text,p.provider_payment_id,p.status,p.gateway_account_id::text
+ from public.payments p where p.level='store_checkout' and p.tenant_id=$1::uuid and p.store_id=$2::uuid and p.order_id=$3::uuid for update`,[scope.tenantId,scope.storeId,orderId]);
+ const row=rows.at(0);if(!row)throw new Error("Pagamento do pedido não encontrado.");if(row["status"]!=="captured")throw new Error("Somente pagamentos aprovados podem ser reembolsados.");
+ const providerPaymentId=row["provider_payment_id"],gatewayAccountId=row["gateway_account_id"];if(typeof providerPaymentId!=="string"||typeof gatewayAccountId!=="string")throw new Error("Pagamento sem referência do Mercado Pago.");
+ await ensureMercadoPagoGatewayAccessToken(gatewayAccountId);const loaded=await gateway(scope);if(loaded.id!==gatewayAccountId)throw new Error("Gateway do pagamento não pertence à loja.");
+ const token=await accessToken(loaded),provider=createPaymentProvider("mercadopago",{credentials:token,webhookSecret:null},{writesEnabled:true});
+ await provider.refund({providerPaymentId:providerPaymentId as ProviderPaymentId,idempotencyKey:`refund-order-${orderId}`});
+ return{paymentId:String(row["id"]),status:"refund_requested"};
 }
