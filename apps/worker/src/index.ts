@@ -6,10 +6,12 @@ async function tick(): Promise<void> {
   for (const result of results) {
     if (result.status === "rejected") {
       const error: unknown = result.reason;
-      console.error("[worker] tick failed.", {
+      console.error(JSON.stringify({
+        level: "error",
+        message: "worker.tick.failed",
         name: error instanceof Error ? error.name : "UnknownError",
-        message: error instanceof Error ? error.message : "unknown error",
-      });
+        error: error instanceof Error ? error.message : "unknown error",
+      }));
     }
   }
 }
@@ -17,9 +19,9 @@ async function tick(): Promise<void> {
 if (import.meta.main) {
   const interval = Math.max(1000, Number(process.env["WORKER_POLL_MS"] ?? 5000));
   if (!process.env["SUPABASE_DB_URL"]) {
-    console.warn("[worker] SUPABASE_DB_URL ausente; worker desabilitado.");
+    console.warn(JSON.stringify({level:"warn",message:"worker.disabled",reason:"SUPABASE_DB_URL missing"}));
   } else {
-    console.warn(`[worker] durable queues online (${String(interval)}ms).`);
+    console.info(JSON.stringify({level:"info",message:"worker.online",pollMs:interval}));
     void tick();
     setInterval(() => void tick(), interval);
   }
