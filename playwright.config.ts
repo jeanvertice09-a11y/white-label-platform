@@ -7,5 +7,5 @@ export default defineConfig({
   reporter: "list",
   use: { baseURL: "http://127.0.0.1:5173", trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: { command: "bun run --cwd apps/web dev -- --host 127.0.0.1", url: "http://127.0.0.1:5173/api/health", reuseExistingServer: !process.env["CI"], timeout: 120_000, env: { ...process.env, HOST: "localhost" }, stdout: "pipe", stderr: "pipe" },
+  webServer: { command: "bun run --cwd apps/web preview -- --host 127.0.0.1 --port 5173", url: "http://127.0.0.1:5173/login", reuseExistingServer: !process.env["CI"], timeout: 120_000, env: { ...process.env, HOST: "localhost" }, stdout: "pipe", stderr: "pipe" },
 });
