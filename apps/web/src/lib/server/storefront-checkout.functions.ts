@@ -10,6 +10,8 @@ import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 import { enforceRateLimit } from "./rate-limit.server.ts";
 import { createStorePixPayment } from "./mercadopago-store-payment.server.ts";
+import { shippingAddressSchema } from "./storefront-shipping.functions.ts";
+import { saveOrderShipping } from "./order-shipping.server.ts";
 
 const cartItemSchema = z.object({
   productId: z.string().uuid(),
@@ -26,9 +28,8 @@ const checkoutSchema = z.object({
   items: z.array(cartItemSchema).min(1).max(100),
 });
 
-const onlineCheckoutSchema = checkoutSchema.extend({
-  payerEmail: z.string().trim().email().max(254),
-});
+const shippingSelection=z.object({serviceId:z.number().int().positive(),serviceName:z.string().min(1).max(120),companyName:z.string().max(120),priceCents:z.number().int().min(0),deliveryDays:z.number().int().min(0),snapshot:z.string().max(50000),recipient:shippingAddressSchema});
+const onlineCheckoutSchema = checkoutSchema.extend({ payerEmail: z.string().trim().email().max(254), shipping: shippingSelection.nullable() });
 type CartRequestItem = z.infer<typeof cartItemSchema>;
 
 function itemKey(item: Pick<CartRequestItem, "productId" | "variantId">): string {
@@ -103,8 +104,9 @@ export const createOnlinePixOrder = createServerFn({ method: "POST" }).validator
   if (data.couponCode?.trim()) await assertCouponsEntitlement(sql, catalog.scope);
   const order = await createOrderRepository(sql).createFromCart(catalog.scope, {
     idempotencyKey: data.idempotencyKey, origin: "online", customerName, customerPhone,
-    couponCode: data.couponCode, notes, shippingCents: 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
+    couponCode: data.couponCode, notes, shippingCents: data.shipping?.priceCents ?? 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
   });
+  if(data.shipping) await saveOrderShipping(catalog.scope,order.id,data.shipping);
   const payment = await createStorePixPayment(catalog.scope, {
     orderId: order.id, orderNumber: order.orderNumber, amountCents: order.totalCents, payerEmail: data.payerEmail,
   });
