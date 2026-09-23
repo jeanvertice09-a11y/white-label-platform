@@ -14,12 +14,12 @@ const migrationSource = read("../../supabase/migrations/0027_security_rate_limit
 const vercelSource = read("../../vercel.json");
 
 describe("security production hardening boundary", () => {
-  test("MFA usa AAL oficial do Supabase e protege os três boundaries server-side", () => {
+  test("HML mantém autenticação Supabase sem forçar enrollment MFA", () => {
     expect(sessionSource).toContain("getAuthenticatorAssuranceLevel()");
-    expect(routeContextSource).toContain('session.assuranceLevel !== "aal2"');
     expect(routeContextSource.match(/requireMfaAssurance\(session\);/g)?.length).toBe(3);
-    expect(mfaSource).toContain("auth.mfa.enroll");
-    expect(mfaSource).toContain("auth.mfa.challengeAndVerify");
+    expect(routeContextSource).toContain("Intentionally disabled during HML");
+    expect(mfaSource).not.toContain("auth.mfa.enroll");
+    expect(mfaSource).not.toContain("auth.mfa.challengeAndVerify");
     expect(mfaSource).not.toContain("totp.secret");
     expect(mfaSource).not.toContain("service_role");
   });
