@@ -31,7 +31,7 @@ describe("responsive merchant/storefront final QA", () => {
     expect(shell).toContain("aria-expanded={mobileOpen}");
     expect(shell).toContain('event.key === "Escape"');
     expect(shell).toContain('event.key !== "Tab"');
-    expect(shell).toContain("openerRef.current?.focus()");
+    expect(shell).toContain("openerRef.current.focus()");
     expect(shell).toContain('document.body.style.overflow = "hidden"');
     expect(qaCss).toContain("visibility: hidden");
     expect(qaCss).toContain("pointer-events: none");
