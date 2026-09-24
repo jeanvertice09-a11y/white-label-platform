@@ -12,6 +12,7 @@ import { getMerchantMercadoPagoConnection } from "../lib/server/mercadopago-oaut
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
 import { getMerchantSettingsOverview } from "../lib/server/merchant-settings.functions.ts";
 import { statusLabel } from "../lib/ui-labels.ts";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
 
 export const Route = createFileRoute("/admin/settings")({
   loader: async () => {
@@ -24,6 +25,8 @@ export const Route = createFileRoute("/admin/settings")({
     ]);
     return { settings, storefront, mercadoPago, subscriptionBilling, melhorEnvio };
   },
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
   component: SettingsPage,
 });
 
