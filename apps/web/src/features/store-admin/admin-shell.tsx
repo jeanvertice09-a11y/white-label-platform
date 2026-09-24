@@ -76,19 +76,19 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>): Rea
     if (!mobileOpen) return undefined;
     const previous = document.body.style.overflow;
     const drawer = document.getElementById("merchant-navigation");
-    drawer?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    const firstFocusable=drawer?.querySelector<HTMLElement>(FOCUSABLE);if(firstFocusable)firstFocusable.focus();
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") { event.preventDefault(); setMobileOpen(false); return; }
       if (event.key !== "Tab" || !drawer) return;
       const items = [...drawer.querySelectorAll<HTMLElement>(FOCUSABLE)];
       if (!items.length) return;
       const first = items[0]; const last = items.at(-1);
-      if (event.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      if (event.shiftKey && (document.activeElement === first || !drawer.contains(document.activeElement))) { event.preventDefault(); if(last)last.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     }
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
-    return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", onKeyDown); openerRef.current?.focus(); };
+    return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", onKeyDown); if(openerRef.current)openerRef.current.focus(); };
   }, [mobileOpen]);
   return (
     <section className="k-admin">
