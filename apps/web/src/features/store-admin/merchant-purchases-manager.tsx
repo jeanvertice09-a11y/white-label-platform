@@ -233,7 +233,7 @@ export function MerchantPurchasesManager(props: MerchantPurchasesManagerProps): 
       data={state.data} error={state.error} success={state.success} loading={state.loading}
       canReceive={props.inventoryEnabled}
       onChangeStatus={(purchase, action) => { void changePurchaseStatus(purchase, action, state); }}
-      onPage={(page)=>{state.setLoading(true);state.setError("");void refreshPurchases(state,page).catch(cause=>{state.setError(messageFrom(cause,"Não foi possível carregar as compras."));}).finally(()=>{state.setLoading(false);});}}
+      onPage={(page)=>{state.setLoading(true);state.setError("");void refreshPurchases(state,page).catch((cause:unknown)=>{state.setError(messageFrom(cause,"Não foi possível carregar as compras."));}).finally(()=>{state.setLoading(false);});}}
     />
   </div>;
 }
