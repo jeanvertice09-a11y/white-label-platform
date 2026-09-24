@@ -16,8 +16,12 @@ import { readCampaign } from "./campaign-ui.tsx";
 export function useCampaignListing(initialPage: CampaignPage) {
   const [page, setPage] = useState(initialPage);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function reload(nextPage = page.page): Promise<void> {
+    setLoading(true); setError("");
+    try {
     const result = await listMerchantCampaigns({
       data: {
         page: nextPage,
@@ -26,9 +30,12 @@ export function useCampaignListing(initialPage: CampaignPage) {
       },
     });
     setPage(result);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Não foi possível carregar as campanhas.");
+    } finally { setLoading(false); }
   }
 
-  return { page, search, setSearch, reload };
+  return { page, search, setSearch, reload, loading, error };
 }
 
 export function useCampaignSave(

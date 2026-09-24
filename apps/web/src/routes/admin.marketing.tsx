@@ -1,7 +1,10 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
 
 export const Route = createFileRoute("/admin/marketing")({
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
   component: MarketingRoutePage,
 });
 
