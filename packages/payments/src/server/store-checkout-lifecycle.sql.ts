@@ -115,5 +115,9 @@ stock_guard as (
   select null,tenant_id,store_id,'payment.status_changed','payment',id::text,
     jsonb_build_object('status',status,'source','provider_reconciliation')
   from changed returning id
+), stock_failure_audit as (
+  insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
+  select null,c.tenant_id,c.store_id,'order.payment_stock_conflict','order',c.order_id::text,jsonb_build_object('payment_status',c.status)
+  from changed c cross join stock_guard sg where c.status='captured' and c.order_id is not null and not sg.ok returning id
 )
 select exists(select 1 from changed) changed`;

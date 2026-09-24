@@ -9,7 +9,7 @@ import { createPublicCatalogContext } from "./catalog-context.server.ts";
 import { assertCouponsEntitlement } from "./marketing-entitlements.server.ts";
 import { assertOrdersEntitlement } from "./orders-entitlements.server.ts";
 import { enforceRateLimit } from "./rate-limit.server.ts";
-import { createStorePixPayment, getStoreOrderPayment } from "./mercadopago-store-payment.server.ts";
+import { createStorePixPayment, getStoreOrderPayment, reconcileStoreOrderPayment } from "./mercadopago-store-payment.server.ts";
 import { shippingAddressSchema } from "./storefront-shipping.functions.ts";
 import { saveOrderShipping } from "./order-shipping.server.ts";
 
@@ -20,6 +20,7 @@ const cartItemSchema = z.object({
 });
 const refreshCartSchema = z.object({ items: z.array(cartItemSchema).max(100) });
 const publicPaymentStatusSchema = z.object({ orderId: z.string().uuid(), idempotencyKey: z.string().trim().min(8).max(120) });
+const reconcilePublicPaymentSchema=publicPaymentStatusSchema.extend({force:z.boolean().optional()});
 const checkoutSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(120),
   customerName: z.string().trim().max(160).nullable(),
@@ -191,4 +192,12 @@ export const getOnlinePixOrderStatus = createServerFn({ method: "POST" }).valida
   const payment=await getStoreOrderPayment(catalog.scope,data.orderId);
   const paymentStatus = z.enum(["pending","paid","failed","refunded","cancelled"]).parse(order["payment_status"]);
   return { orderStatus:String(order["status"]), paymentStatus, gatewayStatus:payment?.status ?? null, expiresAt:payment?.checkout.expiresAt ?? null };
+});
+
+export const reconcileOnlinePixOrder = createServerFn({method:"POST"}).validator(reconcilePublicPaymentSchema).handler(async({data})=>{
+ const catalog=await createPublicCatalogContext(getRequestHost()),sql=createAdminSqlExecutor();
+ await enforceRateLimit(sql,`checkout:reconcile:${catalog.scope.tenantId}:${catalog.scope.storeId}`,12,60);
+ const rows=await sql.query(`select id::text,payment_status from public.orders where tenant_id=$1::uuid and store_id=$2::uuid and id=$3::uuid and idempotency_key=$4 and origin='online' limit 1`,[catalog.scope.tenantId,catalog.scope.storeId,data.orderId,data.idempotencyKey]);
+ const order=rows.at(0);if(!order)throw new Error("Pedido não encontrado.");if(order["payment_status"]!=="pending")return{status:String(order["payment_status"]),changed:false};
+ return reconcileStoreOrderPayment(catalog.scope,data.orderId);
 });
