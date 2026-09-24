@@ -284,3 +284,10 @@ describe("commerce lifecycle hardening",()=>{
  test("captured payment stock conflicts become auditable incidents",()=>{const lifecycle=source("packages/payments/src/server/store-checkout-lifecycle.sql.ts");expect(lifecycle).toContain("order.payment_stock_conflict");expect(lifecycle).toContain("not sg.ok");});
  test("buyer can request immediate provider reconciliation after Pix payment",()=>{const cart=source("apps/web/src/features/storefront/cart-panel.tsx");expect(cart).toContain("Já paguei · verificar agora");expect(cart).toContain("reconcileOnlinePixOrder");});
 });
+
+
+describe("admin functional completion",()=>{
+ test("finance and purchases expose pagination for records beyond first page",()=>{const finance=source("apps/web/src/features/store-admin/merchant-finance-manager.tsx"),purchases=source("apps/web/src/features/store-admin/merchant-purchases-manager.tsx");expect(finance).toContain("state.data.page+1");expect(finance).toContain("state.data.total/state.data.pageSize");expect(purchases).toContain("props.onPage(props.data.page+1)");expect(purchases).toContain("Math.ceil(props.data.total/props.data.pageSize)");});
+ test("settings route has explicit pending and error states",()=>{const settings=source("apps/web/src/routes/admin.settings.tsx");expect(settings).toContain("pendingComponent: AdminRoutePending");expect(settings).toContain("errorComponent: AdminRouteError");});
+ test("mobile admin drawer restores focus without optional-call lint ambiguity",()=>{const shell=source("apps/web/src/features/store-admin/admin-shell.tsx");expect(shell).toContain("if(firstFocusable)firstFocusable.focus()");expect(shell).toContain("if(openerRef.current)openerRef.current.focus()");});
+});

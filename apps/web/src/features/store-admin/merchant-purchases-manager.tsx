@@ -75,6 +75,7 @@ function PurchaseListSection(props: Readonly<{
   data: Page<Purchase>;
   error: string; success: string; loading: boolean; canReceive: boolean;
   onChangeStatus: (purchase: Purchase, action: "receive" | "cancel") => void;
+  onPage: (page:number)=>void;
 }>): React.JSX.Element {
   return (
     <section className="k-workspace-section">
@@ -82,6 +83,7 @@ function PurchaseListSection(props: Readonly<{
       {props.error ? <div className="k-inline-state k-inline-state--error"><strong>Erro</strong><span>{props.error}</span></div> : null}
       {props.success ? <div className="k-inline-state"><strong>Concluído</strong><span>{props.success}</span></div> : null}
       {!props.data.items.length ? <div className="k-empty"><strong>Nenhuma compra</strong><span>{props.canReceive ? "Crie uma compra acima para começar." : "Nenhuma compra registrada."}</span></div> : <div className="k-table-wrap k-table-wrap--flush"><table className="k-table"><thead><tr><th>Data</th><th>Fornecedor / itens</th><th>Status</th><th>Total</th><th>Ações</th></tr></thead><tbody>{props.data.items.map((purchase) => <tr key={purchase.id}><td>{formatDate(purchase.purchasedAt)}</td><td><strong>{purchase.supplierName ?? "Sem fornecedor"}</strong><div className="k-row__meta">{purchase.items.length} item(ns) · {purchase.items.map((item) => item.variantName ?? item.productName).join(", ")}</div></td><td><span className={purchase.status === "received" ? "k-badge k-badge--on" : "k-badge"}>{purchase.status === "draft" ? "Rascunho" : purchase.status === "received" ? "Recebida" : "Cancelada"}</span></td><td>{formatCurrency(purchase.totalCents)}</td><td>{purchase.status === "draft" ? <div className="k-row">{props.canReceive ? <button className="k-button k-button--primary" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "receive"); }}>Receber</button> : null}<button className="k-button" type="button" disabled={props.loading} onClick={() => { props.onChangeStatus(purchase, "cancel"); }}>Cancelar</button></div> : "—"}</td></tr>)}</tbody></table></div>}
+      {props.data.total>0?<div className="k-pagination"><span>{props.data.total} compra(s) · página {props.data.page} de {Math.max(1,Math.ceil(props.data.total/props.data.pageSize))}</span><div><button className="k-button" type="button" disabled={props.loading||props.data.page<=1} onClick={()=>{props.onPage(props.data.page-1);}}>Anterior</button><button className="k-button" type="button" disabled={props.loading||props.data.page*props.data.pageSize>=props.data.total} onClick={()=>{props.onPage(props.data.page+1);}}>Próxima</button></div></div>:null}
     </section>
   );
 }
@@ -231,6 +233,7 @@ export function MerchantPurchasesManager(props: MerchantPurchasesManagerProps): 
       data={state.data} error={state.error} success={state.success} loading={state.loading}
       canReceive={props.inventoryEnabled}
       onChangeStatus={(purchase, action) => { void changePurchaseStatus(purchase, action, state); }}
+      onPage={(page)=>{state.setLoading(true);state.setError("");void refreshPurchases(state,page).catch((cause:unknown)=>{state.setError(messageFrom(cause,"Não foi possível carregar as compras."));}).finally(()=>{state.setLoading(false);});}}
     />
   </div>;
 }
