@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { DashboardIcon, type DashboardIconName } from "../components/dashboard/DashboardIcon.tsx";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
 import { OnboardingChecklist } from "../features/store-admin/onboarding-checklist.tsx";
 import { StorefrontAnalyticsPanel } from "../features/store-admin/storefront-analytics-panel.tsx";
@@ -36,6 +37,8 @@ export const Route = createFileRoute("/admin/")({
       onboarding: onboardingResult.status === "fulfilled" ? onboardingResult.value : null,
     };
   },
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
   component: AdminDashboard,
 });
 
