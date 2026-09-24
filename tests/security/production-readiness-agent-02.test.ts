@@ -276,3 +276,11 @@ describe("automatic operational recovery",()=>{
  test("worker reconciles store checkout payment through its scoped gateway",()=>{const handlers=source("apps/worker/src/jobs/handlers.ts");expect(handlers).toContain('loaded.level!=="store_checkout"');expect(handlers).toContain("reconcileStorePayment");});
  test("merchant dashboard surfaces retry and dead-letter recovery alerts",()=>{const server=source("apps/web/src/lib/server/operations-dashboard.functions.ts"),ui=source("apps/web/src/routes/admin.index.tsx");expect(server).toContain("RECOVERY_ALERTS_SQL");expect(server).toContain("'retry','dead_letter'");expect(ui).toContain("Recuperação automática");expect(ui).toContain("Pendências técnicas");});
 });
+
+
+describe("commerce lifecycle hardening",()=>{
+ test("public buyer reconciliation is store+order+idempotency scoped and rate limited",()=>{const checkout=source("apps/web/src/lib/server/storefront-checkout.functions.ts");expect(checkout).toContain("checkout:reconcile:");expect(checkout).toContain("id=$3::uuid and idempotency_key=$4 and origin='online'");expect(checkout).toContain("reconcileStoreOrderPayment");});
+ test("expired or incomplete Pix is never silently reused",()=>{const payment=source("apps/web/src/lib/server/mercadopago-store-payment.server.ts");expect(payment).toContain("const usable=Boolean(oldCheckout.qrCode||oldCheckout.ticketUrl)");expect(payment).toContain("O Pix anterior expirou ou ficou incompleto");});
+ test("captured payment stock conflicts become auditable incidents",()=>{const lifecycle=source("packages/payments/src/server/store-checkout-lifecycle.sql.ts");expect(lifecycle).toContain("order.payment_stock_conflict");expect(lifecycle).toContain("not sg.ok");});
+ test("buyer can request immediate provider reconciliation after Pix payment",()=>{const cart=source("apps/web/src/features/storefront/cart-panel.tsx");expect(cart).toContain("Já paguei · verificar agora");expect(cart).toContain("reconcileOnlinePixOrder");});
+});
