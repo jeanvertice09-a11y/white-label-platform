@@ -20,7 +20,7 @@ export function CampaignManager({
   const listing = useCampaignListing(initialPage);
   const saving = useCampaignSave(listing.reload);
   const actions = useCampaignAction(listing.reload);
-  const busy = saving.saving || actions.actionBusy;
+  const busy = listing.loading || saving.saving || actions.actionBusy;
   const message = actions.actionMessage || saving.saveMessage;
 
   return (
@@ -37,6 +37,7 @@ export function CampaignManager({
         </header>
         <CampaignComposer busy={busy} save={saving.save} />
         <CampaignSearch busy={busy} search={listing.search} setSearch={listing.setSearch} reload={listing.reload} />
+        {listing.error ? <div className="k-inline-state k-inline-state--error"><strong>Não foi possível carregar</strong><span>{listing.error}</span><button className="k-button" type="button" disabled={busy} onClick={()=>{void listing.reload();}}>Tentar novamente</button></div> : null}
         {message ? <div className="k-inline-state">{message}</div> : null}
         <CampaignList page={listing.page} detail={actions.detail} busy={busy} save={saving.save} runAction={actions.runAction} />
         <CampaignPagination busy={busy} page={listing.page.page} pageSize={listing.page.pageSize} total={listing.page.total} reload={listing.reload} />
