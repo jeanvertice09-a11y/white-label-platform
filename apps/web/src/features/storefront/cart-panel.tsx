@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CatalogAdvancedSettings, CartState } from "@white-label/catalog";
 import { cartTotalCents, clearCart, removeCartItem, setCartItemQuantity } from "@white-label/catalog";
-import { createOnlinePixOrder, createWhatsappOrder, getOnlinePixOrderStatus, refreshPublicCart } from "../../lib/server/storefront-checkout.functions.ts";
+import { createOnlinePixOrder, createWhatsappOrder, getOnlinePixOrderStatus, reconcileOnlinePixOrder, refreshPublicCart } from "../../lib/server/storefront-checkout.functions.ts";
 import { storefrontMoney } from "./format.ts";
 import { trackStorefrontEvent } from "./storefront-tracking.tsx";
 import { quotePublicShipping } from "../../lib/server/storefront-shipping.functions.ts";
@@ -35,16 +35,17 @@ function CheckoutFields(props:Readonly<{settings:CheckoutSettings;onlineEnabled:
 }
 function WhatsappSuccess({result,showPrice}:Readonly<{result:WhatsappResult;showPrice:boolean}>):React.JSX.Element{return <div className="sf__success"><h3>{result.displayNumber}</h3><p>Pedido registrado. Continue o atendimento pelo WhatsApp.</p>{showPrice?<strong>{storefrontMoney(result.totalCents)}</strong>:null}<a className="sf__primary" href={result.whatsappUrl}>Continuar no WhatsApp</a></div>;}
 function PixSuccess({result,idempotencyKey}:Readonly<{result:PixResult;idempotencyKey:string}>):React.JSX.Element{
- const [copied,setCopied]=useState(false),[paymentStatus,setPaymentStatus]=useState(result.paymentStatus),[expired,setExpired]=useState(false);
+ const [copied,setCopied]=useState(false),[paymentStatus,setPaymentStatus]=useState(result.paymentStatus),[expired,setExpired]=useState(false),[checking,setChecking]=useState(false);
  async function copy():Promise<void>{if(!result.pix.qrCode)return;await navigator.clipboard.writeText(result.pix.qrCode);setCopied(true);}
  useEffect(()=>{let active=true;async function poll():Promise<void>{try{const status=await getOnlinePixOrderStatus({data:{orderId:result.orderId,idempotencyKey}});if(!active)return;setPaymentStatus(status.paymentStatus);if(status.expiresAt&&Date.parse(status.expiresAt)<=Date.now()&&status.paymentStatus==="pending")setExpired(true);}catch{if(active)setExpired(false);}}
  void poll();const timer=window.setInterval(()=>{void poll();},5000);return()=>{active=false;window.clearInterval(timer);};},[idempotencyKey,result.orderId]);
+ async function verifyNow():Promise<void>{setChecking(true);try{const value=await reconcileOnlinePixOrder({data:{orderId:result.orderId,idempotencyKey,force:true}});if(value.status==="captured")setPaymentStatus("paid");}finally{setChecking(false);}}
  const paid=paymentStatus==="paid";
  return <div className="sf__success"><div className="sf__confirmation-head"><span className="sf__success-mark" aria-hidden="true">{paid?"✓":"⌁"}</span><div><span className="sf__eyebrow">{paid?"Pagamento confirmado":"Aguardando pagamento"}</span><h3>{result.displayNumber}</h3><p>{paid?"Pagamento confirmado. Seu pedido já entrou em processamento.":expired?"Este Pix expirou. Feche esta confirmação e faça um novo pedido para gerar outro código.":"Pague via Pix. Esta tela verifica a confirmação automaticamente."}</p></div></div>
  <div className="sf__summary"><div className="sf__summary-row sf__summary-row--total"><span>Total</span><strong>{storefrontMoney(result.totalCents)}</strong></div></div>
  {result.pix.qrCodeBase64?<img src={`data:image/png;base64,${result.pix.qrCodeBase64}`} alt="QR Code Pix" style={{maxWidth:240,width:"100%",margin:"0 auto"}}/>:null}
  {result.pix.qrCode?<><label className="sf__field"><span>Pix Copia e Cola</span><textarea readOnly value={result.pix.qrCode}/></label><button className="sf__primary" type="button" onClick={()=>{void copy();}}>{copied?"Código copiado":"Copiar código Pix"}</button></>:null}
- {result.pix.ticketUrl?<a className="sf__text-button" href={result.pix.ticketUrl} target="_blank" rel="noreferrer">Abrir pagamento no Mercado Pago</a>:null}</div>;
+ {!paid&&!expired?<button className="sf__text-button" disabled={checking} type="button" onClick={()=>{void verifyNow();}}>{checking?"Verificando…":"Já paguei · verificar agora"}</button>:null}{result.pix.ticketUrl?<a className="sf__text-button" href={result.pix.ticketUrl} target="_blank" rel="noreferrer">Abrir pagamento no Mercado Pago</a>:null}</div>;
 }
 function safeCheckoutMessage(error:unknown):string{const message=error instanceof Error?error.message:"";if(message.toLowerCase().includes("pedido mínimo"))return"O subtotal atual ainda não atingiu o pedido mínimo desta loja.";if(message.toLowerCase().includes("cupom"))return"Confira o código, a validade, o subtotal mínimo e o limite de uso do cupom.";if(message.toLowerCase().includes("mercado pago"))return"Pagamento online temporariamente indisponível. Tente novamente em instantes.";if(message.toLowerCase().includes("carrinho")||message.toLowerCase().includes("estoque"))return"Um item mudou de disponibilidade. Revise o carrinho e tente novamente.";return message||"Não foi possível finalizar o pedido.";}
 // eslint-disable-next-line max-lines-per-function
