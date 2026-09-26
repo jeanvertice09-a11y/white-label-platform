@@ -1,0 +1,5 @@
+- success after refresh
+- reset after refresh
+- errors use alert semantics
+- controls disabled while busy
+- retry preserves input after failure
