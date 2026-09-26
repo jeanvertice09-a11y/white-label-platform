@@ -10,18 +10,19 @@ export function CampaignManager({ initialPage, merchandising }: Readonly<{ initi
   const busy = listing.loading || saving.saving || actions.actionBusy;
   const message = actions.actionMessage || saving.saveMessage;
   const mutationError = actions.actionError || saving.saveError;
+  const reloadForUi = async (page?: number): Promise<void> => { await listing.reload(page); };
   return <>
     <CatalogMerchandisingForm initial={merchandising} />
     <section className="k-workspace-section">
       <header className="k-section-head"><div><span className="k-section-kicker">Marketing</span><h2>Campanhas</h2><p>Segmentação com consentimento explícito e preparação segura de destinatários.</p></div><span className="k-section-count">{listing.page.total} campanha(s)</span></header>
       <CampaignComposer busy={busy} save={saving.save} />
-      <CampaignSearch busy={busy} search={listing.search} setSearch={listing.setSearch} reload={listing.reload} />
+      <CampaignSearch busy={busy} search={listing.search} setSearch={listing.setSearch} reload={reloadForUi} />
       {listing.loading ? <div className="k-inline-state">Atualizando campanhas…</div> : null}
       {listing.error ? <div className="k-inline-state k-inline-state--error"><strong>Não foi possível carregar</strong><span>{listing.error}</span><button className="k-button" type="button" disabled={busy} onClick={()=>{void listing.reload();}}>Tentar novamente</button></div> : null}
       {mutationError ? <div className="k-inline-state k-inline-state--error"><strong>Operação incompleta</strong><span>{mutationError}</span></div> : null}
       {message ? <div className="k-inline-state"><strong>Concluído</strong><span>{message}</span></div> : null}
       {!listing.error ? <CampaignList page={listing.page} detail={actions.detail} busy={busy} save={saving.save} runAction={actions.runAction} /> : null}
-      {!listing.error ? <CampaignPagination busy={busy} page={listing.page.page} pageSize={listing.page.pageSize} total={listing.page.total} reload={listing.reload} /> : null}
+      {!listing.error ? <CampaignPagination busy={busy} page={listing.page.page} pageSize={listing.page.pageSize} total={listing.page.total} reload={reloadForUi} /> : null}
     </section>
   </>;
 }
