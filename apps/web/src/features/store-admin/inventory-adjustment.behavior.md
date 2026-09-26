@@ -1,0 +1,1 @@
+Inventory adjustment publishes success only after the caller refresh completes. On refresh failure the form remains populated, feedback is an alert, and the operator can retry without re-entering the movement.
