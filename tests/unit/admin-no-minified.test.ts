@@ -19,7 +19,8 @@ describe("admin formatting", () => {
       if (!/\.(?:ts|tsx|css)$/.test(file)) continue;
       const lines = (await readFile(file, "utf8")).split("\n");
       lines.forEach((line, index) => {
-        expect(`${file}:${String(index + 1)} ${line.length}`).toSatisfy(() => line.length <= 110);
+        const position = `${file}:${String(index + 1)} ${String(line.length)}`;
+        expect(position).toSatisfy(() => line.length <= 110);
       });
     }
   });
