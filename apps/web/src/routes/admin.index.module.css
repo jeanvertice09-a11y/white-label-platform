@@ -1,0 +1,154 @@
+.page {
+  display: grid;
+  gap: 48px;
+}
+
+.primaryAction {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: var(--radius-control);
+  background: var(--ink);
+  color: white;
+  font-weight: 650;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-block: 1px solid var(--line);
+}
+
+.metric {
+  display: grid;
+  gap: 5px;
+  padding: 24px;
+}
+
+.metric + .metric {
+  border-left: 1px solid var(--line);
+}
+
+.metric span,
+.metric small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric strong {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.attentionList,
+.orders {
+  border-top: 1px solid var(--line);
+}
+
+.attentionRow,
+.orderRow {
+  display: grid;
+  min-height: 72px;
+  align-items: center;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.attentionRow {
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+}
+
+.orderRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.attentionRow > span:nth-child(2),
+.orderRow > span {
+  display: grid;
+  gap: 4px;
+}
+
+.attentionRow small,
+.orderRow small {
+  color: var(--muted);
+}
+
+.attentionRow b,
+.orderRow b,
+.allOrders {
+  font-weight: 620;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--danger);
+}
+
+.statusDot.warning {
+  background: var(--warning);
+}
+
+.clearState {
+  padding: 18px 0;
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.allOrders {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--accent);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .page {
+    gap: 32px;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metric {
+    padding: 18px 12px;
+  }
+
+  .metric + .metric {
+    border-left: 0;
+  }
+
+  .metric:nth-child(even) {
+    border-left: 1px solid var(--line);
+  }
+
+  .metric:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .columns {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .attentionRow {
+    grid-template-columns: 8px minmax(0, 1fr);
+    padding: 12px 0;
+  }
+
+  .attentionRow b {
+    grid-column: 2;
+  }
+}

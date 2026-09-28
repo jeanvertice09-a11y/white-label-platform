@@ -29,12 +29,16 @@ export default tseslint.config(
       },
     },
     rules: {
-      // Requisito do produto: arquivos de aplicação <= 300 linhas úteis.
-      "max-lines": [
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-len": [
         "error",
-        { max: 300, skipBlankLines: true, skipComments: true },
+        {
+          code: 110,
+          ignoreUrls: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+        },
       ],
-      // Funções longas geram warning (~60 linhas).
       "max-lines-per-function": ["warn", { max: 60, skipBlankLines: true, skipComments: true }],
       "@typescript-eslint/no-unused-vars": [
         "error",
@@ -54,9 +58,13 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ["apps/web/src/routes/**/*", "apps/web/src/lib/client-guard.ts", "apps/web/src/router.tsx", "apps/web/src/main.tsx"],
+    files: [
+      "apps/web/src/routes/**/*",
+      "apps/web/src/lib/client-guard.ts",
+      "apps/web/src/router.tsx",
+      "apps/web/src/main.tsx",
+    ],
     rules: {
-      // Fronteira server/client: bundle client nunca importa entry server.
       "no-restricted-imports": [
         "error",
         {
