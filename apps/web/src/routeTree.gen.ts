@@ -15,13 +15,7 @@ import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as ControlRouteImport } from './routes/control'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MasterRouteImport } from './routes/master'
-import { Route as MasterIndexRouteImport } from './routes/master.index'
-import { Route as MasterAuditRouteImport } from './routes/master.audit'
-import { Route as MasterBillingRouteImport } from './routes/master.billing'
-import { Route as MasterInfrastructureRouteImport } from './routes/master.infrastructure'
-import { Route as MasterPlatformsRouteImport } from './routes/master.platforms'
-import { Route as MasterSettingsRouteImport } from './routes/master.settings'
-import { Route as MasterSupportRouteImport } from './routes/master.support'
+import { Route as MfaRouteImport } from './routes/mfa'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminCampaignsRouteImport } from './routes/admin.campaigns'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
@@ -38,16 +32,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
 import { Route as AdminTasksRouteImport } from './routes/admin.tasks'
-import { Route as AdminCustomersIndexRouteImport } from './routes/admin.customers.index'
-import { Route as AdminCustomersIdRouteImport } from './routes/admin.customers.$id'
-import { Route as AdminOrdersIndexRouteImport } from './routes/admin.orders.index'
-import { Route as AdminOrdersIdRouteImport } from './routes/admin.orders.$id'
-import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
-import { Route as AdminProductsNewRouteImport } from './routes/admin.products.new'
-import { Route as AdminStoreIndexRouteImport } from './routes/admin.store.index'
-import { Route as AdminStoreAppearanceRouteImport } from './routes/admin.store.appearance'
-import { Route as AdminStoreBannersRouteImport } from './routes/admin.store.banners'
-import { Route as AdminStoreCatalogRouteImport } from './routes/admin.store.catalog'
+import { Route as CategoriaSlugRouteImport } from './routes/categoria.$slug'
 import { Route as ControlIndexRouteImport } from './routes/control.index'
 import { Route as ControlAuditRouteImport } from './routes/control.audit'
 import { Route as ControlBillingRouteImport } from './routes/control.billing'
@@ -57,7 +42,31 @@ import { Route as ControlPaymentsRouteImport } from './routes/control.payments'
 import { Route as ControlPlansRouteImport } from './routes/control.plans'
 import { Route as ControlStoresRouteImport } from './routes/control.stores'
 import { Route as ControlTeamRouteImport } from './routes/control.team'
+import { Route as MasterIndexRouteImport } from './routes/master.index'
+import { Route as MasterAuditRouteImport } from './routes/master.audit'
+import { Route as MasterBillingRouteImport } from './routes/master.billing'
+import { Route as MasterInfrastructureRouteImport } from './routes/master.infrastructure'
+import { Route as MasterPlatformsRouteImport } from './routes/master.platforms'
+import { Route as MasterSettingsRouteImport } from './routes/master.settings'
+import { Route as MasterSupportRouteImport } from './routes/master.support'
+import { Route as ProdutoSlugRouteImport } from './routes/produto.$slug'
+import { Route as AdminCustomersIndexRouteImport } from './routes/admin.customers.index'
+import { Route as AdminCustomersIdRouteImport } from './routes/admin.customers.$id'
+import { Route as AdminOrdersIndexRouteImport } from './routes/admin.orders.index'
+import { Route as AdminOrdersIdRouteImport } from './routes/admin.orders.$id'
+import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
+import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
+import { Route as AdminProductsNewRouteImport } from './routes/admin.products.new'
+import { Route as AdminStoreIndexRouteImport } from './routes/admin.store.index'
+import { Route as AdminStoreAppearanceRouteImport } from './routes/admin.store.appearance'
+import { Route as AdminStoreBannersRouteImport } from './routes/admin.store.banners'
+import { Route as AdminStoreCatalogRouteImport } from './routes/admin.store.catalog'
+import { Route as ApiWebhooksMercadopagoRouteImport } from './routes/api.webhooks.mercadopago'
 import { Route as ControlStoresStoreIdRouteImport } from './routes/control.stores_.$storeId'
+import { Route as MasterPlatformsTenantIdRouteImport } from './routes/master.platforms.$tenantId'
+import { Route as OauthMelhorEnvioCallbackRouteImport } from './routes/oauth.melhor-envio.callback'
+import { Route as OauthMercadopagoCallbackRouteImport } from './routes/oauth.mercadopago.callback'
+import { Route as ApiWebhooksProviderGatewayAccountIdRouteImport } from './routes/api.webhooks.$provider.$gatewayAccountId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -89,40 +98,10 @@ const MasterRoute = MasterRouteImport.update({
   path: '/master',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MasterIndexRoute = MasterIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => MasterRoute,
-} as any)
-const MasterAuditRoute = MasterAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => MasterRoute,
-} as any)
-const MasterBillingRoute = MasterBillingRouteImport.update({
-  id: '/billing',
-  path: '/billing',
-  getParentRoute: () => MasterRoute,
-} as any)
-const MasterInfrastructureRoute = MasterInfrastructureRouteImport.update({
-  id: '/infrastructure',
-  path: '/infrastructure',
-  getParentRoute: () => MasterRoute,
-} as any)
-const MasterPlatformsRoute = MasterPlatformsRouteImport.update({
-  id: '/platforms',
-  path: '/platforms',
-  getParentRoute: () => MasterRoute,
-} as any)
-const MasterSettingsRoute = MasterSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => MasterRoute,
-} as any)
-const MasterSupportRoute = MasterSupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => MasterRoute,
+const MfaRoute = MfaRouteImport.update({
+  id: '/mfa',
+  path: '/mfa',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -204,55 +183,10 @@ const AdminTasksRoute = AdminTasksRouteImport.update({
   path: '/tasks',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminCustomersRoute,
-} as any)
-const AdminCustomersIdRoute = AdminCustomersIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AdminCustomersRoute,
-} as any)
-const AdminOrdersIndexRoute = AdminOrdersIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminOrdersRoute,
-} as any)
-const AdminOrdersIdRoute = AdminOrdersIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AdminOrdersRoute,
-} as any)
-const AdminProductsIdRoute = AdminProductsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AdminProductsRoute,
-} as any)
-const AdminProductsNewRoute = AdminProductsNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => AdminProductsRoute,
-} as any)
-const AdminStoreIndexRoute = AdminStoreIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminStoreRoute,
-} as any)
-const AdminStoreAppearanceRoute = AdminStoreAppearanceRouteImport.update({
-  id: '/appearance',
-  path: '/appearance',
-  getParentRoute: () => AdminStoreRoute,
-} as any)
-const AdminStoreBannersRoute = AdminStoreBannersRouteImport.update({
-  id: '/banners',
-  path: '/banners',
-  getParentRoute: () => AdminStoreRoute,
-} as any)
-const AdminStoreCatalogRoute = AdminStoreCatalogRouteImport.update({
-  id: '/catalog',
-  path: '/catalog',
-  getParentRoute: () => AdminStoreRoute,
+const CategoriaSlugRoute = CategoriaSlugRouteImport.update({
+  id: '/categoria/$slug',
+  path: '/categoria/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ControlIndexRoute = ControlIndexRouteImport.update({
   id: '/',
@@ -299,11 +233,134 @@ const ControlTeamRoute = ControlTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => ControlRoute,
 } as any)
+const MasterIndexRoute = MasterIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterAuditRoute = MasterAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterBillingRoute = MasterBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterInfrastructureRoute = MasterInfrastructureRouteImport.update({
+  id: '/infrastructure',
+  path: '/infrastructure',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterPlatformsRoute = MasterPlatformsRouteImport.update({
+  id: '/platforms',
+  path: '/platforms',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterSettingsRoute = MasterSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => MasterRoute,
+} as any)
+const MasterSupportRoute = MasterSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => MasterRoute,
+} as any)
+const ProdutoSlugRoute = ProdutoSlugRouteImport.update({
+  id: '/produto/$slug',
+  path: '/produto/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCustomersIndexRoute = AdminCustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminCustomersRoute,
+} as any)
+const AdminCustomersIdRoute = AdminCustomersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminCustomersRoute,
+} as any)
+const AdminOrdersIndexRoute = AdminOrdersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminOrdersRoute,
+} as any)
+const AdminOrdersIdRoute = AdminOrdersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminOrdersRoute,
+} as any)
+const AdminProductsIndexRoute = AdminProductsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminProductsRoute,
+} as any)
+const AdminProductsIdRoute = AdminProductsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AdminProductsRoute,
+} as any)
+const AdminProductsNewRoute = AdminProductsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminProductsRoute,
+} as any)
+const AdminStoreIndexRoute = AdminStoreIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminStoreRoute,
+} as any)
+const AdminStoreAppearanceRoute = AdminStoreAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => AdminStoreRoute,
+} as any)
+const AdminStoreBannersRoute = AdminStoreBannersRouteImport.update({
+  id: '/banners',
+  path: '/banners',
+  getParentRoute: () => AdminStoreRoute,
+} as any)
+const AdminStoreCatalogRoute = AdminStoreCatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
+  getParentRoute: () => AdminStoreRoute,
+} as any)
+const ApiWebhooksMercadopagoRoute = ApiWebhooksMercadopagoRouteImport.update({
+  id: '/api/webhooks/mercadopago',
+  path: '/api/webhooks/mercadopago',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ControlStoresStoreIdRoute = ControlStoresStoreIdRouteImport.update({
   id: '/stores_/$storeId',
   path: '/stores/$storeId',
   getParentRoute: () => ControlRoute,
 } as any)
+const MasterPlatformsTenantIdRoute = MasterPlatformsTenantIdRouteImport.update({
+  id: '/$tenantId',
+  path: '/$tenantId',
+  getParentRoute: () => MasterPlatformsRoute,
+} as any)
+const OauthMelhorEnvioCallbackRoute =
+  OauthMelhorEnvioCallbackRouteImport.update({
+    id: '/oauth/melhor-envio/callback',
+    path: '/oauth/melhor-envio/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const OauthMercadopagoCallbackRoute =
+  OauthMercadopagoCallbackRouteImport.update({
+    id: '/oauth/mercadopago/callback',
+    path: '/oauth/mercadopago/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiWebhooksProviderGatewayAccountIdRoute =
+  ApiWebhooksProviderGatewayAccountIdRouteImport.update({
+    id: '/api/webhooks/$provider/$gatewayAccountId',
+    path: '/api/webhooks/$provider/$gatewayAccountId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -312,14 +369,7 @@ export interface FileRoutesByFullPath {
   '/control': typeof ControlRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
-  '/master/': typeof MasterIndexRoute
-  '/master/audit': typeof MasterAuditRoute
-  '/master/billing': typeof MasterBillingRoute
-  '/master/infrastructure': typeof MasterInfrastructureRoute
-  '/master/platforms': typeof MasterPlatformsRoute
-  '/master/settings': typeof MasterSettingsRoute
-  '/master/support': typeof MasterSupportRoute
-  '/admin/': typeof AdminIndexRoute
+  '/mfa': typeof MfaRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/coupons': typeof AdminCouponsRoute
@@ -335,17 +385,7 @@ export interface FileRoutesByFullPath {
   '/admin/store': typeof AdminStoreRouteWithChildren
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/tasks': typeof AdminTasksRoute
-  '/admin/customers/': typeof AdminCustomersIndexRoute
-  '/admin/customers/$id': typeof AdminCustomersIdRoute
-  '/admin/orders/': typeof AdminOrdersIndexRoute
-  '/admin/orders/$id': typeof AdminOrdersIdRoute
-  '/admin/products/$id': typeof AdminProductsIdRoute
-  '/admin/products/new': typeof AdminProductsNewRoute
-  '/admin/store/': typeof AdminStoreIndexRoute
-  '/admin/store/appearance': typeof AdminStoreAppearanceRoute
-  '/admin/store/banners': typeof AdminStoreBannersRoute
-  '/admin/store/catalog': typeof AdminStoreCatalogRoute
-  '/control/': typeof ControlIndexRoute
+  '/categoria/$slug': typeof CategoriaSlugRoute
   '/control/audit': typeof ControlAuditRoute
   '/control/billing': typeof ControlBillingRoute
   '/control/branding': typeof ControlBrandingRoute
@@ -354,43 +394,51 @@ export interface FileRoutesByFullPath {
   '/control/plans': typeof ControlPlansRoute
   '/control/stores': typeof ControlStoresRoute
   '/control/team': typeof ControlTeamRoute
-  '/control/stores/$storeId': typeof ControlStoresStoreIdRoute
-}
-export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/admin': typeof AdminIndexRoute
-  '/catalog': typeof CatalogRoute
-  '/control': typeof ControlIndexRoute
-  '/login': typeof LoginRoute
-  '/master': typeof MasterIndexRoute
   '/master/audit': typeof MasterAuditRoute
   '/master/billing': typeof MasterBillingRoute
   '/master/infrastructure': typeof MasterInfrastructureRoute
-  '/master/platforms': typeof MasterPlatformsRoute
+  '/master/platforms': typeof MasterPlatformsRouteWithChildren
   '/master/settings': typeof MasterSettingsRoute
   '/master/support': typeof MasterSupportRoute
+  '/produto/$slug': typeof ProdutoSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/control/': typeof ControlIndexRoute
+  '/master/': typeof MasterIndexRoute
+  '/admin/customers/$id': typeof AdminCustomersIdRoute
+  '/admin/orders/$id': typeof AdminOrdersIdRoute
+  '/admin/products/$id': typeof AdminProductsIdRoute
+  '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/store/appearance': typeof AdminStoreAppearanceRoute
+  '/admin/store/banners': typeof AdminStoreBannersRoute
+  '/admin/store/catalog': typeof AdminStoreCatalogRoute
+  '/api/webhooks/mercadopago': typeof ApiWebhooksMercadopagoRoute
+  '/control/stores/$storeId': typeof ControlStoresStoreIdRoute
+  '/master/platforms/$tenantId': typeof MasterPlatformsTenantIdRoute
+  '/oauth/melhor-envio/callback': typeof OauthMelhorEnvioCallbackRoute
+  '/oauth/mercadopago/callback': typeof OauthMercadopagoCallbackRoute
+  '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/orders/': typeof AdminOrdersIndexRoute
+  '/admin/products/': typeof AdminProductsIndexRoute
+  '/admin/store/': typeof AdminStoreIndexRoute
+  '/api/webhooks/$provider/$gatewayAccountId': typeof ApiWebhooksProviderGatewayAccountIdRoute
+}
+export interface FileRoutesByTo {
+  '/': typeof IndexRoute
+  '/catalog': typeof CatalogRoute
+  '/login': typeof LoginRoute
+  '/mfa': typeof MfaRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/coupons': typeof AdminCouponsRoute
-  '/admin/customers': typeof AdminCustomersIndexRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/inventory': typeof AdminInventoryRoute
   '/admin/marketing': typeof AdminMarketingRoute
   '/admin/operations': typeof AdminOperationsRoute
-  '/admin/orders': typeof AdminOrdersIndexRoute
-  '/admin/products': typeof AdminProductsRouteWithChildren
   '/admin/purchases': typeof AdminPurchasesRoute
   '/admin/settings': typeof AdminSettingsRoute
-  '/admin/store': typeof AdminStoreIndexRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/tasks': typeof AdminTasksRoute
-  '/admin/customers/$id': typeof AdminCustomersIdRoute
-  '/admin/orders/$id': typeof AdminOrdersIdRoute
-  '/admin/products/$id': typeof AdminProductsIdRoute
-  '/admin/products/new': typeof AdminProductsNewRoute
-  '/admin/store/appearance': typeof AdminStoreAppearanceRoute
-  '/admin/store/banners': typeof AdminStoreBannersRoute
-  '/admin/store/catalog': typeof AdminStoreCatalogRoute
+  '/categoria/$slug': typeof CategoriaSlugRoute
   '/control/audit': typeof ControlAuditRoute
   '/control/billing': typeof ControlBillingRoute
   '/control/branding': typeof ControlBrandingRoute
@@ -399,7 +447,33 @@ export interface FileRoutesByTo {
   '/control/plans': typeof ControlPlansRoute
   '/control/stores': typeof ControlStoresRoute
   '/control/team': typeof ControlTeamRoute
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRouteWithChildren
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
+  '/produto/$slug': typeof ProdutoSlugRoute
+  '/admin': typeof AdminIndexRoute
+  '/control': typeof ControlIndexRoute
+  '/master': typeof MasterIndexRoute
+  '/admin/customers/$id': typeof AdminCustomersIdRoute
+  '/admin/orders/$id': typeof AdminOrdersIdRoute
+  '/admin/products/$id': typeof AdminProductsIdRoute
+  '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/store/appearance': typeof AdminStoreAppearanceRoute
+  '/admin/store/banners': typeof AdminStoreBannersRoute
+  '/admin/store/catalog': typeof AdminStoreCatalogRoute
+  '/api/webhooks/mercadopago': typeof ApiWebhooksMercadopagoRoute
   '/control/stores/$storeId': typeof ControlStoresStoreIdRoute
+  '/master/platforms/$tenantId': typeof MasterPlatformsTenantIdRoute
+  '/oauth/melhor-envio/callback': typeof OauthMelhorEnvioCallbackRoute
+  '/oauth/mercadopago/callback': typeof OauthMercadopagoCallbackRoute
+  '/admin/customers': typeof AdminCustomersIndexRoute
+  '/admin/orders': typeof AdminOrdersIndexRoute
+  '/admin/products': typeof AdminProductsIndexRoute
+  '/admin/store': typeof AdminStoreIndexRoute
+  '/api/webhooks/$provider/$gatewayAccountId': typeof ApiWebhooksProviderGatewayAccountIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -409,14 +483,7 @@ export interface FileRoutesById {
   '/control': typeof ControlRouteWithChildren
   '/login': typeof LoginRoute
   '/master': typeof MasterRouteWithChildren
-  '/master/': typeof MasterIndexRoute
-  '/master/audit': typeof MasterAuditRoute
-  '/master/billing': typeof MasterBillingRoute
-  '/master/infrastructure': typeof MasterInfrastructureRoute
-  '/master/platforms': typeof MasterPlatformsRoute
-  '/master/settings': typeof MasterSettingsRoute
-  '/master/support': typeof MasterSupportRoute
-  '/admin/': typeof AdminIndexRoute
+  '/mfa': typeof MfaRoute
   '/admin/campaigns': typeof AdminCampaignsRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/coupons': typeof AdminCouponsRoute
@@ -432,17 +499,7 @@ export interface FileRoutesById {
   '/admin/store': typeof AdminStoreRouteWithChildren
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/tasks': typeof AdminTasksRoute
-  '/admin/customers/': typeof AdminCustomersIndexRoute
-  '/admin/customers/$id': typeof AdminCustomersIdRoute
-  '/admin/orders/': typeof AdminOrdersIndexRoute
-  '/admin/orders/$id': typeof AdminOrdersIdRoute
-  '/admin/products/$id': typeof AdminProductsIdRoute
-  '/admin/products/new': typeof AdminProductsNewRoute
-  '/admin/store/': typeof AdminStoreIndexRoute
-  '/admin/store/appearance': typeof AdminStoreAppearanceRoute
-  '/admin/store/banners': typeof AdminStoreBannersRoute
-  '/admin/store/catalog': typeof AdminStoreCatalogRoute
-  '/control/': typeof ControlIndexRoute
+  '/categoria/$slug': typeof CategoriaSlugRoute
   '/control/audit': typeof ControlAuditRoute
   '/control/billing': typeof ControlBillingRoute
   '/control/branding': typeof ControlBrandingRoute
@@ -451,7 +508,33 @@ export interface FileRoutesById {
   '/control/plans': typeof ControlPlansRoute
   '/control/stores': typeof ControlStoresRoute
   '/control/team': typeof ControlTeamRoute
+  '/master/audit': typeof MasterAuditRoute
+  '/master/billing': typeof MasterBillingRoute
+  '/master/infrastructure': typeof MasterInfrastructureRoute
+  '/master/platforms': typeof MasterPlatformsRouteWithChildren
+  '/master/settings': typeof MasterSettingsRoute
+  '/master/support': typeof MasterSupportRoute
+  '/produto/$slug': typeof ProdutoSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/control/': typeof ControlIndexRoute
+  '/master/': typeof MasterIndexRoute
+  '/admin/customers/$id': typeof AdminCustomersIdRoute
+  '/admin/orders/$id': typeof AdminOrdersIdRoute
+  '/admin/products/$id': typeof AdminProductsIdRoute
+  '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/store/appearance': typeof AdminStoreAppearanceRoute
+  '/admin/store/banners': typeof AdminStoreBannersRoute
+  '/admin/store/catalog': typeof AdminStoreCatalogRoute
+  '/api/webhooks/mercadopago': typeof ApiWebhooksMercadopagoRoute
   '/control/stores_/$storeId': typeof ControlStoresStoreIdRoute
+  '/master/platforms/$tenantId': typeof MasterPlatformsTenantIdRoute
+  '/oauth/melhor-envio/callback': typeof OauthMelhorEnvioCallbackRoute
+  '/oauth/mercadopago/callback': typeof OauthMercadopagoCallbackRoute
+  '/admin/customers/': typeof AdminCustomersIndexRoute
+  '/admin/orders/': typeof AdminOrdersIndexRoute
+  '/admin/products/': typeof AdminProductsIndexRoute
+  '/admin/store/': typeof AdminStoreIndexRoute
+  '/api/webhooks/$provider/$gatewayAccountId': typeof ApiWebhooksProviderGatewayAccountIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -462,14 +545,7 @@ export interface FileRouteTypes {
     | '/control'
     | '/login'
     | '/master'
-    | '/master/'
-    | '/master/audit'
-    | '/master/billing'
-    | '/master/infrastructure'
-    | '/master/platforms'
-    | '/master/settings'
-    | '/master/support'
-    | '/admin/'
+    | '/mfa'
     | '/admin/campaigns'
     | '/admin/categories'
     | '/admin/coupons'
@@ -485,17 +561,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/suppliers'
     | '/admin/tasks'
-    | '/admin/customers/'
-    | '/admin/customers/$id'
-    | '/admin/orders/'
-    | '/admin/orders/$id'
-    | '/admin/products/$id'
-    | '/admin/products/new'
-    | '/admin/store/'
-    | '/admin/store/appearance'
-    | '/admin/store/banners'
-    | '/admin/store/catalog'
-    | '/control/'
+    | '/categoria/$slug'
     | '/control/audit'
     | '/control/billing'
     | '/control/branding'
@@ -504,43 +570,51 @@ export interface FileRouteTypes {
     | '/control/plans'
     | '/control/stores'
     | '/control/team'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/produto/$slug'
+    | '/admin/'
+    | '/control/'
+    | '/master/'
+    | '/admin/customers/$id'
+    | '/admin/orders/$id'
+    | '/admin/products/$id'
+    | '/admin/products/new'
+    | '/admin/store/appearance'
+    | '/admin/store/banners'
+    | '/admin/store/catalog'
+    | '/api/webhooks/mercadopago'
     | '/control/stores/$storeId'
+    | '/master/platforms/$tenantId'
+    | '/oauth/melhor-envio/callback'
+    | '/oauth/mercadopago/callback'
+    | '/admin/customers/'
+    | '/admin/orders/'
+    | '/admin/products/'
+    | '/admin/store/'
+    | '/api/webhooks/$provider/$gatewayAccountId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/catalog'
-    | '/control'
     | '/login'
-    | '/master'
-    | '/master/audit'
-    | '/master/billing'
-    | '/master/infrastructure'
-    | '/master/platforms'
-    | '/master/settings'
-    | '/master/support'
+    | '/mfa'
     | '/admin/campaigns'
     | '/admin/categories'
     | '/admin/coupons'
-    | '/admin/customers'
     | '/admin/finance'
     | '/admin/inventory'
     | '/admin/marketing'
     | '/admin/operations'
-    | '/admin/orders'
-    | '/admin/products'
     | '/admin/purchases'
     | '/admin/settings'
-    | '/admin/store'
     | '/admin/suppliers'
     | '/admin/tasks'
-    | '/admin/customers/$id'
-    | '/admin/orders/$id'
-    | '/admin/products/$id'
-    | '/admin/products/new'
-    | '/admin/store/appearance'
-    | '/admin/store/banners'
-    | '/admin/store/catalog'
+    | '/categoria/$slug'
     | '/control/audit'
     | '/control/billing'
     | '/control/branding'
@@ -549,7 +623,33 @@ export interface FileRouteTypes {
     | '/control/plans'
     | '/control/stores'
     | '/control/team'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/produto/$slug'
+    | '/admin'
+    | '/control'
+    | '/master'
+    | '/admin/customers/$id'
+    | '/admin/orders/$id'
+    | '/admin/products/$id'
+    | '/admin/products/new'
+    | '/admin/store/appearance'
+    | '/admin/store/banners'
+    | '/admin/store/catalog'
+    | '/api/webhooks/mercadopago'
     | '/control/stores/$storeId'
+    | '/master/platforms/$tenantId'
+    | '/oauth/melhor-envio/callback'
+    | '/oauth/mercadopago/callback'
+    | '/admin/customers'
+    | '/admin/orders'
+    | '/admin/products'
+    | '/admin/store'
+    | '/api/webhooks/$provider/$gatewayAccountId'
   id:
     | '__root__'
     | '/'
@@ -558,14 +658,7 @@ export interface FileRouteTypes {
     | '/control'
     | '/login'
     | '/master'
-    | '/master/'
-    | '/master/audit'
-    | '/master/billing'
-    | '/master/infrastructure'
-    | '/master/platforms'
-    | '/master/settings'
-    | '/master/support'
-    | '/admin/'
+    | '/mfa'
     | '/admin/campaigns'
     | '/admin/categories'
     | '/admin/coupons'
@@ -581,17 +674,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/suppliers'
     | '/admin/tasks'
-    | '/admin/customers/'
-    | '/admin/customers/$id'
-    | '/admin/orders/'
-    | '/admin/orders/$id'
-    | '/admin/products/$id'
-    | '/admin/products/new'
-    | '/admin/store/'
-    | '/admin/store/appearance'
-    | '/admin/store/banners'
-    | '/admin/store/catalog'
-    | '/control/'
+    | '/categoria/$slug'
     | '/control/audit'
     | '/control/billing'
     | '/control/branding'
@@ -600,7 +683,33 @@ export interface FileRouteTypes {
     | '/control/plans'
     | '/control/stores'
     | '/control/team'
+    | '/master/audit'
+    | '/master/billing'
+    | '/master/infrastructure'
+    | '/master/platforms'
+    | '/master/settings'
+    | '/master/support'
+    | '/produto/$slug'
+    | '/admin/'
+    | '/control/'
+    | '/master/'
+    | '/admin/customers/$id'
+    | '/admin/orders/$id'
+    | '/admin/products/$id'
+    | '/admin/products/new'
+    | '/admin/store/appearance'
+    | '/admin/store/banners'
+    | '/admin/store/catalog'
+    | '/api/webhooks/mercadopago'
     | '/control/stores_/$storeId'
+    | '/master/platforms/$tenantId'
+    | '/oauth/melhor-envio/callback'
+    | '/oauth/mercadopago/callback'
+    | '/admin/customers/'
+    | '/admin/orders/'
+    | '/admin/products/'
+    | '/admin/store/'
+    | '/api/webhooks/$provider/$gatewayAccountId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -610,6 +719,13 @@ export interface RootRouteChildren {
   ControlRoute: typeof ControlRouteWithChildren
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
+  MfaRoute: typeof MfaRoute
+  CategoriaSlugRoute: typeof CategoriaSlugRoute
+  ProdutoSlugRoute: typeof ProdutoSlugRoute
+  ApiWebhooksMercadopagoRoute: typeof ApiWebhooksMercadopagoRoute
+  OauthMelhorEnvioCallbackRoute: typeof OauthMelhorEnvioCallbackRoute
+  OauthMercadopagoCallbackRoute: typeof OauthMercadopagoCallbackRoute
+  ApiWebhooksProviderGatewayAccountIdRoute: typeof ApiWebhooksProviderGatewayAccountIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -656,54 +772,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MasterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/master/': {
-      id: '/master/'
-      path: '/'
-      fullPath: '/master/'
-      preLoaderRoute: typeof MasterIndexRouteImport
-      parentRoute: typeof MasterRoute
-    }
-    '/master/audit': {
-      id: '/master/audit'
-      path: '/audit'
-      fullPath: '/master/audit'
-      preLoaderRoute: typeof MasterAuditRouteImport
-      parentRoute: typeof MasterRoute
-    }
-    '/master/billing': {
-      id: '/master/billing'
-      path: '/billing'
-      fullPath: '/master/billing'
-      preLoaderRoute: typeof MasterBillingRouteImport
-      parentRoute: typeof MasterRoute
-    }
-    '/master/infrastructure': {
-      id: '/master/infrastructure'
-      path: '/infrastructure'
-      fullPath: '/master/infrastructure'
-      preLoaderRoute: typeof MasterInfrastructureRouteImport
-      parentRoute: typeof MasterRoute
-    }
-    '/master/platforms': {
-      id: '/master/platforms'
-      path: '/platforms'
-      fullPath: '/master/platforms'
-      preLoaderRoute: typeof MasterPlatformsRouteImport
-      parentRoute: typeof MasterRoute
-    }
-    '/master/settings': {
-      id: '/master/settings'
-      path: '/settings'
-      fullPath: '/master/settings'
-      preLoaderRoute: typeof MasterSettingsRouteImport
-      parentRoute: typeof MasterRoute
-    }
-    '/master/support': {
-      id: '/master/support'
-      path: '/support'
-      fullPath: '/master/support'
-      preLoaderRoute: typeof MasterSupportRouteImport
-      parentRoute: typeof MasterRoute
+    '/mfa': {
+      id: '/mfa'
+      path: '/mfa'
+      fullPath: '/mfa'
+      preLoaderRoute: typeof MfaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
@@ -817,75 +891,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTasksRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/customers/': {
-      id: '/admin/customers/'
-      path: '/'
-      fullPath: '/admin/customers/'
-      preLoaderRoute: typeof AdminCustomersIndexRouteImport
-      parentRoute: typeof AdminCustomersRoute
-    }
-    '/admin/customers/$id': {
-      id: '/admin/customers/$id'
-      path: '/$id'
-      fullPath: '/admin/customers/$id'
-      preLoaderRoute: typeof AdminCustomersIdRouteImport
-      parentRoute: typeof AdminCustomersRoute
-    }
-    '/admin/orders/': {
-      id: '/admin/orders/'
-      path: '/'
-      fullPath: '/admin/orders/'
-      preLoaderRoute: typeof AdminOrdersIndexRouteImport
-      parentRoute: typeof AdminOrdersRoute
-    }
-    '/admin/orders/$id': {
-      id: '/admin/orders/$id'
-      path: '/$id'
-      fullPath: '/admin/orders/$id'
-      preLoaderRoute: typeof AdminOrdersIdRouteImport
-      parentRoute: typeof AdminOrdersRoute
-    }
-    '/admin/products/$id': {
-      id: '/admin/products/$id'
-      path: '/$id'
-      fullPath: '/admin/products/$id'
-      preLoaderRoute: typeof AdminProductsIdRouteImport
-      parentRoute: typeof AdminProductsRoute
-    }
-    '/admin/products/new': {
-      id: '/admin/products/new'
-      path: '/new'
-      fullPath: '/admin/products/new'
-      preLoaderRoute: typeof AdminProductsNewRouteImport
-      parentRoute: typeof AdminProductsRoute
-    }
-    '/admin/store/': {
-      id: '/admin/store/'
-      path: '/'
-      fullPath: '/admin/store/'
-      preLoaderRoute: typeof AdminStoreIndexRouteImport
-      parentRoute: typeof AdminStoreRoute
-    }
-    '/admin/store/appearance': {
-      id: '/admin/store/appearance'
-      path: '/appearance'
-      fullPath: '/admin/store/appearance'
-      preLoaderRoute: typeof AdminStoreAppearanceRouteImport
-      parentRoute: typeof AdminStoreRoute
-    }
-    '/admin/store/banners': {
-      id: '/admin/store/banners'
-      path: '/banners'
-      fullPath: '/admin/store/banners'
-      preLoaderRoute: typeof AdminStoreBannersRouteImport
-      parentRoute: typeof AdminStoreRoute
-    }
-    '/admin/store/catalog': {
-      id: '/admin/store/catalog'
-      path: '/catalog'
-      fullPath: '/admin/store/catalog'
-      preLoaderRoute: typeof AdminStoreCatalogRouteImport
-      parentRoute: typeof AdminStoreRoute
+    '/categoria/$slug': {
+      id: '/categoria/$slug'
+      path: '/categoria/$slug'
+      fullPath: '/categoria/$slug'
+      preLoaderRoute: typeof CategoriaSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/control/': {
       id: '/control/'
@@ -950,6 +961,146 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ControlTeamRouteImport
       parentRoute: typeof ControlRoute
     }
+    '/master/': {
+      id: '/master/'
+      path: '/'
+      fullPath: '/master/'
+      preLoaderRoute: typeof MasterIndexRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/audit': {
+      id: '/master/audit'
+      path: '/audit'
+      fullPath: '/master/audit'
+      preLoaderRoute: typeof MasterAuditRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/billing': {
+      id: '/master/billing'
+      path: '/billing'
+      fullPath: '/master/billing'
+      preLoaderRoute: typeof MasterBillingRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/infrastructure': {
+      id: '/master/infrastructure'
+      path: '/infrastructure'
+      fullPath: '/master/infrastructure'
+      preLoaderRoute: typeof MasterInfrastructureRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/platforms': {
+      id: '/master/platforms'
+      path: '/platforms'
+      fullPath: '/master/platforms'
+      preLoaderRoute: typeof MasterPlatformsRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/settings': {
+      id: '/master/settings'
+      path: '/settings'
+      fullPath: '/master/settings'
+      preLoaderRoute: typeof MasterSettingsRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/master/support': {
+      id: '/master/support'
+      path: '/support'
+      fullPath: '/master/support'
+      preLoaderRoute: typeof MasterSupportRouteImport
+      parentRoute: typeof MasterRoute
+    }
+    '/produto/$slug': {
+      id: '/produto/$slug'
+      path: '/produto/$slug'
+      fullPath: '/produto/$slug'
+      preLoaderRoute: typeof ProdutoSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/customers/': {
+      id: '/admin/customers/'
+      path: '/'
+      fullPath: '/admin/customers/'
+      preLoaderRoute: typeof AdminCustomersIndexRouteImport
+      parentRoute: typeof AdminCustomersRoute
+    }
+    '/admin/customers/$id': {
+      id: '/admin/customers/$id'
+      path: '/$id'
+      fullPath: '/admin/customers/$id'
+      preLoaderRoute: typeof AdminCustomersIdRouteImport
+      parentRoute: typeof AdminCustomersRoute
+    }
+    '/admin/orders/': {
+      id: '/admin/orders/'
+      path: '/'
+      fullPath: '/admin/orders/'
+      preLoaderRoute: typeof AdminOrdersIndexRouteImport
+      parentRoute: typeof AdminOrdersRoute
+    }
+    '/admin/orders/$id': {
+      id: '/admin/orders/$id'
+      path: '/$id'
+      fullPath: '/admin/orders/$id'
+      preLoaderRoute: typeof AdminOrdersIdRouteImport
+      parentRoute: typeof AdminOrdersRoute
+    }
+    '/admin/products/': {
+      id: '/admin/products/'
+      path: '/'
+      fullPath: '/admin/products/'
+      preLoaderRoute: typeof AdminProductsIndexRouteImport
+      parentRoute: typeof AdminProductsRoute
+    }
+    '/admin/products/$id': {
+      id: '/admin/products/$id'
+      path: '/$id'
+      fullPath: '/admin/products/$id'
+      preLoaderRoute: typeof AdminProductsIdRouteImport
+      parentRoute: typeof AdminProductsRoute
+    }
+    '/admin/products/new': {
+      id: '/admin/products/new'
+      path: '/new'
+      fullPath: '/admin/products/new'
+      preLoaderRoute: typeof AdminProductsNewRouteImport
+      parentRoute: typeof AdminProductsRoute
+    }
+    '/admin/store/': {
+      id: '/admin/store/'
+      path: '/'
+      fullPath: '/admin/store/'
+      preLoaderRoute: typeof AdminStoreIndexRouteImport
+      parentRoute: typeof AdminStoreRoute
+    }
+    '/admin/store/appearance': {
+      id: '/admin/store/appearance'
+      path: '/appearance'
+      fullPath: '/admin/store/appearance'
+      preLoaderRoute: typeof AdminStoreAppearanceRouteImport
+      parentRoute: typeof AdminStoreRoute
+    }
+    '/admin/store/banners': {
+      id: '/admin/store/banners'
+      path: '/banners'
+      fullPath: '/admin/store/banners'
+      preLoaderRoute: typeof AdminStoreBannersRouteImport
+      parentRoute: typeof AdminStoreRoute
+    }
+    '/admin/store/catalog': {
+      id: '/admin/store/catalog'
+      path: '/catalog'
+      fullPath: '/admin/store/catalog'
+      preLoaderRoute: typeof AdminStoreCatalogRouteImport
+      parentRoute: typeof AdminStoreRoute
+    }
+    '/api/webhooks/mercadopago': {
+      id: '/api/webhooks/mercadopago'
+      path: '/api/webhooks/mercadopago'
+      fullPath: '/api/webhooks/mercadopago'
+      preLoaderRoute: typeof ApiWebhooksMercadopagoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/control/stores_/$storeId': {
       id: '/control/stores_/$storeId'
       path: '/stores/$storeId'
@@ -957,63 +1108,100 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ControlStoresStoreIdRouteImport
       parentRoute: typeof ControlRoute
     }
+    '/master/platforms/$tenantId': {
+      id: '/master/platforms/$tenantId'
+      path: '/$tenantId'
+      fullPath: '/master/platforms/$tenantId'
+      preLoaderRoute: typeof MasterPlatformsTenantIdRouteImport
+      parentRoute: typeof MasterPlatformsRoute
+    }
+    '/oauth/melhor-envio/callback': {
+      id: '/oauth/melhor-envio/callback'
+      path: '/oauth/melhor-envio/callback'
+      fullPath: '/oauth/melhor-envio/callback'
+      preLoaderRoute: typeof OauthMelhorEnvioCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/mercadopago/callback': {
+      id: '/oauth/mercadopago/callback'
+      path: '/oauth/mercadopago/callback'
+      fullPath: '/oauth/mercadopago/callback'
+      preLoaderRoute: typeof OauthMercadopagoCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/$provider/$gatewayAccountId': {
+      id: '/api/webhooks/$provider/$gatewayAccountId'
+      path: '/api/webhooks/$provider/$gatewayAccountId'
+      fullPath: '/api/webhooks/$provider/$gatewayAccountId'
+      preLoaderRoute: typeof ApiWebhooksProviderGatewayAccountIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AdminCustomersRouteChildren {
-  AdminCustomersIndexRoute: typeof AdminCustomersIndexRoute
   AdminCustomersIdRoute: typeof AdminCustomersIdRoute
+  AdminCustomersIndexRoute: typeof AdminCustomersIndexRoute
 }
 
 const AdminCustomersRouteChildren: AdminCustomersRouteChildren = {
-  AdminCustomersIndexRoute: AdminCustomersIndexRoute,
   AdminCustomersIdRoute: AdminCustomersIdRoute,
+  AdminCustomersIndexRoute: AdminCustomersIndexRoute,
 }
 
-const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(AdminCustomersRouteChildren)
+const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
+  AdminCustomersRouteChildren,
+)
 
 interface AdminOrdersRouteChildren {
-  AdminOrdersIndexRoute: typeof AdminOrdersIndexRoute
   AdminOrdersIdRoute: typeof AdminOrdersIdRoute
+  AdminOrdersIndexRoute: typeof AdminOrdersIndexRoute
 }
 
 const AdminOrdersRouteChildren: AdminOrdersRouteChildren = {
-  AdminOrdersIndexRoute: AdminOrdersIndexRoute,
   AdminOrdersIdRoute: AdminOrdersIdRoute,
+  AdminOrdersIndexRoute: AdminOrdersIndexRoute,
 }
 
-const AdminOrdersRouteWithChildren = AdminOrdersRoute._addFileChildren(AdminOrdersRouteChildren)
+const AdminOrdersRouteWithChildren = AdminOrdersRoute._addFileChildren(
+  AdminOrdersRouteChildren,
+)
 
 interface AdminProductsRouteChildren {
   AdminProductsIdRoute: typeof AdminProductsIdRoute
   AdminProductsNewRoute: typeof AdminProductsNewRoute
+  AdminProductsIndexRoute: typeof AdminProductsIndexRoute
 }
 
 const AdminProductsRouteChildren: AdminProductsRouteChildren = {
   AdminProductsIdRoute: AdminProductsIdRoute,
   AdminProductsNewRoute: AdminProductsNewRoute,
+  AdminProductsIndexRoute: AdminProductsIndexRoute,
 }
 
-const AdminProductsRouteWithChildren = AdminProductsRoute._addFileChildren(AdminProductsRouteChildren)
+const AdminProductsRouteWithChildren = AdminProductsRoute._addFileChildren(
+  AdminProductsRouteChildren,
+)
 
 interface AdminStoreRouteChildren {
-  AdminStoreIndexRoute: typeof AdminStoreIndexRoute
   AdminStoreAppearanceRoute: typeof AdminStoreAppearanceRoute
   AdminStoreBannersRoute: typeof AdminStoreBannersRoute
   AdminStoreCatalogRoute: typeof AdminStoreCatalogRoute
+  AdminStoreIndexRoute: typeof AdminStoreIndexRoute
 }
 
 const AdminStoreRouteChildren: AdminStoreRouteChildren = {
-  AdminStoreIndexRoute: AdminStoreIndexRoute,
   AdminStoreAppearanceRoute: AdminStoreAppearanceRoute,
   AdminStoreBannersRoute: AdminStoreBannersRoute,
   AdminStoreCatalogRoute: AdminStoreCatalogRoute,
+  AdminStoreIndexRoute: AdminStoreIndexRoute,
 }
 
-const AdminStoreRouteWithChildren = AdminStoreRoute._addFileChildren(AdminStoreRouteChildren)
+const AdminStoreRouteWithChildren = AdminStoreRoute._addFileChildren(
+  AdminStoreRouteChildren,
+)
 
 interface AdminRouteChildren {
-  AdminIndexRoute: typeof AdminIndexRoute
   AdminCampaignsRoute: typeof AdminCampaignsRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminCouponsRoute: typeof AdminCouponsRoute
@@ -1029,10 +1217,10 @@ interface AdminRouteChildren {
   AdminStoreRoute: typeof AdminStoreRouteWithChildren
   AdminSuppliersRoute: typeof AdminSuppliersRoute
   AdminTasksRoute: typeof AdminTasksRoute
+  AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
-  AdminIndexRoute: AdminIndexRoute,
   AdminCampaignsRoute: AdminCampaignsRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminCouponsRoute: AdminCouponsRoute,
@@ -1048,12 +1236,12 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminStoreRoute: AdminStoreRouteWithChildren,
   AdminSuppliersRoute: AdminSuppliersRoute,
   AdminTasksRoute: AdminTasksRoute,
+  AdminIndexRoute: AdminIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ControlRouteChildren {
-  ControlIndexRoute: typeof ControlIndexRoute
   ControlAuditRoute: typeof ControlAuditRoute
   ControlBillingRoute: typeof ControlBillingRoute
   ControlBrandingRoute: typeof ControlBrandingRoute
@@ -1062,11 +1250,11 @@ interface ControlRouteChildren {
   ControlPlansRoute: typeof ControlPlansRoute
   ControlStoresRoute: typeof ControlStoresRoute
   ControlTeamRoute: typeof ControlTeamRoute
+  ControlIndexRoute: typeof ControlIndexRoute
   ControlStoresStoreIdRoute: typeof ControlStoresStoreIdRoute
 }
 
 const ControlRouteChildren: ControlRouteChildren = {
-  ControlIndexRoute: ControlIndexRoute,
   ControlAuditRoute: ControlAuditRoute,
   ControlBillingRoute: ControlBillingRoute,
   ControlBrandingRoute: ControlBrandingRoute,
@@ -1075,32 +1263,47 @@ const ControlRouteChildren: ControlRouteChildren = {
   ControlPlansRoute: ControlPlansRoute,
   ControlStoresRoute: ControlStoresRoute,
   ControlTeamRoute: ControlTeamRoute,
+  ControlIndexRoute: ControlIndexRoute,
   ControlStoresStoreIdRoute: ControlStoresStoreIdRoute,
 }
 
-const ControlRouteWithChildren = ControlRoute._addFileChildren(ControlRouteChildren)
+const ControlRouteWithChildren =
+  ControlRoute._addFileChildren(ControlRouteChildren)
+
+interface MasterPlatformsRouteChildren {
+  MasterPlatformsTenantIdRoute: typeof MasterPlatformsTenantIdRoute
+}
+
+const MasterPlatformsRouteChildren: MasterPlatformsRouteChildren = {
+  MasterPlatformsTenantIdRoute: MasterPlatformsTenantIdRoute,
+}
+
+const MasterPlatformsRouteWithChildren = MasterPlatformsRoute._addFileChildren(
+  MasterPlatformsRouteChildren,
+)
 
 interface MasterRouteChildren {
-  MasterIndexRoute: typeof MasterIndexRoute
   MasterAuditRoute: typeof MasterAuditRoute
   MasterBillingRoute: typeof MasterBillingRoute
   MasterInfrastructureRoute: typeof MasterInfrastructureRoute
-  MasterPlatformsRoute: typeof MasterPlatformsRoute
+  MasterPlatformsRoute: typeof MasterPlatformsRouteWithChildren
   MasterSettingsRoute: typeof MasterSettingsRoute
   MasterSupportRoute: typeof MasterSupportRoute
+  MasterIndexRoute: typeof MasterIndexRoute
 }
 
 const MasterRouteChildren: MasterRouteChildren = {
-  MasterIndexRoute: MasterIndexRoute,
   MasterAuditRoute: MasterAuditRoute,
   MasterBillingRoute: MasterBillingRoute,
   MasterInfrastructureRoute: MasterInfrastructureRoute,
-  MasterPlatformsRoute: MasterPlatformsRoute,
+  MasterPlatformsRoute: MasterPlatformsRouteWithChildren,
   MasterSettingsRoute: MasterSettingsRoute,
   MasterSupportRoute: MasterSupportRoute,
+  MasterIndexRoute: MasterIndexRoute,
 }
 
-const MasterRouteWithChildren = MasterRoute._addFileChildren(MasterRouteChildren)
+const MasterRouteWithChildren =
+  MasterRoute._addFileChildren(MasterRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1109,6 +1312,14 @@ const rootRouteChildren: RootRouteChildren = {
   ControlRoute: ControlRouteWithChildren,
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
+  MfaRoute: MfaRoute,
+  CategoriaSlugRoute: CategoriaSlugRoute,
+  ProdutoSlugRoute: ProdutoSlugRoute,
+  ApiWebhooksMercadopagoRoute: ApiWebhooksMercadopagoRoute,
+  OauthMelhorEnvioCallbackRoute: OauthMelhorEnvioCallbackRoute,
+  OauthMercadopagoCallbackRoute: OauthMercadopagoCallbackRoute,
+  ApiWebhooksProviderGatewayAccountIdRoute:
+    ApiWebhooksProviderGatewayAccountIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -14,7 +14,7 @@ interface CategoryPageData {
 }
 
 export const Route = createFileRoute("/categoria/$slug")({
-  loader: ({ params }) => getPublicCategoryPage({ data: { slug: (params as unknown as { slug: string }).slug } }),
+  loader: ({ params }) => getPublicCategoryPage({ data: { slug: params.slug } }),
   head: ({ loaderData }) => {
     const data = loaderData as unknown as CategoryPageData | undefined;
     const title = data ? `${data.category.name} · ${data.store.name}` : "Categoria";

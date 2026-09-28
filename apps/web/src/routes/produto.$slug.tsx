@@ -20,7 +20,7 @@ interface ProductPageData {
 }
 
 export const Route = createFileRoute("/produto/$slug")({
-  loader: ({ params }) => getPublicProductPage({ data: { slug: (params as unknown as { slug: string }).slug } }),
+  loader: ({ params }) => getPublicProductPage({ data: { slug: params.slug } }),
   head: ({ loaderData }) => {
     const data = loaderData as unknown as ProductPageData | undefined; const behavior = data ? getCatalogBehavior(data.settings) : null;
     const title = data ? `${data.product.name} · ${data.store.name}` : "Produto";

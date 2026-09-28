@@ -30,7 +30,9 @@ const checkoutSchema = z.object({
   items: z.array(cartItemSchema).min(1).max(100),
 });
 
-const shippingSelection=z.object({serviceId:z.number().int().positive(),serviceName:z.string().min(1).max(120),companyName:z.string().max(120),priceCents:z.number().int().min(0),deliveryDays:z.number().int().min(0),snapshot:z.string().max(50000),recipient:shippingAddressSchema});
+const shippingSelection=z.object({
+  serviceId:z.number().int().positive(),priceCents:z.number().int().min(0),recipient:shippingAddressSchema,
+});
 const onlineCheckoutSchema = checkoutSchema.extend({ payerEmail: z.string().trim().email().max(254), shipping: shippingSelection.nullable() });
 type CartRequestItem = z.infer<typeof cartItemSchema>;
 
@@ -104,11 +106,19 @@ export const createOnlinePixOrder = createServerFn({ method: "POST" }).validator
   await enforceRateLimit(sql, `checkout:online:${catalog.scope.tenantId}:${catalog.scope.storeId}`, 20, 60);
   await assertOrdersEntitlement(sql, catalog.scope);
   if (data.couponCode?.trim()) await assertCouponsEntitlement(sql, catalog.scope);
+  const { resolveCheckoutShipping } = await import("./storefront-shipping.server.ts");
+  const selectedShipping = await resolveCheckoutShipping(catalog.scope, data.items, data.shipping);
   const order = await createOrderRepository(sql).createFromCart(catalog.scope, {
     idempotencyKey: data.idempotencyKey, origin: "online", customerName, customerPhone,
-    couponCode: data.couponCode, notes, shippingCents: data.shipping?.priceCents ?? 0, minimumOrderCents: advanced.minimumOrderCents, items: data.items,
+    couponCode: data.couponCode, notes, shippingCents: selectedShipping?.priceCents ?? 0,
+    minimumOrderCents: advanced.minimumOrderCents, items: data.items,
   });
-  if(data.shipping) await saveOrderShipping(catalog.scope,order.id,data.shipping);
+  if (order.shippingCents !== (selectedShipping?.priceCents ?? 0)) {
+    throw new Error("O pedido existente usa outro frete. Inicie um novo pedido.");
+  }
+  if (data.shipping && selectedShipping) {
+    await saveOrderShipping(catalog.scope, order.id, { ...selectedShipping, recipient: data.shipping.recipient });
+  }
   let payment;
   try {
     payment = await createStorePixPayment(catalog.scope, {
