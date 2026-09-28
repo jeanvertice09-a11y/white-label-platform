@@ -11,7 +11,7 @@ import { requireMfaAssurance } from "./route-context.server.ts";
 const MP_AUTH_URL="https://auth.mercadopago.com/authorization";
 const MP_TOKEN_URL="https://api.mercadopago.com/oauth/token";
 const callbackSchema=z.object({code:z.string().trim().min(8).max(4096),state:z.string().trim().min(32).max(512)});
-type OAuthState={tenantId:string;storeId:string;verifierCiphertext:string;returnUrl:string};
+type OAuthState={tenantId:string;storeId:string;actorUserId:string;verifierCiphertext:string;returnUrl:string};
 type TokenSet={accessToken:string;refreshToken:string;userId:string;expiresIn:number};
 export type MercadoPagoOAuthAvailability={available:boolean;missing:string[]};
 function oauthAvailability():MercadoPagoOAuthAvailability{
@@ -19,7 +19,6 @@ function oauthAvailability():MercadoPagoOAuthAvailability{
  const missing=names.filter((name)=>!process.env[name]?.trim());
  return {available:missing.length===0,missing:[...missing]};
 }
-
 function requiredEnv(name:"MERCADOPAGO_CLIENT_ID"|"MERCADOPAGO_CLIENT_SECRET"|"MERCADOPAGO_OAUTH_REDIRECT_URI"|"MERCADOPAGO_WEBHOOK_SECRET"):string{
  const value=process.env[name]?.trim(); if(!value) throw new Error(`Configuração obrigatória ausente: ${name}`); return value;
 }
@@ -37,29 +36,29 @@ function parseTokenSet(body:Record<string,unknown>):TokenSet{
  if(!accessToken||!refreshToken||!userId) throw new Error("Resposta OAuth do Mercado Pago incompleta.");
  return {accessToken,refreshToken,userId,expiresIn};
 }
-async function claimState(state:string,userId:string):Promise<OAuthState>{
+async function claimState(state:string):Promise<OAuthState>{
  const rows=await createAdminSqlExecutor().query(
   `update private.mercadopago_oauth_states set consumed_at=now()
-   where state_hash=$1 and consumed_at is null and expires_at>now() and actor_user_id=$2::uuid
-     and exists (select 1 from public.tenant_members tm where tm.tenant_id=mercadopago_oauth_states.tenant_id and tm.user_id=$2::uuid)
-     and exists (select 1 from public.store_members sm where sm.tenant_id=mercadopago_oauth_states.tenant_id and sm.store_id=mercadopago_oauth_states.store_id and sm.user_id=$2::uuid)
-   returning tenant_id::text,store_id::text,code_verifier_ciphertext,return_url`,[sha256(state),userId]);
+   where state_hash=$1 and consumed_at is null and expires_at>now()
+     and exists (select 1 from public.tenant_members tm where tm.tenant_id=mercadopago_oauth_states.tenant_id and tm.user_id=mercadopago_oauth_states.actor_user_id)
+     and exists (select 1 from public.store_members sm where sm.tenant_id=mercadopago_oauth_states.tenant_id and sm.store_id=mercadopago_oauth_states.store_id and sm.user_id=mercadopago_oauth_states.actor_user_id)
+   returning tenant_id::text,store_id::text,actor_user_id::text,code_verifier_ciphertext,return_url`,[sha256(state)]);
  const row=rows.at(0); if(!row) throw new Error("Autorização Mercado Pago inválida, expirada ou já utilizada.");
- if(typeof row["code_verifier_ciphertext"]!=="string"||typeof row["return_url"]!=="string") throw new Error("Estado OAuth inválido.");
- return {tenantId:String(row["tenant_id"]),storeId:String(row["store_id"]),verifierCiphertext:row["code_verifier_ciphertext"],returnUrl:row["return_url"]};
+ if(typeof row["actor_user_id"]!=="string"||typeof row["code_verifier_ciphertext"]!=="string"||typeof row["return_url"]!=="string") throw new Error("Estado OAuth inválido.");
+ return {tenantId:String(row["tenant_id"]),storeId:String(row["store_id"]),actorUserId:row["actor_user_id"],verifierCiphertext:row["code_verifier_ciphertext"],returnUrl:row["return_url"]};
 }
 async function exchangeCode(code:string,verifierCiphertext:string):Promise<TokenSet>{
  const vault=createCredentialVaultFromEnv();
  const response=await fetch(MP_TOKEN_URL,{method:"POST",headers:{accept:"application/json","content-type":"application/json"},body:JSON.stringify({
   client_id:requiredEnv("MERCADOPAGO_CLIENT_ID"),client_secret:requiredEnv("MERCADOPAGO_CLIENT_SECRET"),code,
-  grant_type: "authorization_code",redirect_uri:requiredEnv("MERCADOPAGO_OAUTH_REDIRECT_URI"),code_verifier:vault.decrypt(verifierCiphertext),
+  grant_type:"authorization_code",redirect_uri:requiredEnv("MERCADOPAGO_OAUTH_REDIRECT_URI"),code_verifier:vault.decrypt(verifierCiphertext),
  })});
  const body=await response.json() as Record<string,unknown>;
  if(!response.ok) throw new Error("Mercado Pago recusou a autorização. Tente conectar novamente.");
  return parseTokenSet(body);
 }
-async function saveConnection(state:OAuthState,tokens:TokenSet,actorUserId:string):Promise<void>{
- const vault=createCredentialVaultFromEnv(); const { accessToken, refreshToken } = tokens; const rows=await createAdminSqlExecutor().query(
+async function saveConnection(state:OAuthState,tokens:TokenSet):Promise<void>{
+ const vault=createCredentialVaultFromEnv(); const {accessToken,refreshToken}=tokens; const rows=await createAdminSqlExecutor().query(
  `with account as (
     insert into public.gateway_accounts(level,tenant_id,store_id,provider,label,public_identifier,status,updated_at)
     values ('store_checkout',$1::uuid,$2::uuid,'mercadopago','Mercado Pago',$3,'active',now())
@@ -75,8 +74,8 @@ async function saveConnection(state:OAuthState,tokens:TokenSet,actorUserId:strin
     insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
     select $8::uuid,$1::uuid,$2::uuid,'gateway_account.oauth_connected','gateway_account',id::text,jsonb_build_object('provider','mercadopago','level','store_checkout') from account
   ) select id::text from account`,
- [state.tenantId,state.storeId,tokens.userId,vault.encrypt(accessToken),vault.encrypt(requiredEnv("MERCADOPAGO_WEBHOOK_SECRET")),vault.encrypt(refreshToken),tokens.expiresIn,actorUserId]);
- if(rows.length === 0) throw new Error("Não foi possível persistir a conexão Mercado Pago.");
+ [state.tenantId,state.storeId,tokens.userId,vault.encrypt(accessToken),vault.encrypt(requiredEnv("MERCADOPAGO_WEBHOOK_SECRET")),vault.encrypt(refreshToken),tokens.expiresIn,state.actorUserId]);
+ if(rows.length===0) throw new Error("Não foi possível persistir a conexão Mercado Pago.");
 }
 
 export const getMerchantMercadoPagoConnection=createServerFn({method:"GET"}).handler(async()=>{
@@ -91,6 +90,7 @@ export const getMerchantMercadoPagoConnection=createServerFn({method:"GET"}).han
   :{connected:false,accountId:null,mercadoPagoUserId:null,updatedAt:null,...availability};
 });
 export const startMerchantMercadoPagoOAuth=createServerFn({method:"POST"}).handler(async()=>{
+ const session=await resolveSessionFromRequest(); if(!session) throw new Error("Sessão administrativa necessária para conectar o Mercado Pago."); requireMfaAssurance(session);
  const host=getRequestHost(); const context=await createMerchantCatalogContext(host); const availability=oauthAvailability();
  if(!availability.available) throw new Error("Integração Mercado Pago indisponível neste ambiente.");
  requiredEnv("MERCADOPAGO_CLIENT_SECRET"); requiredEnv("MERCADOPAGO_WEBHOOK_SECRET");
@@ -99,11 +99,10 @@ export const startMerchantMercadoPagoOAuth=createServerFn({method:"POST"}).handl
   values ($1,$2::uuid,$3::uuid,$4::uuid,$5,$6,now()+interval '10 minutes')`,
   [sha256(state),context.scope.tenantId,context.scope.storeId,context.userId,vault.encrypt(verifier),safeReturnUrl(host)]);
  const url=new URL(MP_AUTH_URL); url.searchParams.set("response_type","code"); url.searchParams.set("client_id",requiredEnv("MERCADOPAGO_CLIENT_ID"));
- url.searchParams.set("redirect_uri",requiredEnv("MERCADOPAGO_OAUTH_REDIRECT_URI")); url.searchParams.set("state", state);
- url.searchParams.set("code_challenge",challenge(verifier)); url.searchParams.set("code_challenge_method", "S256"); return {authorizationUrl:url.toString()};
+ url.searchParams.set("redirect_uri",requiredEnv("MERCADOPAGO_OAUTH_REDIRECT_URI")); url.searchParams.set("state",state);
+ url.searchParams.set("code_challenge",challenge(verifier)); url.searchParams.set("code_challenge_method","S256"); return {authorizationUrl:url.toString()};
 });
 export const completeMerchantMercadoPagoOAuth=createServerFn({method:"POST"}).validator(callbackSchema).handler(async({data})=>{
- const session=await resolveSessionFromRequest(); if(!session) throw new Error("Sessão administrativa necessária para concluir a conexão."); requireMfaAssurance(session);
- const state=await claimState(data.state,session.userId); const tokens=await exchangeCode(data.code,state.verifierCiphertext);
- await saveConnection(state,tokens,session.userId); return {ok:true,returnUrl:state.returnUrl};
+ const state=await claimState(data.state); const tokens=await exchangeCode(data.code,state.verifierCiphertext);
+ await saveConnection(state,tokens); return {ok:true,returnUrl:state.returnUrl};
 });
