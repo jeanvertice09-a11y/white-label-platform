@@ -1,0 +1,11 @@
+.admin, .admin * { box-sizing: border-box; }
+.admin { min-height: 100vh; background: var(--page); }
+.admin :where(h1,h2,h3,p,ul,ol) { margin: 0; }
+.admin :where(button,input,select,textarea) { font: inherit; }
+.admin a { color: inherit; text-decoration: none; }
+.admin button { color: inherit; }
+.admin :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.admin img { display: block; max-width: 100%; }
+.admin .adminSkip { position: fixed; left: 16px; top: -64px; z-index: 1000; padding: 10px 14px; background: var(--ink); color: white; border-radius: 8px; }
+.admin .adminSkip:focus { top: 16px; }
+@media (prefers-reduced-motion: reduce) { .admin *, .admin *::before, .admin *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }
