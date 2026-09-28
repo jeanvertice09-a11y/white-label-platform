@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { DashboardIcon } from "../components/dashboard/DashboardIcon.tsx";
-import "../admin/dashboard.css";
 import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
 import { formatMoney } from "../features/store-admin/format.ts";
 import { OnboardingChecklist } from "../features/store-admin/onboarding-checklist.tsx";
