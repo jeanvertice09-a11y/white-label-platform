@@ -8,13 +8,13 @@ export const Route = createFileRoute("/admin/store/catalog")({
   component: CatalogSettingsPage,
 });
 
-function CatalogSettingsPage() {
+function CatalogSettingsPage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return (
     <div className="k-page">
       <PageHead
-        title="Configurações do catálogo"
-        description="Controle visibilidade, WhatsApp, checkout e SEO do catálogo público."
+        title="Configurar minha loja"
+        description="Deixe seu catálogo pronto para vender. São poucos passos e você pode alterar tudo depois."
       />
       <CatalogSettingsForm settings={data.settings} />
     </div>
