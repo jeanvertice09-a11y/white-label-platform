@@ -30,8 +30,8 @@ describe("admin real routes lot 3 security boundary", () => {
   test("todas as rotas filhas continuam sob o boundary autenticado do /admin", () => {
     const parent = source("apps/web/src/routes/admin.tsx");
     const boundary = source("apps/web/src/lib/server/route-context.server.ts");
-    expect(parent).toContain("loader: () => loadStoreAdminContext()");
-    expect(parent).toContain("<AdminShell><Outlet /></AdminShell>");
+    expect(parent).toContain("await loadStoreAdminContext()");
+    expect(parent).toContain("<AdminShell storefrontUrl={storefrontUrl}><Outlet /></AdminShell>");
     expect(boundary).toContain('requireDomain(await deps.resolveTenantForHost(host), "store_admin")');
     expect(boundary).toContain("assertCanAccessStoreAdmin({ storeRoles: ctx.storeRoles })");
   });

@@ -85,6 +85,13 @@ function DashboardStrip(props: Readonly<{
   );
 }
 
+function GettingStarted(): React.JSX.Element {
+  return <section className="k-dashboard-welcome" aria-label="Ações para começar">
+    <div><span className="k-section-kicker">UM PASSO DE CADA VEZ</span><h2>Vamos cuidar da sua loja?</h2><p>Comece pelos produtos, acompanhe os pedidos e deixe sua vitrine pronta para os clientes.</p></div>
+    <div className="k-dashboard-welcome__actions"><Link to="/admin/products/new">Cadastrar produto <span aria-hidden="true">→</span></Link><Link to="/admin/orders">Ver pedidos</Link></div>
+  </section>;
+}
+
 function AttentionSection(props: Readonly<{
   pendingOrders: number;
   lowStockProducts: number;
@@ -100,18 +107,16 @@ function AttentionSection(props: Readonly<{
         </div>
       </header>
       <div className="k-attention-list">
-        <Link to="/admin/orders">
+        {props.pendingOrders > 0 ? <Link to="/admin/orders">
           <span><strong>Pedidos pendentes</strong><small>Revise confirmação e andamento.</small></span>
           <b>{props.pendingOrders}</b>
-        </Link>
-        <Link to="/admin/inventory">
+        </Link> : null}
+        {props.lowStockProducts > 0 ? <Link to="/admin/inventory">
           <span><strong>Estoque baixo</strong><small>Produtos próximos de ruptura.</small></span>
           <b>{props.lowStockProducts}</b>
-        </Link>
-        <Link to="/admin/products">
-          <span><strong>Produtos ativos</strong><small>Itens atualmente disponíveis no catálogo.</small></span>
-          <b>{props.activeProducts}</b>
-        </Link>
+        </Link> : null}
+        {props.activeProducts === 0 ? <Link to="/admin/products/new"><span><strong>Sua vitrine está vazia</strong><small>Cadastre o primeiro produto para começar.</small></span><b aria-hidden="true">→</b></Link> : null}
+        {props.pendingOrders === 0 && props.lowStockProducts === 0 && props.activeProducts > 0 ? <p className="k-attention-list__clear">Tudo em dia por aqui. Nenhuma pendência urgente.</p> : null}
       </div>
     </section>
   );
@@ -224,6 +229,8 @@ function AdminDashboard(): React.JSX.Element {
         description="Acompanhe vendas, pedidos, estoque e tudo o que precisa da sua atenção hoje."
         action={<Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>}
       />
+      <GettingStarted />
+      {data.onboarding && data.onboarding.progress.percent < 100 ? <section className="k-workspace-section k-onboarding-panel" id="primeiros-passos"><header className="k-section-head"><div><span className="k-section-kicker">CONFIGURAÇÃO GUIADA</span><h2>Prepare sua loja para vender</h2><p>Conclua cada passo no seu tempo.</p></div></header><OnboardingChecklist data={data.onboarding} /></section> : null}
       <DashboardStrip
         ordersToday={metrics.ordersToday}
         pendingOrders={metrics.pendingOrders}
@@ -233,11 +240,10 @@ function AdminDashboard(): React.JSX.Element {
       <div className="k-dashboard-layout">
         <main className="k-dashboard-primary">
           <AttentionSection pendingOrders={metrics.pendingOrders} lowStockProducts={metrics.lowStockProducts} activeProducts={metrics.activeProducts} />
+          <QuickLinksSection />
           <RecoveryCenter alerts={operations.activity.recoveryAlerts} />
           {data.analytics ? <StorefrontAnalyticsPanel analytics={data.analytics} /> : null}
           <RecentOperations activity={operations.activity} />
-          <QuickLinksSection />
-          {data.onboarding && data.onboarding.progress.percent < 100 ? <section className="k-workspace-section k-onboarding-panel" id="primeiros-passos"><header className="k-section-head"><div><span className="k-section-kicker">Configuração</span><h2>Finalize sua loja</h2><p>Faltam alguns passos antes de deixar tudo pronto para vender.</p></div></header><OnboardingChecklist data={data.onboarding} /></section> : null}
         </main>
         <AccountContext
           tenantStatus={operations.store.tenantStatus}

@@ -17,37 +17,71 @@ interface NavGroup {
 }
 
 const navigation: readonly NavGroup[] = [
-  { label: "Principal", items: [{ to: "/admin", label: "Resumo da loja", exact: true, icon: "home" }] },
-  { label: "Vendas", items: [{ to: "/admin/orders", label: "Pedidos e vendas", exact: false, icon: "orders" }, { to: "/admin/customers", label: "Meus clientes", exact: false, icon: "customers" }] },
-  { label: "Produtos", items: [{ to: "/admin/products", label: "Meus produtos", exact: false, icon: "products" }, { to: "/admin/categories", label: "Categorias", exact: false, icon: "categories" }, { to: "/admin/inventory", label: "Controle de estoque", exact: false, icon: "inventory" }] },
-  { label: "Divulgação", items: [{ to: "/admin/coupons", label: "Cupons de desconto", exact: true, icon: "marketing" }, { to: "/admin/campaigns", label: "Campanhas", exact: true, icon: "activity" }] },
-  { label: "Financeiro", items: [{ to: "/admin/finance", label: "Entradas e resultados", exact: true, icon: "revenue" }, { to: "/admin/purchases", label: "Compras e despesas", exact: true, icon: "orders" }, { to: "/admin/suppliers", label: "Fornecedores", exact: true, icon: "store" }] },
-  { label: "Gestão", items: [{ to: "/admin/tasks", label: "Tarefas", exact: true, icon: "check" }, { to: "/admin/operations", label: "Relatórios e histórico", exact: true, icon: "activity" }] },
-  { label: "Loja online", items: [{ to: "/admin/store", label: "Dados da loja", exact: true, icon: "store" }, { to: "/admin/store/appearance", label: "Visual da loja", exact: true, icon: "palette" }, { to: "/admin/store/banners", label: "Banners da loja", exact: true, icon: "marketing" }, { to: "/admin/store/catalog", label: "Catálogo e formas de venda", exact: true, icon: "settings" }] },
-  { label: "Conta", items: [{ to: "/admin/settings", label: "Plano e configurações", exact: true, icon: "settings" }] },
+  { label: "Comece aqui", items: [
+    { to: "/admin", label: "Visão geral", exact: true, icon: "home" },
+    { to: "/admin/orders", label: "Pedidos", exact: false, icon: "orders" },
+    { to: "/admin/products", label: "Produtos", exact: false, icon: "products" },
+    { to: "/admin/customers", label: "Clientes", exact: false, icon: "customers" },
+  ] },
+  { label: "Organize a loja", items: [
+    { to: "/admin/inventory", label: "Estoque", exact: false, icon: "inventory" },
+    { to: "/admin/categories", label: "Categorias", exact: false, icon: "categories" },
+    { to: "/admin/store", label: "Minha loja online", exact: false, icon: "store" },
+  ] },
+  { label: "Cresça", items: [
+    { to: "/admin/marketing", label: "Divulgação", exact: false, icon: "marketing" },
+    { to: "/admin/finance", label: "Financeiro", exact: false, icon: "revenue" },
+  ] },
+];
+
+const moreNavigation: readonly NavGroup[] = [
+  { label: "Divulgação", items: [
+    { to: "/admin/coupons", label: "Cupons", exact: true, icon: "marketing" },
+    { to: "/admin/campaigns", label: "Campanhas", exact: true, icon: "activity" },
+  ] },
+  { label: "Loja online", items: [
+    { to: "/admin/store/appearance", label: "Aparência", exact: true, icon: "palette" },
+    { to: "/admin/store/banners", label: "Banners", exact: true, icon: "marketing" },
+    { to: "/admin/store/catalog", label: "Catálogo e vendas", exact: true, icon: "settings" },
+  ] },
+  { label: "Operação", items: [
+    { to: "/admin/purchases", label: "Compras e despesas", exact: true, icon: "orders" },
+    { to: "/admin/suppliers", label: "Fornecedores", exact: true, icon: "store" },
+    { to: "/admin/tasks", label: "Tarefas", exact: true, icon: "check" },
+    { to: "/admin/operations", label: "Relatórios e histórico", exact: true, icon: "activity" },
+    { to: "/admin/settings", label: "Plano e configurações", exact: true, icon: "settings" },
+  ] },
 ];
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-function AdminSidebar(props: Readonly<{ open: boolean; onClose: () => void }>): React.JSX.Element {
+function NavigationGroups({ groups, onClose }: Readonly<{ groups: readonly NavGroup[]; onClose: () => void }>): React.JSX.Element {
+  return <>{groups.map((group) => (
+    <div className="k-admin__nav-group" key={group.label}>
+      <span className="k-admin__nav-label">{group.label}</span>
+      {group.items.map((item) => (
+        <Link key={item.to} to={item.to} activeOptions={{ exact: item.exact }} activeProps={{ "data-status": "active" }} onClick={onClose}>
+          <DashboardIcon name={item.icon} /><span>{item.label}</span>
+        </Link>
+      ))}
+    </div>
+  ))}</>;
+}
+
+function AdminSidebar(props: Readonly<{ open: boolean; onClose: () => void; storefrontUrl: string | null }>): React.JSX.Element {
   return (
     <>
       <button type="button" className={props.open ? "k-admin__overlay is-open" : "k-admin__overlay"} onClick={props.onClose} aria-label="Fechar menu" tabIndex={props.open ? 0 : -1} />
       <aside id="merchant-navigation" className={props.open ? "k-admin__sidebar is-open" : "k-admin__sidebar"} aria-label="Navegação da loja">
-        <div className="k-admin__brand"><span className="k-admin__brand-mark" aria-hidden="true">K</span><div className="k-admin__brand-copy"><strong>Kataluu</strong><small>Painel da loja</small></div></div>
+        <Link to="/admin" className="k-admin__brand" onClick={props.onClose}>
+          <span className="k-admin__brand-mark" aria-hidden="true">k.</span>
+          <span className="k-admin__brand-copy"><strong>kataluu</strong><small>Seu espaço de trabalho</small></span>
+        </Link>
         <nav className="k-admin__nav" aria-label="Administração da loja">
-          {navigation.map((group) => (
-            <div className="k-admin__nav-group" key={group.label}>
-              <span className="k-admin__nav-label">{group.label}</span>
-              {group.items.map((item) => (
-                <Link key={item.to} to={item.to} activeOptions={{ exact: item.exact }} activeProps={{ "data-status": "active" }} onClick={props.onClose}>
-                  <DashboardIcon name={item.icon} /><span>{item.label}</span>
-                </Link>
-              ))}
-            </div>
-          ))}
+          <NavigationGroups groups={navigation} onClose={props.onClose} />
+          <details className="k-admin__more"><summary>Mais ferramentas <span aria-hidden="true">⌄</span></summary><NavigationGroups groups={moreNavigation} onClose={props.onClose} /></details>
         </nav>
-        <div className="k-admin__sidebar-foot"><a className="k-admin__store-link" href="/" target="_blank" rel="noreferrer">Ver minha loja online ↗</a><div className="k-admin__account"><span className="k-admin__avatar" aria-hidden="true">L</span><div><strong>Minha conta</strong><small>Administração da loja</small></div></div></div>
+        <div className="k-admin__sidebar-foot">{props.storefrontUrl ? <a className="k-admin__store-link" href={props.storefrontUrl} target="_blank" rel="noreferrer">Abrir minha loja <span aria-hidden="true">↗</span></a> : <Link className="k-admin__store-link" to="/admin/store/catalog" onClick={props.onClose}>Configurar minha loja <span aria-hidden="true">→</span></Link>}<div className="k-admin__account"><span className="k-admin__avatar" aria-hidden="true">K</span><div><strong>Minha conta</strong><small>Administração</small></div></div></div>
       </aside>
     </>
   );
@@ -65,7 +99,7 @@ function MobileNavigation({ open, onMenu }: Readonly<{ open: boolean; onMenu: ()
   );
 }
 
-export function AdminShell({ children }: Readonly<{ children: ReactNode }>): React.JSX.Element {
+export function AdminShell({ children, storefrontUrl }: Readonly<{ children: ReactNode; storefrontUrl: string | null }>): React.JSX.Element {
   const [mobileOpen, setMobileOpen] = useState(false);
   const openerRef = useRef<HTMLElement | null>(null);
   function openMenu(): void {
@@ -93,12 +127,13 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>): Rea
   return (
     <section className="k-admin">
       <a className="k-skip" href="#merchant-content">Ir para o conteúdo</a>
-      <AdminSidebar open={mobileOpen} onClose={() => { setMobileOpen(false); }} />
+      <AdminSidebar open={mobileOpen} storefrontUrl={storefrontUrl} onClose={() => { setMobileOpen(false); }} />
       <div className="k-admin__main">
-        <div className="k-admin__mobilebar">
+        <header className="k-admin__topbar">
           <button className="k-admin__menu" type="button" onClick={openMenu} aria-label="Abrir menu" aria-expanded={mobileOpen} aria-controls="merchant-navigation"><DashboardIcon name="menu" /></button>
-          <strong>Minha loja</strong><Link to="/admin/store">Configurar</Link>
-        </div>
+          <div className="k-admin__topbar-title"><span>PAINEL DA LOJA</span><strong>Seu negócio, em um só lugar.</strong></div>
+          <div className="k-admin__topbar-actions"><Link to="/admin/products/new" className="k-admin__topbar-create">+ Adicionar produto</Link>{storefrontUrl ? <a href={storefrontUrl} target="_blank" rel="noreferrer">Ver loja ↗</a> : <Link to="/admin/store/catalog">Configurar loja →</Link>}</div>
+        </header>
         <main className="k-admin__content" id="merchant-content">{children}</main>
       </div>
       <MobileNavigation open={mobileOpen} onMenu={openMenu} />
@@ -107,5 +142,5 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>): Rea
 }
 
 export function PageHead(props: Readonly<{ title: string; description: string; action?: ReactNode }>): React.JSX.Element {
-  return <header className="k-page__head"><div className="k-page__head-copy"><span className="k-section-kicker">Minha loja / {props.title}</span><h1>{props.title}</h1><p>{props.description}</p></div>{props.action ? <div className="k-page__head-action">{props.action}</div> : null}</header>;
+  return <header className="k-page__head"><div className="k-page__head-copy"><span className="k-section-kicker">SEU ESPAÇO / {props.title}</span><h1>{props.title}</h1><p>{props.description}</p></div>{props.action ? <div className="k-page__head-action">{props.action}</div> : null}</header>;
 }

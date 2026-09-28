@@ -170,8 +170,7 @@ export function ProductsList(props: Readonly<{ initialPage: CatalogPage; categor
   return (
     <section className="k-workspace-section">
       <div className="k-section-head">
-        <div><h2>Catálogo de produtos</h2><p>{data.total} produto(s) encontrados.</p></div>
-        <Link className="k-button k-button--primary" to="/admin/products/new">Novo produto</Link>
+        <div><h2>Seus produtos</h2><p>{data.total} produto(s) encontrados. Use a busca ou filtre por categoria para encontrar um item.</p></div>
       </div>
       <ProductsFilters search={search} categoryId={categoryId} categories={props.categories} loading={loading} setSearch={setSearch} setCategoryId={setCategoryId} load={load} />
       {error ? <div className="k-inline-state k-inline-state--error"><strong>Não foi possível carregar</strong><span>{error}</span><button className="k-button" type="button" onClick={() => { void load(data.page); }}>Tentar novamente</button></div> : null}

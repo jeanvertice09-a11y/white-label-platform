@@ -183,12 +183,13 @@ describe("admin request-context performance boundary", () => {
 
 
 describe("merchant admin visual and navigation contract", () => {
-  test("admin uses a white modern workspace and indigo interaction palette", () => {
-    const css = source("apps/web/src/styles/admin-kataluu-redesign.css");
+  test("admin uses the new white workspace and self-hosted typography", () => {
+    const css = source("apps/web/src/styles/merchant-next.css");
     expect(css).toContain("--merchant-bg:#fff");
-    expect(css).toContain("--merchant-accent:#4f46e5");
-    expect(css).toContain('"Segoe UI Variable"');
+    expect(css).toContain("--merchant-accent:#087a5d");
+    expect(css).toContain('font-family:"DM Sans"');
     expect(css).toContain(".k-dashboard-layout");
+    expect(source("apps/web/src/features/store-admin/admin-shell.tsx")).toContain("Mais ferramentas");
   });
 
   test("completed onboarding does not dominate the operational dashboard", () => {

@@ -7,7 +7,7 @@ function phoneHref(phone: string): string {
 export function StorefrontFooter(props: Readonly<{ storeName: string; profile?: PublicStoreProfile }>): React.JSX.Element {
   const profile = props.profile;
   return (
-    <footer className="sf__footer">
+    <footer className="sf__footer" id="rodape-loja">
       <strong>{props.storeName}</strong>
       {profile?.description ? <span>{profile.description}</span> : <span>Catálogo e pedidos online</span>}
       {profile?.phone ? <a href={phoneHref(profile.phone)}>{profile.phone}</a> : null}
