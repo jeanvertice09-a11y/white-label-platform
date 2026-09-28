@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { AdminShell } from "../admin/shell/AdminShell.tsx";
+import { AdminShell } from "../features/store-admin/admin-shell.tsx";
 import "../admin/admin-entry.ts";
 import { loadStoreAdminContext } from "../lib/client-guard.ts";
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
@@ -17,5 +17,5 @@ export const Route = createFileRoute("/admin")({
 
 function AdminLayout(): React.JSX.Element {
   const { storefrontUrl } = Route.useLoaderData();
-  return <AdminShell storefrontUrl={storefrontUrl}><Outlet /></AdminShell>;
+  return <div className="admin"><AdminShell storefrontUrl={storefrontUrl}><Outlet /></AdminShell></div>;
 }
