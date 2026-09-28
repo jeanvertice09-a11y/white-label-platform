@@ -125,4 +125,5 @@ stock_guard as (
     jsonb_build_object('payment_status',c.status,'order_status','cancelled','requires_refund',true)
   from changed c cross join stock_guard sg where c.status='captured' and c.order_id is not null and not sg.ok returning id
 )
-select exists(select 1 from changed) changed`;
+select exists(select 1 from changed) changed,
+       exists(select 1 from stock_failure_audit) requires_refund`;
