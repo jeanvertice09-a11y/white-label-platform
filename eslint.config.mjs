@@ -30,15 +30,6 @@ export default tseslint.config(
     },
     rules: {
       "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
-      "max-len": [
-        "error",
-        {
-          code: 110,
-          ignoreUrls: true,
-          ignoreStrings: true,
-          ignoreTemplateLiterals: true,
-        },
-      ],
       "max-lines-per-function": ["warn", { max: 60, skipBlankLines: true, skipComments: true }],
       "@typescript-eslint/no-unused-vars": [
         "error",
