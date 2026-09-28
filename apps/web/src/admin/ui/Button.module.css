@@ -1,0 +1,6 @@
+.button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--page); color: var(--ink); font-weight: 650; cursor: pointer; transition: background 140ms var(--ease), border-color 140ms var(--ease); }
+.button:hover { background: var(--surface); }
+.primary { border-color: var(--ink); background: var(--ink); color: white; }
+.primary:hover { background: #302e29; }
+.danger { color: var(--danger); }
+.button:disabled { cursor: not-allowed; opacity: .5; }
