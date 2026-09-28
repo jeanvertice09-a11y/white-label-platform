@@ -1,7 +1,61 @@
-import{createFileRoute,Link}from"@tanstack/react-router";import{PageHead}from"../features/store-admin/admin-shell.tsx";import{AdminRouteError,AdminRoutePending}from"../features/store-admin/admin-route-state.tsx";import{formatMoney}from"../features/store-admin/format.ts";import{OnboardingChecklist}from"../features/store-admin/onboarding-checklist.tsx";import{getMerchantOnboarding}from"../lib/server/onboarding.functions.ts";import{getMerchantOperationsDashboard}from"../lib/server/operations-dashboard.functions.ts";import{statusLabel}from"../lib/ui-labels.ts";
-export const Route=createFileRoute("/admin/")({loader:async()=>{const[operations,onboarding]=await Promise.allSettled([getMerchantOperationsDashboard(),getMerchantOnboarding()]);return{operations:operations.status==="fulfilled"?operations.value:null,onboarding:onboarding.status==="fulfilled"?onboarding.value:null};},pendingComponent:AdminRoutePending,errorComponent:AdminRouteError,component:Dashboard});
-function Metrics({m}:Readonly<{m:Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["metrics"]}>):React.JSX.Element{return <section className="k-dashboard-strip" aria-label="Resumo da loja"><div><span>Pedidos hoje</span><strong>{m.ordersToday}</strong></div><div><span>Para atender</span><strong>{m.pendingOrders}</strong></div><div><span>Vendas · 30 dias</span><strong>{formatMoney(m.revenuePeriodCents)}</strong></div><div><span>Produtos publicados</span><strong>{m.activeProducts}</strong></div></section>;}
-function Start():React.JSX.Element{return <section className="k-dashboard-welcome"><div><span className="k-section-kicker">SUA LOJA</span><h2>O que você quer fazer agora?</h2><p>As tarefas mais usadas estão aqui. O restante fica organizado no menu quando você precisar.</p></div><div className="k-dashboard-welcome__actions"><Link to="/admin/products/new">Adicionar produto <span>→</span></Link><Link to="/admin/orders">Ver pedidos</Link><Link to="/admin/store/catalog">Configurar loja</Link></div></section>;}
-function Attention({pending,low,active}:Readonly<{pending:number;low:number;active:number}>):React.JSX.Element{if(!pending&&!low&&active)return <section className="k-workspace-section"><header className="k-section-head"><div><span className="k-section-kicker">HOJE</span><h2>Tudo em dia</h2><p>Sua loja não tem nenhuma pendência importante agora.</p></div></header></section>;return <section className="k-workspace-section"><header className="k-section-head"><div><span className="k-section-kicker">HOJE</span><h2>Precisa da sua atenção</h2></div></header><div className="k-attention-list">{pending?<Link to="/admin/orders"><span><strong>{pending} pedido(s) esperando você</strong><small>Abra os pedidos para continuar o atendimento.</small></span><b>→</b></Link>:null}{low?<Link to="/admin/inventory"><span><strong>{low} item(ns) com estoque baixo</strong><small>Confira antes que acabem.</small></span><b>→</b></Link>:null}{!active?<Link to="/admin/products/new"><span><strong>Seu catálogo ainda está vazio</strong><small>Adicione o primeiro produto para começar a vender.</small></span><b>→</b></Link>:null}</div></section>;}
-function Recent({orders}:Readonly<{orders:Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"]["recentOrders"]}>):React.JSX.Element{return <section className="k-workspace-section"><header className="k-section-head"><div><span className="k-section-kicker">PEDIDOS</span><h2>Últimos pedidos</h2></div><Link className="k-text-action" to="/admin/orders">Ver todos</Link></header>{orders.length?<div className="k-config-list">{orders.slice(0,5).map((o)=><Link className="k-config-row" key={o.id} to="/admin/orders/$id" params={{id:o.id}}><span><strong>#{String(o.orderNumber).padStart(5,"0")} · {o.customerName??"Cliente"}</strong><small>{statusLabel(o.status)} · {new Date(o.createdAt).toLocaleString("pt-BR")}</small></span><b>{formatMoney(o.totalCents)}</b></Link>)}</div>:<div className="k-inline-state"><strong>Nenhum pedido ainda</strong><span>Quando alguém comprar, o pedido vai aparecer aqui.</span></div>}</section>;}
-function Dashboard():React.JSX.Element{const data=Route.useLoaderData(),o=data.operations;if(!o)return <div className="k-page"><PageHead title="Início" description="Gerencie sua loja sem complicação."/><Start/>{data.onboarding?<OnboardingChecklist data={data.onboarding}/>:null}</div>;const m=o.metrics;return <div className="k-page k-dashboard"><PageHead title={`Olá! Esta é a ${o.store.name}`} description="Veja o que aconteceu e cuide do que precisa de atenção." action={<Link className="k-button k-button--primary" to="/admin/products/new">Adicionar produto</Link>}/><Start/>{data.onboarding&&data.onboarding.progress.percent<100?<section className="k-workspace-section k-onboarding-panel"><header className="k-section-head"><div><span className="k-section-kicker">PRIMEIROS PASSOS</span><h2>Deixe sua loja pronta</h2><p>Complete o que falta. Você pode fazer isso no seu tempo.</p></div></header><OnboardingChecklist data={data.onboarding}/></section>:null}<Metrics m={m}/><Attention pending={m.pendingOrders} low={m.lowStockProducts} active={m.activeProducts}/><Recent orders={o.activity.recentOrders}/></div>;}
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { DashboardIcon } from "../components/dashboard/DashboardIcon.tsx";
+import "../admin/dashboard.css";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
+import { formatMoney } from "../features/store-admin/format.ts";
+import { OnboardingChecklist } from "../features/store-admin/onboarding-checklist.tsx";
+import { getMerchantOnboarding } from "../lib/server/onboarding.functions.ts";
+import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
+import { statusLabel } from "../lib/ui-labels.ts";
+
+export const Route = createFileRoute("/admin/")({
+  loader: async () => {
+    const [operations, onboarding] = await Promise.allSettled([getMerchantOperationsDashboard(), getMerchantOnboarding()]);
+    return { operations: operations.status === "fulfilled" ? operations.value : null, onboarding: onboarding.status === "fulfilled" ? onboarding.value : null };
+  },
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
+  component: Dashboard,
+});
+
+type MetricsData = Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["metrics"];
+type OrdersData = Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"]["recentOrders"];
+
+function Metric({ label, value, hint, icon, attention = false }: Readonly<{ label: string; value: string | number; hint: string; icon: "orders" | "activity" | "revenue" | "products"; attention?: boolean }>): React.JSX.Element {
+  return <article className={attention ? "dashMetric isAttention" : "dashMetric"}><div className="dashMetricTop"><span>{label}</span><span className="dashMetricIcon"><DashboardIcon name={icon} /></span></div><strong>{value}</strong><small>{hint}</small></article>;
+}
+
+function Metrics({ metrics }: Readonly<{ metrics: MetricsData }>): React.JSX.Element {
+  return <section className="dashMetrics" aria-label="Indicadores da loja">
+    <Metric label="Vendas · 30 dias" value={formatMoney(metrics.revenuePeriodCents)} hint="Receita confirmada no período" icon="revenue" />
+    <Metric label="Pedidos hoje" value={metrics.ordersToday} hint="Entradas desde o início do dia" icon="orders" />
+    <Metric label="Para atender" value={metrics.pendingOrders} hint={metrics.pendingOrders ? "Pedidos aguardando sua ação" : "Nenhuma pendência agora"} icon="activity" attention={metrics.pendingOrders > 0} />
+    <Metric label="Produtos ativos" value={metrics.activeProducts} hint="Publicados no catálogo" icon="products" />
+  </section>;
+}
+
+function Attention({ pending, low, active }: Readonly<{ pending: number; low: number; active: number }>): React.JSX.Element {
+  const clear = pending === 0 && low === 0 && active > 0;
+  return <section className="dashPanel"><header className="dashPanelHead"><div><h2>Precisa da sua atenção</h2><p>O que vale resolver primeiro hoje.</p></div></header>{clear ? <div className="dashOk"><span className="dashOkMark">✓</span><strong>Tudo em dia</strong><span>Nenhuma pendência importante agora.</span></div> : <div className="dashAttention">
+    {pending > 0 ? <Link to="/admin/orders"><span className="dashAttentionMark">{pending}</span><span className="dashAttentionCopy"><strong>Pedidos esperando atendimento</strong><small>Abra os pedidos e continue a venda.</small></span><span className="dashAttentionArrow">→</span></Link> : null}
+    {low > 0 ? <Link to="/admin/inventory"><span className="dashAttentionMark">{low}</span><span className="dashAttentionCopy"><strong>Produtos com estoque baixo</strong><small>Revise o saldo antes que acabem.</small></span><span className="dashAttentionArrow">→</span></Link> : null}
+    {active === 0 ? <Link to="/admin/products/new"><span className="dashAttentionMark">+</span><span className="dashAttentionCopy"><strong>Seu catálogo está vazio</strong><small>Cadastre o primeiro produto para começar.</small></span><span className="dashAttentionArrow">→</span></Link> : null}
+  </div>}</section>;
+}
+
+function RecentOrders({ orders }: Readonly<{ orders: OrdersData }>): React.JSX.Element {
+  return <section className="dashPanel"><header className="dashPanelHead"><div><h2>Pedidos recentes</h2><p>Últimas movimentações da sua operação.</p></div><Link to="/admin/orders">Ver todos</Link></header>{orders.length ? orders.slice(0, 6).map((order) => <Link className="dashOrder" key={order.id} to="/admin/orders/$id" params={{ id: order.id }}><span className="dashOrderCopy"><strong>#{String(order.orderNumber).padStart(5, "0")} · {order.customerName ?? "Cliente"}</strong><small>{statusLabel(order.status)} · {new Date(order.createdAt).toLocaleString("pt-BR")}</small></span><span className="dashOrderAmount">{formatMoney(order.totalCents)}</span></Link>) : <div className="dashEmpty">Os pedidos aparecerão aqui assim que sua loja começar a vender.</div>}</section>;
+}
+
+function Dashboard(): React.JSX.Element {
+  const data = Route.useLoaderData();
+  const operations = data.operations;
+  if (!operations) return <div className="k-page"><section className="dashHero"><div className="dashHeroCopy"><span className="dashEyebrow">PAINEL DA LOJA</span><h1>Sua operação, em um só lugar.</h1><p>Os dados do resumo estão temporariamente indisponíveis. As ferramentas da loja continuam acessíveis pelo menu.</p></div></section>{data.onboarding ? <div className="dashOnboarding"><OnboardingChecklist data={data.onboarding} /></div> : null}</div>;
+  const metrics = operations.metrics;
+  return <div className="k-page dash">
+    <section className="dashHero"><div className="dashHeroCopy"><span className="dashEyebrow">VISÃO GERAL · {operations.store.name}</span><h1>Veja sua loja funcionando de verdade.</h1><p>Vendas, pedidos e o que precisa da sua atenção — sem ruído, sem planilha e sem procurar em vários menus.</p></div><div className="dashHeroActions"><Link to="/admin/products/new">Novo produto</Link><Link to="/admin/orders">Ver pedidos</Link><Link to="/admin/store/catalog">Configurar loja</Link></div></section>
+    <Metrics metrics={metrics} />
+    {data.onboarding && data.onboarding.progress.percent < 100 ? <section className="dashOnboarding"><header className="dashOnboardingHead"><span>PRIMEIROS PASSOS</span><h2>Deixe sua loja pronta para vender</h2><p>Complete somente o que ainda falta.</p></header><OnboardingChecklist data={data.onboarding} /></section> : null}
+    <div className="dashGrid"><RecentOrders orders={operations.activity.recentOrders} /><Attention pending={metrics.pendingOrders} low={metrics.lowStockProducts} active={metrics.activeProducts} /></div>
+  </div>;
+}
