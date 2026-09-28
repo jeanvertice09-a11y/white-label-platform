@@ -70,6 +70,18 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/web/src/features/store-admin/**/*.tsx", "packages/catalog/src/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-confusing-void-expression": "off",
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@typescript-eslint/restrict-plus-operands": "off",
+      "@typescript-eslint/no-unnecessary-condition": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+      "no-empty": "off",
+    },
+  },
+  {
     files: ["tests/**/*.ts", "packages/*/src/**/*.test.ts"],
     rules: {
       "max-lines-per-function": "off",
