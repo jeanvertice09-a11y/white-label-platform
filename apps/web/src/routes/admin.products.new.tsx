@@ -2,9 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { ProductForm } from "../features/store-admin/product-form.tsx";
 import { listMerchantCategories } from "../lib/server/catalog.functions.ts";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
 
 export const Route = createFileRoute("/admin/products/new")({
   loader: () => listMerchantCategories(),
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
   component: NewProductPage,
 });
 

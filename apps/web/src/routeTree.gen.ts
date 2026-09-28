@@ -32,6 +32,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStoreRouteImport } from './routes/admin.store'
 import { Route as AdminSuppliersRouteImport } from './routes/admin.suppliers'
 import { Route as AdminTasksRouteImport } from './routes/admin.tasks'
+import { Route as AuthHandoffRouteImport } from './routes/auth.handoff'
 import { Route as CategoriaSlugRouteImport } from './routes/categoria.$slug'
 import { Route as ControlIndexRouteImport } from './routes/control.index'
 import { Route as ControlAuditRouteImport } from './routes/control.audit'
@@ -182,6 +183,11 @@ const AdminTasksRoute = AdminTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
   getParentRoute: () => AdminRoute,
+} as any)
+const AuthHandoffRoute = AuthHandoffRouteImport.update({
+  id: '/auth/handoff',
+  path: '/auth/handoff',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CategoriaSlugRoute = CategoriaSlugRouteImport.update({
   id: '/categoria/$slug',
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/admin/store': typeof AdminStoreRouteWithChildren
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/tasks': typeof AdminTasksRoute
+  '/auth/handoff': typeof AuthHandoffRoute
   '/categoria/$slug': typeof CategoriaSlugRoute
   '/control/audit': typeof ControlAuditRoute
   '/control/billing': typeof ControlBillingRoute
@@ -438,6 +445,7 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/tasks': typeof AdminTasksRoute
+  '/auth/handoff': typeof AuthHandoffRoute
   '/categoria/$slug': typeof CategoriaSlugRoute
   '/control/audit': typeof ControlAuditRoute
   '/control/billing': typeof ControlBillingRoute
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   '/admin/store': typeof AdminStoreRouteWithChildren
   '/admin/suppliers': typeof AdminSuppliersRoute
   '/admin/tasks': typeof AdminTasksRoute
+  '/auth/handoff': typeof AuthHandoffRoute
   '/categoria/$slug': typeof CategoriaSlugRoute
   '/control/audit': typeof ControlAuditRoute
   '/control/billing': typeof ControlBillingRoute
@@ -561,6 +570,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/suppliers'
     | '/admin/tasks'
+    | '/auth/handoff'
     | '/categoria/$slug'
     | '/control/audit'
     | '/control/billing'
@@ -614,6 +624,7 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/suppliers'
     | '/admin/tasks'
+    | '/auth/handoff'
     | '/categoria/$slug'
     | '/control/audit'
     | '/control/billing'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/admin/store'
     | '/admin/suppliers'
     | '/admin/tasks'
+    | '/auth/handoff'
     | '/categoria/$slug'
     | '/control/audit'
     | '/control/billing'
@@ -720,6 +732,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MasterRoute: typeof MasterRouteWithChildren
   MfaRoute: typeof MfaRoute
+  AuthHandoffRoute: typeof AuthHandoffRoute
   CategoriaSlugRoute: typeof CategoriaSlugRoute
   ProdutoSlugRoute: typeof ProdutoSlugRoute
   ApiWebhooksMercadopagoRoute: typeof ApiWebhooksMercadopagoRoute
@@ -890,6 +903,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/tasks'
       preLoaderRoute: typeof AdminTasksRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/auth/handoff': {
+      id: '/auth/handoff'
+      path: '/auth/handoff'
+      fullPath: '/auth/handoff'
+      preLoaderRoute: typeof AuthHandoffRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/categoria/$slug': {
       id: '/categoria/$slug'
@@ -1313,6 +1333,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MasterRoute: MasterRouteWithChildren,
   MfaRoute: MfaRoute,
+  AuthHandoffRoute: AuthHandoffRoute,
   CategoriaSlugRoute: CategoriaSlugRoute,
   ProdutoSlugRoute: ProdutoSlugRoute,
   ApiWebhooksMercadopagoRoute: ApiWebhooksMercadopagoRoute,
