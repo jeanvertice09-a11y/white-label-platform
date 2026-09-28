@@ -1,0 +1,1 @@
+The adjustment form intentionally keeps user-entered values until both the stock mutation and the post-mutation refresh complete. This makes stale-view failures recoverable and prevents a successful mutation response from being confused with a fully reconciled UI state.
