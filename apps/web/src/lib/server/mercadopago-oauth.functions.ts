@@ -40,7 +40,6 @@ async function claimState(state:string):Promise<OAuthState>{
  const rows=await createAdminSqlExecutor().query(
   `update private.mercadopago_oauth_states set consumed_at=now()
    where state_hash=$1 and consumed_at is null and expires_at>now()
-     and exists (select 1 from public.tenant_members tm where tm.tenant_id=mercadopago_oauth_states.tenant_id and tm.user_id=mercadopago_oauth_states.actor_user_id)
      and exists (select 1 from public.store_members sm where sm.tenant_id=mercadopago_oauth_states.tenant_id and sm.store_id=mercadopago_oauth_states.store_id and sm.user_id=mercadopago_oauth_states.actor_user_id)
    returning tenant_id::text,store_id::text,actor_user_id::text,code_verifier_ciphertext,return_url`,[sha256(state)]);
  const row=rows.at(0); if(!row) throw new Error("Autorização Mercado Pago inválida, expirada ou já utilizada.");
