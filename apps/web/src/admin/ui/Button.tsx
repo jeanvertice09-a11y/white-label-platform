@@ -1,9 +1,1 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
-import styles from "./Button.module.css";
-
-type Tone = "default" | "primary" | "danger";
-export function Button({ tone = "default", children, className = "", ...props }:
-  ButtonHTMLAttributes<HTMLButtonElement> & { tone?: Tone; children: ReactNode }) {
-  const toneClass = tone === "primary" ? styles.primary : tone === "danger" ? styles.danger : "";
-  return <button className={`${styles.button} ${toneClass} ${className}`} {...props}>{children}</button>;
-}
+import type{ButtonHTMLAttributes,ReactNode}from"react";import styles from"./Button.module.css";type Variant="primary"|"secondary"|"danger"|"ghost";type Size="sm"|"md"|"lg";export function Button({variant="secondary",size="md",full=false,className="",children,...props}:ButtonHTMLAttributes<HTMLButtonElement>&Readonly<{variant?:Variant;size?:Size;full?:boolean;children:ReactNode}>):React.JSX.Element{return <button {...props} className={`${styles.button} ${styles[variant]} ${size==="sm"?styles.sm:size==="lg"?styles.lg:""} ${full?styles.full:""} ${className}`}>{children}</button>}

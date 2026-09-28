@@ -1,15 +1,1 @@
-import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from "react";
-import styles from "./Field.module.css";
-function Wrap({ label, hint, children }: Readonly<{ label: string; hint?: string; children: ReactNode }>) {
-  return <label className={styles.field}><span className={styles.label}>{label}</span>{children}
-    {hint ? <span className={styles.hint}>{hint}</span> : null}</label>;
-}
-export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
-  return <Wrap label={label} hint={hint}><input className={styles.control} {...props} /></Wrap>;
-}
-export function Select({ label, hint, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hint?: string }) {
-  return <Wrap label={label} hint={hint}><select className={styles.control} {...props}>{children}</select></Wrap>;
-}
-export function Textarea({ label, hint, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: string }) {
-  return <Wrap label={label} hint={hint}><textarea className={`${styles.control} ${styles.textarea}`} {...props} /></Wrap>;
-}
+import type{InputHTMLAttributes,ReactNode,SelectHTMLAttributes,TextareaHTMLAttributes}from"react";import styles from"./Field.module.css";type Base={label:string;hint?:string;error?:string;required?:boolean};function Frame({label,hint,error,required,children}:Readonly<Base&{children:ReactNode}>):React.JSX.Element{return <label className={styles.field}><span className={styles.label}>{label}{required?<span className={styles.required}> *</span>:null}</span>{children}{error?<span className={styles.error}>{error}</span>:hint?<span className={styles.hint}>{hint}</span>:null}</label>}export function Field(props:Readonly<Base&InputHTMLAttributes<HTMLInputElement>>):React.JSX.Element{const{label,hint,error,required,...input}=props;return <Frame label={label} hint={hint} error={error} required={required}><input {...input} required={required} className={styles.control}/></Frame>}export function TextareaField(props:Readonly<Base&TextareaHTMLAttributes<HTMLTextAreaElement>>):React.JSX.Element{const{label,hint,error,required,...input}=props;return <Frame label={label} hint={hint} error={error} required={required}><textarea {...input} required={required} className={styles.control}/></Frame>}export function SelectField(props:Readonly<Base&SelectHTMLAttributes<HTMLSelectElement>>):React.JSX.Element{const{label,hint,error,required,children,...input}=props;return <Frame label={label} hint={hint} error={error} required={required}><select {...input} required={required} className={styles.control}>{children}</select></Frame>}
