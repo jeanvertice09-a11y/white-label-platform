@@ -1,9 +1,70 @@
-import type { ReactNode } from "react";
 import type { Category } from "@white-label/catalog";
 import { slugify } from "./format.ts";
-export interface ProductDraft{name:string;slug:string;description:string;sku:string;categoryId:string;price:string;compareAt:string;cost:string;stock:string;position:string;active:boolean;trackInventory:boolean;}
-type SetField=<K extends keyof ProductDraft>(key:K,value:ProductDraft[K])=>void;
-function Section({title,description,children}:Readonly<{title:string;description:string;children:ReactNode}>):React.JSX.Element{return <section className="k-editor-section"><header className="k-editor-section__head"><h2>{title}</h2><p>{description}</p></header><div className="k-editor-section__body">{children}</div></section>;}
-function Main({draft,categories,hasVariants,setField}:Readonly<{draft:ProductDraft;categories:Category[];hasVariants:boolean;setField:SetField}>):React.JSX.Element{return <div className="k-editor-main"><Section title="Produto" description="Preencha como seu cliente vai encontrar este item."><div className="k-field k-field--full"><label htmlFor="product-name">Nome do produto</label><input id="product-name" value={draft.name} onChange={(e)=>{const name=e.target.value;setField("name",name);if(!draft.slug)setField("slug",slugify(name));}} required autoFocus placeholder="Ex.: Tênis esportivo feminino"/></div><div className="k-field k-field--full"><label htmlFor="product-description">Descrição</label><textarea id="product-description" value={draft.description} onChange={(e)=>{setField("description",e.target.value);}} placeholder="Conte os principais detalhes, materiais, medidas e benefícios."/></div><div className="k-field"><label htmlFor="product-category">Categoria</label><select id="product-category" value={draft.categoryId} onChange={(e)=>{setField("categoryId",e.target.value);}}><option value="">Sem categoria</option>{categories.map((category)=><option key={category.id} value={category.id}>{category.name}{category.active?"":" (inativa)"}</option>)}</select></div></Section><Section title="Preço" description={hasVariants?"Este é o preço base. Você pode definir preços diferentes nas variações abaixo.":"Informe o preço que o cliente verá no catálogo."}><div className="k-field"><label htmlFor="product-price">Preço de venda</label><input id="product-price" inputMode="decimal" value={draft.price} onChange={(e)=>{setField("price",e.target.value);}} required placeholder="0,00"/></div><div className="k-field"><label htmlFor="product-compare">Preço anterior <span className="k-muted">(opcional)</span></label><input id="product-compare" inputMode="decimal" value={draft.compareAt} onChange={(e)=>{setField("compareAt",e.target.value);}} placeholder="0,00"/><span className="k-muted">Use para mostrar uma promoção.</span></div></Section><details className="k-record-editor"><summary><span><strong>Mais opções</strong><small>SKU, custo, endereço e ordem do produto.</small></span></summary><div className="k-record-editor__form"><div className="k-form__grid"><div className="k-field"><label htmlFor="product-sku">Código / SKU</label><input id="product-sku" value={draft.sku} onChange={(e)=>{setField("sku",e.target.value);}}/></div><div className="k-field"><label htmlFor="product-cost">Custo interno</label><input id="product-cost" inputMode="decimal" value={draft.cost} onChange={(e)=>{setField("cost",e.target.value);}} placeholder="0,00"/></div><div className="k-field"><label htmlFor="product-slug">Endereço do produto</label><input id="product-slug" value={draft.slug} onChange={(e)=>{setField("slug",slugify(e.target.value));}} required/></div><div className="k-field"><label htmlFor="product-position">Ordem no catálogo</label><input id="product-position" type="number" min="0" value={draft.position} onChange={(e)=>{setField("position",e.target.value);}}/></div></div></div></details></div>;}
-function Aside({draft,hasVariants,setField}:Readonly<{draft:ProductDraft;hasVariants:boolean;setField:SetField}>):React.JSX.Element{return <aside className="k-editor-aside"><section className="k-context-section"><h2>Publicação</h2><label className="k-switch-row"><span><strong>Produto disponível</strong><small>Aparece no catálogo quando estiver marcado.</small></span><input type="checkbox" checked={draft.active} onChange={(e)=>{setField("active",e.target.checked);}}/></label><label className="k-switch-row"><span><strong>Controlar estoque</strong><small>Avise quando o produto acabar.</small></span><input type="checkbox" checked={draft.trackInventory} onChange={(e)=>{setField("trackInventory",e.target.checked);}}/></label></section><section className="k-context-section"><h2>Estoque</h2><div className="k-context-value"><span>Saldo atual</span><strong>{draft.stock}</strong></div><p className="k-muted">O saldo é alterado pela área de Estoque para manter o histórico.{hasVariants?" Cada variação possui seu próprio saldo.":""}</p></section><section className="k-context-section"><h2>Depois de salvar</h2><p className="k-muted">Adicione fotos e, se precisar, tamanhos, cores ou outras variações. Tudo fica no mesmo produto.</p></section></aside>;}
-export function ProductEditorLayout(props:Readonly<{draft:ProductDraft;categories:Category[];hasVariants:boolean;setField:SetField}>):React.JSX.Element{return <div className="k-editor-layout"><Main {...props}/><Aside draft={props.draft} hasVariants={props.hasVariants} setField={props.setField}/></div>;}
+
+export interface ProductDraft {
+  name: string;
+  slug: string;
+  description: string;
+  sku: string;
+  categoryId: string;
+  price: string;
+  compareAt: string;
+  cost: string;
+  stock: string;
+  position: string;
+  active: boolean;
+  trackInventory: boolean;
+}
+
+type SetField = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => void;
+
+function Field(props: Readonly<{ label: string; hint?: string; children: React.ReactNode }>): React.JSX.Element {
+  return <label className="productField"><span>{props.label}</span>{props.children}{props.hint ? <small>{props.hint}</small> : null}</label>;
+}
+
+function Toggle(props: Readonly<{ checked: boolean; title: string; description: string; onChange: (value: boolean) => void }>): React.JSX.Element {
+  return <label className="productToggle"><span><strong>{props.title}</strong><small>{props.description}</small></span><input type="checkbox" checked={props.checked} onChange={(event) => { props.onChange(event.target.checked); }} /></label>;
+}
+
+export function ProductEditorLayout({ draft, categories, hasVariants, setField }: Readonly<{ draft: ProductDraft; categories: Category[]; hasVariants: boolean; setField: SetField }>): React.JSX.Element {
+  return <div className="productStudio">
+    <main className="productStudioMain">
+      <section className="productCard productIdentity">
+        <div className="productCardTitle"><span>01</span><div><h2>Informações do produto</h2><p>O essencial para o cliente entender o que você vende.</p></div></div>
+        <div className="productFields">
+          <Field label="Nome do produto"><input id="product-name" value={draft.name} onChange={(event) => { const name = event.target.value; setField("name", name); if (!draft.slug) setField("slug", slugify(name)); }} required autoFocus placeholder="Ex.: Tênis Runner Pro" /></Field>
+          <Field label="Descrição" hint="Escreva como se estivesse apresentando o produto para o cliente."><textarea value={draft.description} onChange={(event) => { setField("description", event.target.value); }} placeholder="Material, diferenciais, medidas e outras informações importantes…" /></Field>
+          <Field label="Categoria"><select value={draft.categoryId} onChange={(event) => { setField("categoryId", event.target.value); }}><option value="">Selecionar categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}{category.active ? "" : " (inativa)"}</option>)}</select></Field>
+        </div>
+      </section>
+
+      <section className="productCard">
+        <div className="productCardTitle"><span>02</span><div><h2>Preço</h2><p>{hasVariants ? "Defina o preço base; variações podem ter valores próprios." : "Defina quanto o cliente paga e, se quiser, mostre uma oferta."}</p></div></div>
+        <div className="productPriceGrid">
+          <Field label="Preço de venda"><div className="moneyInput"><b>R$</b><input inputMode="decimal" value={draft.price} onChange={(event) => { setField("price", event.target.value); }} required placeholder="0,00" /></div></Field>
+          <Field label="Preço anterior" hint="Opcional. Use quando houver promoção."><div className="moneyInput"><b>R$</b><input inputMode="decimal" value={draft.compareAt} onChange={(event) => { setField("compareAt", event.target.value); }} placeholder="0,00" /></div></Field>
+        </div>
+      </section>
+
+      <section className="productCard productAdvanced">
+        <div className="productCardTitle"><span>03</span><div><h2>Organização</h2><p>Informações internas. O cliente não precisa ver isso.</p></div></div>
+        <div className="productAdvancedGrid">
+          <Field label="SKU / código"><input value={draft.sku} onChange={(event) => { setField("sku", event.target.value); }} placeholder="Ex.: TEN-RUN-001" /></Field>
+          <Field label="Custo interno"><div className="moneyInput"><b>R$</b><input inputMode="decimal" value={draft.cost} onChange={(event) => { setField("cost", event.target.value); }} placeholder="0,00" /></div></Field>
+          <Field label="URL do produto"><input value={draft.slug} onChange={(event) => { setField("slug", slugify(event.target.value)); }} required /></Field>
+          <Field label="Posição no catálogo"><input type="number" min="0" value={draft.position} onChange={(event) => { setField("position", event.target.value); }} /></Field>
+        </div>
+      </section>
+    </main>
+
+    <aside className="productStudioSide">
+      <section className="productPublishCard">
+        <div className="productPublishHead"><span className={draft.active ? "productLiveDot isLive" : "productLiveDot"} /><div><strong>{draft.active ? "Produto publicado" : "Produto oculto"}</strong><small>Você pode mudar isso a qualquer momento.</small></div></div>
+        <Toggle checked={draft.active} title="Disponível no catálogo" description="Clientes conseguem encontrar e comprar." onChange={(value) => { setField("active", value); }} />
+        <Toggle checked={draft.trackInventory} title="Controlar estoque" description="Acompanhe a quantidade disponível." onChange={(value) => { setField("trackInventory", value); }} />
+        {draft.trackInventory ? <div className="productStockSummary"><span>Quantidade atual</span><strong>{draft.stock}</strong><small>Movimentações continuam sendo feitas pela área Estoque.</small></div> : null}
+      </section>
+      <section className="productHelpCard"><span>Próximo passo</span><strong>Salve para adicionar fotos e variações</strong><p>Depois você poderá cadastrar cores, tamanhos e imagens sem recriar o produto.</p></section>
+    </aside>
+  </div>;
+}
