@@ -1,0 +1,31 @@
+.admin {
+  --page: #ffffff;
+  --surface: #fafaf8;
+  --line: #ecebe7;
+  --ink: #1b1a17;
+  --muted: #6b6961;
+  --quiet: #9a978e;
+  --accent: #356df3;
+  --ok: #0e7a4f;
+  --warning: #b45309;
+  --danger: #c2321f;
+  --shadow-float: 0 12px 32px rgba(20, 18, 10, 0.1);
+  --radius-control: 8px;
+  --radius-sheet: 12px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-18: 72px;
+  --content: 1120px;
+  --reading: 680px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  color: var(--ink);
+  background: var(--page);
+  font-family: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
