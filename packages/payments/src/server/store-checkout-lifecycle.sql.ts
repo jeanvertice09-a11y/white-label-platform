@@ -58,20 +58,24 @@ stock_guard as (
       when c.status='refunded' then 'refunded'
       else o.payment_status end,
     status=case
-      when c.status='captured' and ol.status='pending' then 'confirmed'
+      when c.status='captured' and ol.status='pending' and sg.ok then 'confirmed'
+      when c.status='captured' and ol.status='pending' and not sg.ok then 'cancelled'
       when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then 'cancelled'
       else o.status end,
-    confirmed_at=case when c.status='captured' and ol.status='pending' then coalesce(o.confirmed_at,now()) else o.confirmed_at end,
-    cancelled_at=case when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then coalesce(o.cancelled_at,now()) else o.cancelled_at end,
+    confirmed_at=case when c.status='captured' and ol.status='pending' and sg.ok then coalesce(o.confirmed_at,now()) else o.confirmed_at end,
+    cancelled_at=case
+      when c.status='captured' and ol.status='pending' and not sg.ok then coalesce(o.cancelled_at,now())
+      when c.status in ('failed','chargeback','refunded') and ol.status in ('pending','confirmed','preparing','ready') then coalesce(o.cancelled_at,now())
+      else o.cancelled_at end,
     updated_at=now()
   from changed c join order_locked ol on ol.id=c.order_id cross join stock_guard sg
-  where o.id=ol.id and (c.status<>'captured' or ol.status<>'pending' or sg.ok) and o.tenant_id=ol.tenant_id and o.store_id=ol.store_id
+  where o.id=ol.id and o.tenant_id=ol.tenant_id and o.store_id=ol.store_id
   returning o.id,o.tenant_id,o.store_id,ol.status previous_status,o.status,c.status payment_status
 ), stock_sales as (
   insert into public.stock_movements(tenant_id,store_id,product_id,variant_id,delta,reason,movement_type,reference_type,reference_id)
   select t.tenant_id,t.store_id,t.product_id,t.variant_id,-t.qty,'Pagamento aprovado','sale','order',oc.id
   from stock_targets t join order_change oc on oc.tenant_id=t.tenant_id and oc.store_id=t.store_id cross join stock_guard g
-  where g.ok
+  where g.ok and oc.payment_status='captured' and oc.status='confirmed'
   on conflict do nothing returning tenant_id,store_id,product_id,variant_id,delta
 ), variant_delta as (
   select tenant_id,store_id,product_id,variant_id,sum(delta)::integer delta from stock_sales where variant_id is not null group by 1,2,3,4
@@ -106,7 +110,7 @@ stock_guard as (
 ), order_audit as (
   insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
   select null,tenant_id,store_id,'order.payment_transition','order',id::text,
-    jsonb_build_object('from',previous_status,'to',case when payment_status='captured' then 'confirmed' else 'cancelled' end,'payment_status',payment_status)
+    jsonb_build_object('from',previous_status,'to',status,'payment_status',payment_status)
   from order_change where status is distinct from previous_status returning id
 ), audit as (
   insert into public.audit_logs(
@@ -117,7 +121,8 @@ stock_guard as (
   from changed returning id
 ), stock_failure_audit as (
   insert into public.audit_logs(actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
-  select null,c.tenant_id,c.store_id,'order.payment_stock_conflict','order',c.order_id::text,jsonb_build_object('payment_status',c.status)
+  select null,c.tenant_id,c.store_id,'order.payment_stock_conflict','order',c.order_id::text,
+    jsonb_build_object('payment_status',c.status,'order_status','cancelled','requires_refund',true)
   from changed c cross join stock_guard sg where c.status='captured' and c.order_id is not null and not sg.ok returning id
 )
 select exists(select 1 from changed) changed`;
