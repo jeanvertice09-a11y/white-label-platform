@@ -10,7 +10,7 @@ const baseProduct: Product = {
   slug: "camiseta",
   description: null,
   sku: null,
-  categoryId: null,
+  categoryId: null, categoryIds: [], discountType: null, discountValue: null, pixDiscountPercent: null, freeShipping: false,
   priceCents: 1299,
   compareAtPriceCents: null,
   costCents: null,

@@ -20,7 +20,7 @@ function variantProduct(): Product {
     slug: "produto-variantes",
     description: null,
     sku: null,
-    categoryId: null,
+    categoryId: null, categoryIds: [], discountType: null, discountValue: null, pixDiscountPercent: null, freeShipping: false,
     priceCents: 999,
     compareAtPriceCents: null,
     costCents: null,

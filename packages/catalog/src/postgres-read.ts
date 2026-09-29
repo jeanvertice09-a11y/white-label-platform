@@ -1,1 +1,218 @@
-import{assertCatalogQuery,assertCatalogScope}from"./scope.ts";import{defaultCatalogSettings}from"./defaults.ts";import{mapBanner,mapCategory,mapImage,mapProduct,mapSettings,mapStore,mapVariant}from"./postgres-mappers.ts";import type{CatalogPage,CatalogQuery,CatalogScope,CatalogSettings,Category,Product,ProductVariant,StoreBanner,StorefrontStore}from"./types.ts";import type{CatalogReadRepository,CatalogSqlExecutor}from"./repository.ts";type SafeVariant=Omit<ProductVariant,"costCents">&{costCents?:number|null};type SafeProduct=Omit<Product,"costCents"|"variants">&{costCents?:number|null;variants:SafeVariant[]};function strip(p:Product):Product{const s:SafeProduct={...p,variants:p.variants.map(v=>({...v}))};delete s.costCents;for(const v of s.variants)delete v.costCents;return s as Product;}const COLS="p.id,p.tenant_id,p.store_id,p.name,p.slug,p.description,p.sku,p.category_id,p.price_cents,p.compare_at_price_cents,p.cost_cents,p.discount_type,p.discount_value,p.pix_discount_percent,p.free_shipping,p.active,p.track_inventory,p.stock_quantity,p.position";async function hydrate(sql:CatalogSqlExecutor,s:CatalogScope,products:Product[],pub:boolean){if(!products.length)return products;const ids=products.map(p=>p.id);const active=pub?" and active=true":"";const[v,i,c]=await Promise.all([sql.query("select id,tenant_id,store_id,product_id,name,sku,attributes,price_cents,compare_at_price_cents,cost_cents,active,stock_quantity,position from public.product_variants where tenant_id=$1 and store_id=$2 and product_id=any($3::uuid[])"+active+" order by position,name",[s.tenantId,s.storeId,ids]),sql.query("select id,tenant_id,store_id,product_id,variant_id,object_key,alt_text,position from public.product_images where tenant_id=$1 and store_id=$2 and product_id=any($3::uuid[]) order by position,id",[s.tenantId,s.storeId,ids]),sql.query("select product_id,category_id from public.product_categories where tenant_id=$1 and store_id=$2 and product_id=any($3::uuid[])",[s.tenantId,s.storeId,ids])]);const h=products.map(p=>({...p,categoryIds:c.filter(x=>x["product_id"]===p.id).map(x=>String(x["category_id"])),variants:v.filter(x=>x["product_id"]===p.id).map(mapVariant),images:i.filter(x=>x["product_id"]===p.id).map(mapImage)}));return pub?h.map(strip):h;}function publicFilter(){return"p.active=true and (not exists(select 1 from public.product_variants va where va.tenant_id=p.tenant_id and va.store_id=p.store_id and va.product_id=p.id) or exists(select 1 from public.product_variants vv where vv.tenant_id=p.tenant_id and vv.store_id=p.store_id and vv.product_id=p.id and vv.active=true))";}function stockFilter(){return"(p.track_inventory=false or (not exists(select 1 from public.product_variants sva where sva.tenant_id=p.tenant_id and sva.store_id=p.store_id and sva.product_id=p.id) and p.stock_quantity>0) or exists(select 1 from public.product_variants sv where sv.tenant_id=p.tenant_id and sv.store_id=p.store_id and sv.product_id=p.id and sv.active=true and sv.stock_quantity>0))";}async function getProduct(sql:CatalogSqlExecutor,s:CatalogScope,field:"id"|"slug",value:string,pub:boolean){assertCatalogScope(s);const r=await sql.query("select "+COLS+" from public.products p where p.tenant_id=$1 and p.store_id=$2 and p."+field+"=$3"+(pub?" and "+publicFilter():"")+" limit 1",[s.tenantId,s.storeId,value]);if(!r[0])return null;return(await hydrate(sql,s,[mapProduct(r[0])],pub))[0]??null;}async function getStore(sql:CatalogSqlExecutor,s:CatalogScope):Promise<StorefrontStore|null>{const r=await sql.query("select s.tenant_id,s.id as store_id,s.name,s.slug,t.status as tenant_status,s.status as store_status,t.trial_ends_at from public.stores s join public.tenants t on t.id=s.tenant_id where s.tenant_id=$1 and s.id=$2 limit 1",[s.tenantId,s.storeId]);return r[0]?mapStore(r[0]):null;}async function getSettings(sql:CatalogSqlExecutor,s:CatalogScope):Promise<CatalogSettings>{const r=await sql.query("select tenant_id,store_id,layout,primary_color,accent_color,background_color,font_family,show_search,show_categories,show_price,show_stock,labels,whatsapp_phone,whatsapp_message,checkout_mode,seo_title,seo_description from public.catalog_settings where tenant_id=$1 and store_id=$2 limit 1",[s.tenantId,s.storeId]);return r[0]?mapSettings(r[0]):defaultCatalogSettings(s);}async function listCategories(sql:CatalogSqlExecutor,s:CatalogScope,pub:boolean):Promise<Category[]>{const r=await sql.query("select id,tenant_id,store_id,name,slug,description,parent_id,active,position from public.categories where tenant_id=$1 and store_id=$2"+(pub?" and active=true":"")+" order by position,name",[s.tenantId,s.storeId]);return r.map(mapCategory);}async function listBanners(sql:CatalogSqlExecutor,s:CatalogScope,pub:boolean):Promise<StoreBanner[]>{const r=await sql.query("select id,tenant_id,store_id,title,alt_text,image_object_key,href,active,position from public.store_banners where tenant_id=$1 and store_id=$2"+(pub?" and active=true":"")+" order by position,id",[s.tenantId,s.storeId]);return r.map(mapBanner);}function where(q:CatalogQuery,pub:boolean){const w=["p.tenant_id=$1","p.store_id=$2"];const p:unknown[]=[q.tenantId,q.storeId];if(pub)w.push(publicFilter());if(q.inStockOnly)w.push(stockFilter());if(q.search?.trim()){p.push("%"+q.search.trim()+"%");const n=p.length;w.push(`(p.name ilike $${n} or coalesce(p.sku,'') ilike $${n})`);}if(q.categoryId){p.push(q.categoryId);const n=p.length;w.push(`exists(select 1 from public.product_categories pc where pc.tenant_id=p.tenant_id and pc.store_id=p.store_id and pc.product_id=p.id and pc.category_id=$${n})`);}return{w,p};}async function listProducts(sql:CatalogSqlExecutor,q:CatalogQuery,pub:boolean):Promise<CatalogPage>{assertCatalogQuery(q);const x=where(q,pub);const orders={position:"p.position asc,p.name asc",name:"p.name asc",price_asc:"p.price_cents asc,p.name asc",price_desc:"p.price_cents desc,p.name asc"}as const;x.p.push(q.pageSize,(q.page-1)*q.pageSize);const l=x.p.length-1,o=x.p.length;const r=await sql.query("select "+COLS+",count(*) over() as total_count from public.products p where "+x.w.join(" and ")+" order by "+orders[q.sort??"position"]+` limit $${l} offset $${o}`,x.p);return{items:await hydrate(sql,q,r.map(mapProduct),pub),page:q.page,pageSize:q.pageSize,total:r[0]?Number(r[0]["total_count"]):0};}export function createCatalogReadRepository(sql:CatalogSqlExecutor):CatalogReadRepository{return{getStore:s=>getStore(sql,s),getSettings:s=>getSettings(sql,s),listCategories:(s,p)=>listCategories(sql,s,p),listBanners:(s,p)=>listBanners(sql,s,p),listProducts:(q,p)=>listProducts(sql,q,p),getProductBySlug:(s,v,p)=>getProduct(sql,s,"slug",v,p),getProductById:(s,v,p=false)=>getProduct(sql,s,"id",v,p)};}
+import { assertCatalogQuery, assertCatalogScope } from "./scope.ts";
+import { defaultCatalogSettings } from "./defaults.ts";
+import {
+  mapBanner,
+  mapCategory,
+  mapImage,
+  mapProduct,
+  mapSettings,
+  mapStore,
+  mapVariant,
+} from "./postgres-mappers.ts";
+import type {
+  CatalogPage,
+  CatalogQuery,
+  CatalogScope,
+  CatalogSettings,
+  Category,
+  Product,
+  ProductVariant,
+  StoreBanner,
+  StorefrontStore,
+} from "./types.ts";
+import type {
+  CatalogReadRepository,
+  CatalogSqlExecutor,
+} from "./repository.ts";
+type SafeVariant = Omit<ProductVariant, "costCents"> & {
+  costCents?: number | null;
+};
+type SafeProduct = Omit<Product, "costCents" | "variants"> & {
+  costCents?: number | null;
+  variants: SafeVariant[];
+};
+function strip(p: Product): Product {
+  const s: SafeProduct = { ...p, variants: p.variants.map((v) => ({ ...v })) };
+  delete s.costCents;
+  for (const v of s.variants) delete v.costCents;
+  return s as Product;
+}
+const COLS =
+  "p.id,p.tenant_id,p.store_id,p.name,p.slug,p.description,p.sku,p.category_id,p.price_cents,p.compare_at_price_cents,p.cost_cents,p.discount_type,p.discount_value,p.pix_discount_percent,p.free_shipping,p.active,p.track_inventory,p.stock_quantity,p.position";
+async function hydrate(
+  sql: CatalogSqlExecutor,
+  s: CatalogScope,
+  products: Product[],
+  pub: boolean,
+) {
+  if (!products.length) return products;
+  const ids = products.map((p) => p.id);
+  const active = pub ? " and active=true" : "";
+  const [v, i, c] = await Promise.all([
+    sql.query(
+      "select id,tenant_id,store_id,product_id,name,sku,attributes,price_cents,compare_at_price_cents,cost_cents,active,stock_quantity,position from public.product_variants where tenant_id=$1 and store_id=$2 and product_id=any($3::uuid[])" +
+        active +
+        " order by position,name",
+      [s.tenantId, s.storeId, ids],
+    ),
+    sql.query(
+      "select id,tenant_id,store_id,product_id,variant_id,object_key,alt_text,position from public.product_images where tenant_id=$1 and store_id=$2 and product_id=any($3::uuid[]) order by position,id",
+      [s.tenantId, s.storeId, ids],
+    ),
+    sql.query(
+      "select product_id,category_id from public.product_categories where tenant_id=$1 and store_id=$2 and product_id=any($3::uuid[])",
+      [s.tenantId, s.storeId, ids],
+    ),
+  ]);
+  const h = products.map((p) => ({
+    ...p,
+    categoryIds: c
+      .filter((x) => x["product_id"] === p.id)
+      .map((x) => String(x["category_id"])),
+    variants: v.filter((x) => x["product_id"] === p.id).map(mapVariant),
+    images: i.filter((x) => x["product_id"] === p.id).map(mapImage),
+  }));
+  return pub ? h.map(strip) : h;
+}
+function publicFilter() {
+  return "p.active=true and (not exists (select 1 from public.product_variants va where va.tenant_id=p.tenant_id and va.store_id=p.store_id and va.product_id=p.id) or exists (select 1 from public.product_variants vv where vv.tenant_id=p.tenant_id and vv.store_id=p.store_id and vv.product_id=p.id and vv.active=true)) and (p.category_id is null or exists (select 1 from public.categories c where c.tenant_id=p.tenant_id and c.store_id=p.store_id and c.id=p.category_id and c.active=true and (c.parent_id is null or exists (select 1 from public.categories pc where pc.tenant_id=p.tenant_id and pc.store_id=p.store_id and pc.id=c.parent_id and pc.active=true))))";
+}
+function stockFilter() {
+  return "(p.track_inventory=false or (not exists(select 1 from public.product_variants sva where sva.tenant_id=p.tenant_id and sva.store_id=p.store_id and sva.product_id=p.id) and p.stock_quantity>0) or exists(select 1 from public.product_variants sv where sv.tenant_id=p.tenant_id and sv.store_id=p.store_id and sv.product_id=p.id and sv.active=true and sv.stock_quantity>0))";
+}
+async function getProduct(
+  sql: CatalogSqlExecutor,
+  s: CatalogScope,
+  field: "id" | "slug",
+  value: string,
+  pub: boolean,
+) {
+  assertCatalogScope(s);
+  const r = await sql.query(
+    "select " +
+      COLS +
+      " from public.products p where p.tenant_id=$1 and p.store_id=$2 and p." +
+      field +
+      "=$3" +
+      (pub ? " and " + publicFilter() : "") +
+      " limit 1",
+    [s.tenantId, s.storeId, value],
+  );
+  if (!r[0]) return null;
+  return (await hydrate(sql, s, [mapProduct(r[0])], pub))[0] ?? null;
+}
+async function getStore(
+  sql: CatalogSqlExecutor,
+  s: CatalogScope,
+): Promise<StorefrontStore | null> {
+  const r = await sql.query(
+    "select s.tenant_id,s.id as store_id,s.name,s.slug,t.status as tenant_status,s.status as store_status,t.trial_ends_at from public.stores s join public.tenants t on t.id=s.tenant_id where s.tenant_id=$1 and s.id=$2 limit 1",
+    [s.tenantId, s.storeId],
+  );
+  return r[0] ? mapStore(r[0]) : null;
+}
+async function getSettings(
+  sql: CatalogSqlExecutor,
+  s: CatalogScope,
+): Promise<CatalogSettings> {
+  const r = await sql.query(
+    "select tenant_id,store_id,layout,primary_color,accent_color,background_color,font_family,show_search,show_categories,show_price,show_stock,labels,whatsapp_phone,whatsapp_message,checkout_mode,seo_title,seo_description from public.catalog_settings where tenant_id=$1 and store_id=$2 limit 1",
+    [s.tenantId, s.storeId],
+  );
+  return r[0] ? mapSettings(r[0]) : defaultCatalogSettings(s);
+}
+async function listCategories(
+  sql: CatalogSqlExecutor,
+  s: CatalogScope,
+  pub: boolean,
+): Promise<Category[]> {
+  const r = await sql.query(
+    "select c.id,c.tenant_id,c.store_id,c.name,c.slug,c.description,c.parent_id,c.active,c.position from public.categories c where c.tenant_id=$1 and c.store_id=$2" +
+      (pub
+        ? " and c.active=true and (c.parent_id is null or exists (select 1 from public.categories pc where pc.tenant_id=c.tenant_id and pc.store_id=c.store_id and pc.id=c.parent_id and pc.active=true))"
+        : "") +
+      " order by c.position,c.name",
+    [s.tenantId, s.storeId],
+  );
+  return r.map(mapCategory);
+}
+async function listBanners(
+  sql: CatalogSqlExecutor,
+  s: CatalogScope,
+  pub: boolean,
+): Promise<StoreBanner[]> {
+  const r = await sql.query(
+    "select id,tenant_id,store_id,title,alt_text,image_object_key,href,active,position from public.store_banners where tenant_id=$1 and store_id=$2" +
+      (pub ? " and active=true" : "") +
+      " order by position,id",
+    [s.tenantId, s.storeId],
+  );
+  return r.map(mapBanner);
+}
+function where(q: CatalogQuery, pub: boolean) {
+  const w = ["p.tenant_id=$1", "p.store_id=$2"];
+  const p: unknown[] = [q.tenantId, q.storeId];
+  if (pub) w.push(publicFilter());
+  if (q.inStockOnly) w.push(stockFilter());
+  if (q.search?.trim()) {
+    p.push("%" + q.search.trim() + "%");
+    const n = p.length;
+    w.push(
+      `(p.name ilike $${String(n)} or coalesce(p.sku,'') ilike $${String(n)} or exists (select 1 from public.categories sc where sc.tenant_id=p.tenant_id and sc.store_id=p.store_id and sc.id=p.category_id and sc.name ilike $${String(n)}) or exists (select 1 from public.product_categories spc join public.categories sc on sc.id=spc.category_id and sc.tenant_id=spc.tenant_id and sc.store_id=spc.store_id where spc.tenant_id=p.tenant_id and spc.store_id=p.store_id and spc.product_id=p.id and sc.tenant_id=p.tenant_id and sc.store_id=p.store_id and sc.name ilike $${String(n)}) or exists (select 1 from public.product_variants ssv where ssv.tenant_id=p.tenant_id and ssv.store_id=p.store_id and ssv.product_id=p.id and ${pub ? "ssv.active=true and " : ""}coalesce(ssv.sku,'') ilike $${String(n)}))`,
+    );
+  }
+  if (q.categoryId) {
+    p.push(q.categoryId);
+    const n = p.length;
+    w.push(
+      `(exists (select 1 from public.categories fc where fc.tenant_id=p.tenant_id and fc.store_id=p.store_id and fc.id=p.category_id and (fc.id=$${String(n)} or fc.parent_id=$${String(n)})) or exists (select 1 from public.product_categories pc join public.categories fc on fc.id=pc.category_id and fc.tenant_id=pc.tenant_id and fc.store_id=pc.store_id where pc.tenant_id=p.tenant_id and pc.store_id=p.store_id and pc.product_id=p.id and (fc.id=$${String(n)} or fc.parent_id=$${String(n)})))`,
+    );
+  }
+  return { w, p };
+}
+async function listProducts(
+  sql: CatalogSqlExecutor,
+  q: CatalogQuery,
+  pub: boolean,
+): Promise<CatalogPage> {
+  assertCatalogQuery(q);
+  const x = where(q, pub);
+  const orders = {
+    position: "p.position asc,p.name asc",
+    name: "p.name asc",
+    price_asc: "p.price_cents asc,p.name asc",
+    price_desc: "p.price_cents desc,p.name asc",
+  } as const;
+  x.p.push(q.pageSize, (q.page - 1) * q.pageSize);
+  const l = x.p.length - 1,
+    o = x.p.length;
+  const r = await sql.query(
+    "select " +
+      COLS +
+      ",count(*) over() as total_count from public.products p where " +
+      x.w.join(" and ") +
+      " order by " +
+      orders[q.sort ?? "position"] +
+      ` limit $${String(l)} offset $${String(o)}`,
+    x.p,
+  );
+  return {
+    items: await hydrate(sql, q, r.map(mapProduct), pub),
+    page: q.page,
+    pageSize: q.pageSize,
+    total: r[0] ? Number(r[0]["total_count"]) : 0,
+  };
+}
+export function createCatalogReadRepository(
+  sql: CatalogSqlExecutor,
+): CatalogReadRepository {
+  return {
+    getStore: (s) => getStore(sql, s),
+    getSettings: (s) => getSettings(sql, s),
+    listCategories: (s, p) => listCategories(sql, s, p),
+    listBanners: (s, p) => listBanners(sql, s, p),
+    listProducts: (q, p) => listProducts(sql, q, p),
+    getProductBySlug: (s, v, p) => getProduct(sql, s, "slug", v, p),
+    getProductById: (s, v, p = false) => getProduct(sql, s, "id", v, p),
+  };
+}

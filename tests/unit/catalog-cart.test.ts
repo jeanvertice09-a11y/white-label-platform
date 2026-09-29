@@ -17,7 +17,7 @@ function product(storeId = "s1"): Product {
     slug: "produto",
     description: null,
     sku: null,
-    categoryId: null,
+    categoryId: null, categoryIds: [], discountType: null, discountValue: null, pixDiscountPercent: null, freeShipping: false,
     priceCents: 1000,
     compareAtPriceCents: null,
     costCents: null,

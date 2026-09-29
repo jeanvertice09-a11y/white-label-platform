@@ -11,7 +11,7 @@ const scope = { tenantId: "tenant-a", storeId: "store-a" };
 
 function product(stockQuantity: number, variantStocks: number[] = []): Product {
   return {
-    ...scope, id: "product-a", name: "Produto", slug: "produto", description: null, sku: "SKU-A", categoryId: null,
+    ...scope, id: "product-a", name: "Produto", slug: "produto", description: null, sku: "SKU-A", categoryId: null, categoryIds: [], discountType: null, discountValue: null, pixDiscountPercent: null, freeShipping: false,
     priceCents: 1000, compareAtPriceCents: null, costCents: null, active: true, trackInventory: true, stockQuantity, position: 0,
     images: [], variants: variantStocks.map((stock, index) => ({ ...scope, id: `variant-${String(index)}`, productId: "product-a", name: `V${String(index)}`, sku: null, attributes: {}, priceCents: 1000, compareAtPriceCents: null, costCents: null, active: true, stockQuantity: stock, position: index })),
   };

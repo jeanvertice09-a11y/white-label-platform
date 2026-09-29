@@ -1,1 +1,159 @@
-.admin .productStudio{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;align-items:start}.admin .productStudioMain,.admin .productFields{display:grid;gap:16px}.admin .productCard,.admin .productPublishCard,.admin .productHelpCard,.admin .createWizardPanel{background:#fff;border:1px solid #e1e6ee;border-radius:16px}.admin .createWizard{display:grid;gap:18px}.admin .createWizardSteps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.admin .createWizardSteps button{display:flex;align-items:center;gap:9px;padding:11px;border:1px solid #e4e7ec;border-radius:11px;background:#fff}.admin .createWizardSteps button b{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#f2f4f7}.admin .createWizardSteps .isActive{border-color:#9bb6ff;color:#2446a8}.admin .createWizardSteps .isActive b,.admin .createWizardSteps .isDone b{background:#315efb;color:#fff}.admin .createWizardPanel{min-height:430px;padding:30px}.admin .wizardFields,.admin .createWizardPanel label{display:grid;gap:7px}.admin .createWizardPanel :where(input,select,textarea){min-height:44px;border:1px solid #d8dee8;border-radius:10px;padding:10px 12px}.admin .createWizardPanel textarea{min-height:120px}.admin .wizardGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.admin .commercialBox{display:grid;gap:12px;margin:4px 0;padding:18px;border:1px solid #e4e7ec;border-radius:13px;background:#fafbfc}.admin .commercialBox legend{padding:0 7px;font-weight:800}.admin .commercialBox p{margin:0;color:#667085;font-size:11px}.admin .checkRow{display:flex!important;align-items:center;gap:9px!important;font-weight:600}.admin .checkRow input{min-height:0!important;width:17px;height:17px;accent-color:#315efb}.admin .wizardDrop{min-height:180px;place-items:center;border:1.5px dashed #b8c2d1!important;background:#f8fafc}.admin .wizardFileList{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.admin .wizardFileList span{padding:7px;background:#f2f4f7;border-radius:8px}.admin .variantOptionRow{display:grid;grid-template-columns:180px 1fr;gap:10px;margin-bottom:10px}.admin .wizardVariants>div{display:grid;grid-template-columns:1fr 180px 140px;gap:12px;align-items:end;padding:10px;border-bottom:1px solid #eee}.admin .createWizardFooter{position:sticky;bottom:16px;display:flex;justify-content:space-between;padding:12px;border:1px solid #e4e7ec;border-radius:13px;background:#fff;box-shadow:0 8px 30px #10182814}@media(max-width:640px){.admin .wizardGrid,.admin .variantOptionRow,.admin .wizardVariants>div{grid-template-columns:1fr}.admin .createWizardSteps button span{display:none}}
+.admin .productStudio {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+.admin .productStudioMain,
+.admin .productFields {
+  display: grid;
+  gap: 16px;
+}
+.admin .productCard,
+.admin .productPublishCard,
+.admin .productHelpCard,
+.admin .createWizardPanel {
+  background: #fff;
+  border: 1px solid #e1e6ee;
+  border-radius: 16px;
+}
+.admin .createWizard {
+  display: grid;
+  gap: 18px;
+}
+.admin .createWizardSteps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.admin .createWizardSteps button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid #e4e7ec;
+  border-radius: 11px;
+  background: #fff;
+}
+.admin .createWizardSteps button b {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #f2f4f7;
+}
+.admin .createWizardSteps .isActive {
+  border-color: #9bb6ff;
+  color: #2446a8;
+}
+.admin .createWizardSteps .isActive b,
+.admin .createWizardSteps .isDone b {
+  background: #315efb;
+  color: #fff;
+}
+.admin .createWizardPanel {
+  min-height: 430px;
+  padding: 30px;
+}
+.admin .wizardFields,
+.admin .createWizardPanel label {
+  display: grid;
+  gap: 7px;
+}
+.admin .createWizardPanel :where(input, select, textarea) {
+  min-height: 44px;
+  border: 1px solid #d8dee8;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.admin .createWizardPanel textarea {
+  min-height: 120px;
+}
+.admin .wizardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.admin .commercialBox {
+  display: grid;
+  gap: 12px;
+  margin: 4px 0;
+  padding: 18px;
+  border: 1px solid #e4e7ec;
+  border-radius: 13px;
+  background: #fafbfc;
+}
+.admin .commercialBox legend {
+  padding: 0 7px;
+  font-weight: 800;
+}
+.admin .commercialBox p {
+  margin: 0;
+  color: #667085;
+  font-size: 11px;
+}
+.admin .checkRow {
+  display: flex !important;
+  align-items: center;
+  gap: 9px !important;
+  font-weight: 600;
+}
+.admin .checkRow input {
+  min-height: 0 !important;
+  width: 17px;
+  height: 17px;
+  accent-color: #315efb;
+}
+.admin .wizardDrop {
+  min-height: 180px;
+  place-items: center;
+  border: 1.5px dashed #b8c2d1 !important;
+  background: #f8fafc;
+}
+.admin .wizardFileList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+.admin .wizardFileList span {
+  padding: 7px;
+  background: #f2f4f7;
+  border-radius: 8px;
+}
+.admin .variantOptionRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.admin .wizardVariants > div {
+  display: grid;
+  grid-template-columns: 1fr 180px 140px;
+  gap: 12px;
+  align-items: end;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+.admin .createWizardFooter {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid #e4e7ec;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 8px 30px #10182814;
+}
+@media (max-width: 640px) {
+  .admin .wizardGrid,
+  .admin .variantOptionRow,
+  .admin .wizardVariants > div {
+    grid-template-columns: 1fr;
+  }
+  .admin .createWizardSteps button span {
+    display: none;
+  }
+}

@@ -32,7 +32,7 @@ function domainStore(records: DomainRecord[]): DomainStore {
 function product(tenantId: string, storeId: string): Product {
   return {
     tenantId, storeId, id: crypto.randomUUID(), name: "Produto", slug: "produto",
-    description: null, sku: null, categoryId: null, priceCents: 1000,
+    description: null, sku: null, categoryId: null, categoryIds: [], discountType: null, discountValue: null, pixDiscountPercent: null, freeShipping: false, priceCents: 1000,
     compareAtPriceCents: null, costCents: null, active: true, trackInventory: false,
     stockQuantity: 0, position: 0, variants: [], images: [],
   };

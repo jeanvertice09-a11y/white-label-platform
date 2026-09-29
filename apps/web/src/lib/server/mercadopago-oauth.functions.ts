@@ -36,12 +36,12 @@ function parseTokenSet(body:Record<string,unknown>):TokenSet{
  if(!accessToken||!refreshToken||!userId) throw new Error("Resposta OAuth do Mercado Pago incompleta.");
  return {accessToken,refreshToken,userId,expiresIn};
 }
-async function claimState(state:string):Promise<OAuthState>{
+async function claimState(state:string,actorUserId:string):Promise<OAuthState>{
  const rows=await createAdminSqlExecutor().query(
   `update private.mercadopago_oauth_states set consumed_at=now()
-   where state_hash=$1 and consumed_at is null and expires_at>now()
+   where state_hash=$1 and actor_user_id=$2::uuid and consumed_at is null and expires_at>now()
      and exists (select 1 from public.store_members sm where sm.tenant_id=mercadopago_oauth_states.tenant_id and sm.store_id=mercadopago_oauth_states.store_id and sm.user_id=mercadopago_oauth_states.actor_user_id)
-   returning tenant_id::text,store_id::text,actor_user_id::text,code_verifier_ciphertext,return_url`,[sha256(state)]);
+   returning tenant_id::text,store_id::text,actor_user_id::text,code_verifier_ciphertext,return_url`,[sha256(state),actorUserId]);
  const row=rows.at(0); if(!row) throw new Error("Autorização Mercado Pago inválida, expirada ou já utilizada.");
  if(typeof row["actor_user_id"]!=="string"||typeof row["code_verifier_ciphertext"]!=="string"||typeof row["return_url"]!=="string") throw new Error("Estado OAuth inválido.");
  return {tenantId:String(row["tenant_id"]),storeId:String(row["store_id"]),actorUserId:row["actor_user_id"],verifierCiphertext:row["code_verifier_ciphertext"],returnUrl:row["return_url"]};
@@ -102,6 +102,7 @@ export const startMerchantMercadoPagoOAuth=createServerFn({method:"POST"}).handl
  url.searchParams.set("code_challenge",challenge(verifier)); url.searchParams.set("code_challenge_method","S256"); return {authorizationUrl:url.toString()};
 });
 export const completeMerchantMercadoPagoOAuth=createServerFn({method:"POST"}).validator(callbackSchema).handler(async({data})=>{
- const state=await claimState(data.state); const tokens=await exchangeCode(data.code,state.verifierCiphertext);
+ const session=await resolveSessionFromRequest(); if(!session) throw new Error("Sessão administrativa necessária para conectar o Mercado Pago."); requireMfaAssurance(session);
+ const state=await claimState(data.state,session.userId); const tokens=await exchangeCode(data.code,state.verifierCiphertext);
  await saveConnection(state,tokens); return {ok:true,returnUrl:state.returnUrl};
 });

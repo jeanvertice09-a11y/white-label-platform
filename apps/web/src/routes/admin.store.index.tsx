@@ -102,12 +102,12 @@ function StorePage(): React.JSX.Element {
             <ConfigLink
               to="/admin/store/banners"
               title="Banners"
-              description={`${String(data.catalog.banners.length)} banner(s) cadastrado(s).`}
+              description={`${String(data.catalog.banners.length)} ${data.catalog.banners.length === 1 ? "banner cadastrado" : "banners cadastrados"}.`}
             />
             <ConfigLink
               to="/admin/store/catalog"
               title="Catálogo e checkout"
-              description={`${String(data.catalog.products.total)} produto(s), busca, categorias, WhatsApp e informações para buscadores.`}
+              description={`${String(data.catalog.products.total)} ${data.catalog.products.total === 1 ? "produto" : "produtos"}, busca, categorias, WhatsApp e informações para buscadores.`}
             />
           </div>
         </main>

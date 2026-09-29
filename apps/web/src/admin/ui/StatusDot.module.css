@@ -1,5 +1,22 @@
-.status { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
-.dot { width: 8px; height: 8px; border-radius: 999px; background: var(--quiet); }
-.ok .dot { background: var(--ok); }
-.warning .dot { background: var(--warning); }
-.danger .dot { background: var(--danger); }
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--quiet);
+}
+.ok .dot {
+  background: var(--ok);
+}
+.warning .dot {
+  background: var(--warning);
+}
+.danger .dot {
+  background: var(--danger);
+}

@@ -132,7 +132,7 @@ describe("HML admin runtime contracts", () => {
     const orders = source("apps/web/src/routes/admin.orders.index.tsx");
     const catalog = source("apps/web/src/lib/server/catalog.functions.ts");
     expect(catalog).toContain("max(48)");
-    expect(orders).toContain('pageSize: 48, sort: "name"');
+    expect(orders).toMatch(/pageSize\s*:\s*48\s*,\s*sort\s*:\s*"name"/);
     expect(orders).not.toContain("pageSize: 100");
   });
 
@@ -194,8 +194,8 @@ describe("merchant admin visual and navigation contract", () => {
 
   test("completed onboarding does not dominate the operational dashboard", () => {
     const dashboard = source("apps/web/src/routes/admin.index.tsx");
-    expect(dashboard).toContain("data.onboarding.progress.percent < 100");
-    expect(dashboard.indexOf("<DashboardStrip")).toBeLessThan(dashboard.indexOf("<AttentionSection"));
+    expect(dashboard).toContain("onboarding.progress.percent >= 100");
+    expect(dashboard.indexOf("Para resolver agora")).toBeLessThan(dashboard.indexOf("Números do período"));
   });
 
   test("onboarding actions use SPA navigation instead of document reloads", () => {
@@ -290,7 +290,7 @@ describe("commerce lifecycle hardening",()=>{
 describe("admin functional completion",()=>{
  test("finance and purchases expose pagination for records beyond first page",()=>{const finance=source("apps/web/src/features/store-admin/merchant-finance-manager.tsx"),purchases=source("apps/web/src/features/store-admin/merchant-purchases-manager.tsx");expect(finance).toContain("state.data.page+1");expect(finance).toContain("state.data.total/state.data.pageSize");expect(purchases).toContain("props.onPage(props.data.page+1)");expect(purchases).toContain("Math.ceil(props.data.total/props.data.pageSize)");});
  test("settings route has explicit pending and error states",()=>{const settings=source("apps/web/src/routes/admin.settings.tsx");expect(settings).toContain("pendingComponent: AdminRoutePending");expect(settings).toContain("errorComponent: AdminRouteError");});
- test("mobile admin drawer restores focus without optional-call lint ambiguity",()=>{const shell=source("apps/web/src/features/store-admin/admin-shell.tsx");expect(shell).toContain("if(firstFocusable)firstFocusable.focus()");expect(shell).toContain("if(openerRef.current)openerRef.current.focus()");});
+ test("mobile admin drawer restores focus without optional-call lint ambiguity",()=>{const shell=source("apps/web/src/admin/shell/AdminShell.tsx");expect(shell).toContain("drawer?.querySelector<HTMLElement>(focusable)?.focus()");expect(shell).toContain("opener.current?.focus()");});
 });
 
 

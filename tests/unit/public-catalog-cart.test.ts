@@ -20,7 +20,7 @@ const product: Product = {
   slug: "produto",
   description: null,
   sku: "SKU",
-  categoryId: null,
+  categoryId: null, categoryIds: [], discountType: null, discountValue: null, pixDiscountPercent: null, freeShipping: false,
   priceCents: 1299,
   compareAtPriceCents: null,
   costCents: null,

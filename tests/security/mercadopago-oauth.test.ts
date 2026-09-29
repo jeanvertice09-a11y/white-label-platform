@@ -6,9 +6,9 @@ const source=readFileSync(join(root,"apps/web/src/lib/server/mercadopago-oauth.f
 const migration=readFileSync(join(root,"supabase/migrations/0036_mercadopago_store_oauth.sql"),"utf8");
 describe("Mercado Pago OAuth store checkout",()=>{
   test("uses authorization code with PKCE S256 and state",()=>{
-    expect(source).toContain('code_challenge_method", "S256"');
+    expect(source).toMatch(/code_challenge_method"\s*,\s*"S256"/);
     expect(source).toContain('url.searchParams.set("state"');
-    expect(source).toContain('grant_type: "authorization_code"');
+    expect(source).toMatch(/grant_type\s*:\s*"authorization_code"/);
     expect(source).toContain("code_verifier");
   });
   test("state is one-use, expires and is bound to initiating actor",()=>{

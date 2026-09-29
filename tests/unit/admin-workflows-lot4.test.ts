@@ -9,7 +9,7 @@ describe("admin workflows lot 4", () => {
   test("produto expõe workflow de imagens real", () => {
     const route = source("apps/web/src/routes/admin.products.$id.tsx");
     const manager = source("apps/web/src/features/store-admin/product-image-manager.tsx");
-    expect(route).toContain("<ProductImageManager product={data.product} />");
+    expect(route).toMatch(/<ProductImageManager\s+product=\{data\.product\}\s*\/>/);
     expect(manager).toContain("uploadMerchantMedia");
     expect(manager).toContain("createUploadedProductImage");
     expect(manager).toContain("updateUploadedProductImage");

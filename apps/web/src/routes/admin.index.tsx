@@ -1,6 +1,163 @@
-import{createFileRoute,Link}from"@tanstack/react-router";import{DashboardIcon}from"../components/dashboard/DashboardIcon.tsx";import{AdminRouteError,AdminRoutePending}from"../features/store-admin/admin-route-state.tsx";import{formatMoney}from"../features/store-admin/format.ts";import{OnboardingChecklist}from"../features/store-admin/onboarding-checklist.tsx";import{getMerchantOnboarding}from"../lib/server/onboarding.functions.ts";import{getMerchantOperationsDashboard}from"../lib/server/operations-dashboard.functions.ts";import{statusLabel}from"../lib/ui-labels.ts";
-export const Route=createFileRoute("/admin/")({loader:async()=>{const[operations,onboarding]=await Promise.allSettled([getMerchantOperationsDashboard(),getMerchantOnboarding()]);return{operations:operations.status==="fulfilled"?operations.value:null,onboarding:onboarding.status==="fulfilled"?onboarding.value:null};},pendingComponent:AdminRoutePending,errorComponent:AdminRouteError,component:Dashboard});type M=Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["metrics"];type O=Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"]["recentOrders"];
-function Metric({label,value,hint,icon}:Readonly<{label:string;value:string|number;hint:string;icon:"orders"|"activity"|"revenue"|"products"}>){return <article className="dashMetric"><div className="dashMetricTop"><span>{label}</span><span className="dashMetricIcon"><DashboardIcon name={icon}/></span></div><strong>{value}</strong><small>{hint}</small></article>;}function Metrics({m}:Readonly<{m:M}>){return <section className="dashMetrics"><Metric label="Vendas · 30 dias" value={formatMoney(m.revenuePeriodCents)} hint="Receita confirmada" icon="revenue"/><Metric label="Pedidos hoje" value={m.ordersToday} hint="Entradas de hoje" icon="orders"/><Metric label="Para atender" value={m.pendingOrders} hint="Aguardando sua ação" icon="activity"/><Metric label="Produtos ativos" value={m.activeProducts} hint="Publicados no catálogo" icon="products"/></section>;}
-function Recent({orders}:Readonly<{orders:O}>){return <section className="dashPanel"><header className="dashPanelHead"><div><h2>Pedidos recentes</h2><p>Últimas movimentações da operação.</p></div><Link to="/admin/orders">Ver todos</Link></header>{orders.length?orders.slice(0,6).map(o=><Link className="dashOrder" key={o.id} to="/admin/orders/$id" params={{id:o.id}}><span className="dashOrderCopy"><strong>#{String(o.orderNumber).padStart(5,"0")} · {o.customerName??"Cliente"}</strong><small>{statusLabel(o.status)} · {new Date(o.createdAt).toLocaleString("pt-BR")}</small></span><span className="dashOrderAmount">{formatMoney(o.totalCents)}</span></Link>):<div className="dashEmpty">Os pedidos aparecerão aqui assim que sua loja começar a vender.</div>}</section>;}
-function Attention({m}:Readonly<{m:M}>){return <section className="dashPanel"><header className="dashPanelHead"><div><h2>Precisa da sua atenção</h2><p>O que vale resolver primeiro hoje.</p></div></header><div className="dashAttention">{m.pendingOrders>0?<Link to="/admin/orders"><span className="dashAttentionMark">{m.pendingOrders}</span><span className="dashAttentionCopy"><strong>Pedidos esperando atendimento</strong><small>Continue a venda.</small></span><span>→</span></Link>:null}{m.lowStockProducts>0?<Link to="/admin/inventory"><span className="dashAttentionMark">{m.lowStockProducts}</span><span className="dashAttentionCopy"><strong>Estoque baixo</strong><small>Revise antes que acabe.</small></span><span>→</span></Link>:null}{m.pendingOrders===0&&m.lowStockProducts===0?<div className="dashOk"><strong>Tudo em dia</strong><span>Nenhuma pendência importante agora.</span></div>:null}</div></section>;}
-function Dashboard(){const data=Route.useLoaderData(),o=data.operations;if(!o)return <div className="k-page"><section className="dashHero"><div className="dashHeroCopy"><span className="dashEyebrow">PAINEL DA LOJA</span><h1>Sua operação, em um só lugar.</h1><p>Os dados do resumo estão temporariamente indisponíveis.</p></div></section></div>;const m=o.metrics;return <div className="k-page dash"><section className="dashHero"><div className="dashHeroCopy"><span className="dashEyebrow">VISÃO GERAL · {o.store.name}</span><h1>Veja sua loja funcionando de verdade.</h1><p>Vendas, pedidos e o que precisa da sua atenção, sem ruído.</p></div><div className="dashHeroActions"><Link to="/admin/products/new">Novo produto</Link><Link to="/admin/orders">Ver pedidos</Link><Link to="/admin/store/catalog">Configurar loja</Link></div></section><Metrics m={m}/>{data.onboarding&&data.onboarding.progress.percent<100?<section className="dashOnboarding"><OnboardingChecklist data={data.onboarding}/></section>:null}<div className="dashGrid"><Recent orders={o.activity.recentOrders}/><Attention m={m}/></div></div>;}
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
+import { formatMoney } from "../features/store-admin/format.ts";
+import { OnboardingChecklist } from "../features/store-admin/onboarding-checklist.tsx";
+import { getMerchantOnboarding } from "../lib/server/onboarding.functions.ts";
+import { getMerchantOperationsDashboard } from "../lib/server/operations-dashboard.functions.ts";
+import { statusLabel } from "../lib/ui-labels.ts";
+import styles from "../admin/Dashboard.module.css";
+
+export const Route = createFileRoute("/admin/")({
+  loader: async () => {
+    const startedAt = performance.now();
+    const [operations, onboarding] = await Promise.allSettled([
+      getMerchantOperationsDashboard(),
+      getMerchantOnboarding(),
+    ]);
+    if (operations.status === "rejected" || onboarding.status === "rejected") {
+      console.error("admin.dashboard.partial_failure", {
+        durationMs: Math.round(performance.now() - startedAt),
+        operationsFailed: operations.status === "rejected",
+        onboardingFailed: onboarding.status === "rejected",
+      });
+    }
+    return {
+      operations: operations.status === "fulfilled" ? operations.value : null,
+      onboarding: onboarding.status === "fulfilled" ? onboarding.value : null,
+    };
+  },
+  pendingComponent: AdminRoutePending,
+  errorComponent: AdminRouteError,
+  component: Dashboard,
+});
+
+function Dashboard() {
+  const { operations, onboarding } = Route.useLoaderData();
+  const metrics = operations?.metrics;
+  const pending = metrics?.pendingOrders ?? 0;
+  const lowStock = metrics?.lowStockProducts ?? 0;
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const storeName = operations?.store.name ?? "lojista";
+
+  return <div className={styles.dashboard}>
+    <header className={styles.heading}>
+      <div>
+        <h1>{greeting}, {storeName}.</h1>
+        <p>{operations
+          ? pending || lowStock
+            ? [
+              pending ? `${String(pending)} ${pending === 1 ? "pedido esperando" : "pedidos esperando"}` : null,
+              lowStock ? `${String(lowStock)} ${lowStock === 1 ? "produto" : "produtos"} com estoque baixo` : null,
+            ].filter(Boolean).join(" e ") + "."
+            : "Nada esperando por você agora."
+          : "Não foi possível carregar o resumo da loja."}</p>
+      </div>
+      <Link className={styles.primary} to="/admin/products/new">Adicionar produto</Link>
+    </header>
+    {operations ? <>
+      <section className={styles.section} aria-labelledby="attention-title">
+        <h2 id="attention-title">Para resolver agora</h2>
+        <div className={styles.rows}>
+          {pending > 0 ? <Link className={styles.attention} to="/admin/orders">
+            <span className={styles.warningDot} aria-hidden="true" />
+            <span><strong>{pending === 1 ? "Pedido aguardando" : "Pedidos aguardando"}</strong>
+              <small>Confira os pedidos que precisam de atendimento.</small></span>
+            <span className={styles.action}>Abrir pedidos</span>
+          </Link> : null}
+          {lowStock > 0 ? <Link className={styles.attention} to="/admin/inventory">
+            <span className={styles.warningDot} aria-hidden="true" />
+            <span><strong>Estoque baixo</strong><small>Revise os produtos antes que acabem.</small></span>
+            <span className={styles.action}>Repor estoque</span>
+          </Link> : null}
+          {!pending && !lowStock ? <p className={styles.quiet}>Nada esperando por você agora.</p> : null}
+        </div>
+      </section>
+      <section className={styles.section} aria-labelledby="numbers-title">
+        <h2 id="numbers-title">Números do período</h2>
+        <div className={styles.metrics}>
+          <Metric label="Pedidos hoje" value={operations.metrics.ordersToday} hint="Entradas de hoje" />
+          <Metric label="Para atender" value={pending} hint="Aguardando atendimento" />
+          <Metric label="Vendas · 30 dias" value={formatMoney(operations.metrics.revenuePeriodCents)}
+            hint="Receita confirmada" />
+          <Metric label="Produtos ativos" value={operations.metrics.activeProducts} hint="No catálogo" />
+        </div>
+      </section>
+
+      <RecentOrders orders={operations.activity.recentOrders} />
+      <RecoveryAlerts alerts={operations.activity.recoveryAlerts} />
+    </> : <div className={styles.error} role="status">
+      <p>Confira a conexão e tente carregar o resumo novamente.</p>
+      <button type="button" onClick={() => { window.location.reload(); }}>Tentar de novo</button>
+    </div>}
+
+    <FirstSteps onboarding={onboarding} />
+  </div>;
+}
+
+function FirstSteps({ onboarding }: Readonly<{
+  onboarding: Awaited<ReturnType<typeof getMerchantOnboarding>> | null;
+}>) {
+  if (!onboarding || onboarding.progress.percent >= 100) return null;
+  return <section className={styles.section}>
+    <h2>Primeiros passos</h2>
+    <OnboardingChecklist data={onboarding} />
+  </section>;
+}
+
+function RecoveryAlerts({ alerts }: Readonly<{
+  alerts: Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"]["recoveryAlerts"];
+}>) {
+  if (!alerts.length) return null;
+  return <section className={styles.section} aria-labelledby="recovery-title">
+    <h2 id="recovery-title">Recuperação automática</h2>
+    <p className={styles.quiet}>Pendências técnicas que precisam de acompanhamento.</p>
+    <div className={styles.rows}>
+      {alerts.map(alert => <Link className={styles.attention} key={alert.id}
+        to={alert.orderId ? "/admin/orders/$id" : "/admin/operations"}
+        params={alert.orderId ? { id: alert.orderId } : undefined}>
+        <span className={styles.warningDot} aria-hidden="true" />
+        <strong>{alert.title}</strong>
+        <span className={styles.action}>Ver detalhes</span>
+      </Link>)}
+    </div>
+  </section>;
+}
+
+function RecentOrders({ orders }: Readonly<{
+  orders: Awaited<ReturnType<typeof getMerchantOperationsDashboard>>["activity"]["recentOrders"];
+}>) {
+  return <>
+      <section className={styles.section} aria-labelledby="recent-title">
+        <div className={styles.sectionTitle}>
+          <h2 id="recent-title">Últimos pedidos</h2>
+          <Link to="/admin/orders">Ver todos os pedidos</Link>
+        </div>
+        <div className={styles.rows}>
+          {orders.slice(0, 5).map(order =>
+            <Link className={styles.order} key={order.id} to="/admin/orders/$id"
+              params={{ id: order.id }}>
+              <span><strong>#{String(order.orderNumber).padStart(5, "0")}</strong>
+                <span> · {order.customerName ?? "Cliente"}</span></span>
+              <span className={styles.orderStatus}><span className={styles.statusDot} />
+                {statusLabel(order.status)}</span>
+              <time>{new Date(order.createdAt).toLocaleDateString("pt-BR")}</time>
+              <strong className={styles.amount}>{formatMoney(order.totalCents)}</strong>
+            </Link>)}
+          {!orders.length
+            ? <p className={styles.quiet}>Ainda não há pedidos. Quando alguém comprar, aparece aqui.</p>
+            : null}
+        </div>
+      </section>
+  </>;
+}
+
+function Metric({ label, value, hint }: Readonly<{
+  label: string;
+  value: string | number;
+  hint: string;
+}>) {
+  return <div className={styles.metric}>
+    <span>{label}</span><strong>{value}</strong><small>{hint}</small>
+  </div>;
+}

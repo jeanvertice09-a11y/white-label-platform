@@ -58,6 +58,7 @@ const MIGRATIONS = [
   "0042_operational_recovery.sql",
   "0043_authenticated_store_admin_destination.sql",
   "0044_membership_self_read_operational_scope.sql",
+  "0045_product_commercial_rules.sql",
 ];
 
 class PGliteDb implements TestDb {

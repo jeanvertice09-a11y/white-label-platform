@@ -31,7 +31,7 @@ describe("storefront growth security boundary", () => {
   test("admin não oferece checkout online/Pix decorativo", () => {
     expect(adminSource).not.toContain('<option value="online">');
     expect(adminSource).not.toContain('<option value="both">');
-    expect(adminSource).toContain('<option value="whatsapp">WhatsApp</option>');
+    expect(adminSource).toContain("Permitir pedido pelo WhatsApp");
   });
 
   test("tracking usa apenas endpoints fixos e não envia PII de checkout", () => {

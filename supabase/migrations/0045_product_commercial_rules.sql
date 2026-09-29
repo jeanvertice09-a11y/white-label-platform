@@ -1,4 +1,4 @@
--- 0032_product_commercial_rules.sql — regras comerciais por produto e múltiplas categorias.
+-- 0045_product_commercial_rules.sql — regras comerciais por produto e múltiplas categorias.
 alter table public.products
   add column if not exists discount_type text check (discount_type is null or discount_type in ('percentage','fixed')),
   add column if not exists discount_value integer check (discount_value is null or discount_value >= 0),

@@ -24,27 +24,23 @@ describe("admin real routes lot 3", () => {
     }
   });
 
-  test("dashboard principal tolera falha de widgets secundários", () => {
+  test("dashboard mantém resumo e onboarding independentes", () => {
     const dashboard = source("apps/web/src/routes/admin.index.tsx");
     expect(dashboard).toContain("Promise.allSettled");
-    expect(dashboard).toContain('analyticsResult.status === "fulfilled"');
-    expect(dashboard).toContain('onboardingResult.status === "fulfilled"');
-    expect(dashboard).toContain('operationsResult.status === "fulfilled"');
-    expect(dashboard).toContain("Indicadores temporariamente indisponíveis");
-    expect(dashboard).toContain("data.analytics ? <StorefrontAnalyticsPanel");
-    expect(dashboard).toContain("data.onboarding && data.onboarding.progress.percent < 100");
+    expect(dashboard).toContain('operations.status === "fulfilled"');
+    expect(dashboard).toContain('onboarding.status === "fulfilled"');
+    expect(dashboard).toContain("Tentar de novo");
+    expect(dashboard).toContain("<FirstSteps onboarding={onboarding} />");
   });
 
-  test("menu aponta diretamente para as novas rotas sem hash", () => {
-    const shell = source("apps/web/src/features/store-admin/admin-shell.tsx");
-    for (const [, path] of routes) expect(shell).toContain(`to: "${path}"`);
-    expect(shell).not.toContain('hash: "finance"');
-    expect(shell).not.toContain('hash: "purchases"');
-    expect(shell).not.toContain('hash: "suppliers"');
-    expect(shell).not.toContain('hash: "tasks"');
-    expect(shell).not.toContain('hash: "coupons"');
-    expect(shell).not.toContain('hash: "campaigns"');
-    expect(shell).not.toContain("includeHash");
+  test("navegação usa as rotas reais do painel", () => {
+    const shell = source("apps/web/src/admin/shell/AdminShell.tsx");
+    const layout = source("apps/web/src/routes/admin.tsx");
+    for (const path of ["/admin/coupons", "/admin/campaigns", "/admin/finance"]) {
+      expect(shell).toContain(`"${path}"`);
+    }
+    expect(layout).toContain('import { AdminShell } from "../admin/shell/AdminShell.tsx"');
+    expect(shell).not.toContain('"/admin/marketing"');
   });
 
   test("route tree tipada registra todas as novas superfícies", () => {
@@ -66,21 +62,11 @@ describe("admin real routes lot 3", () => {
     expect(source("apps/web/src/routes/admin.campaigns.tsx")).toContain("<CampaignManager");
   });
 
-  test("operações expõe histórico real e marketing permanece como compatibilidade", () => {
-    const shell = source("apps/web/src/features/store-admin/admin-shell.tsx");
+  test("relatórios continuam com acesso ao histórico da loja", () => {
+    const shell = source("apps/web/src/admin/shell/AdminShell.tsx");
     const operations = source("apps/web/src/routes/admin.operations.tsx");
-    const marketing = source("apps/web/src/routes/admin.marketing.tsx");
     expect(operations).toContain('createFileRoute("/admin/operations")');
-    expect(operations).toContain('to="/admin/finance"');
-    expect(operations).toContain('to="/admin/purchases"');
-    expect(operations).not.toContain("window.location.hash");
-    expect(marketing).toContain('createFileRoute("/admin/marketing")');
-    expect(marketing).toContain('to="/admin/coupons"');
-    expect(marketing).toContain('to="/admin/campaigns"');
-    expect(marketing).not.toContain('id="coupons"');
-    expect(marketing).not.toContain('id="campaigns"');
     expect(operations).toContain("<MerchantAuditLog");
-    expect(shell).toContain('to: "/admin/operations"');
-    expect(shell).not.toContain('to: "/admin/marketing"');
+    expect(shell).toContain('"/admin/operations"');
   });
 });

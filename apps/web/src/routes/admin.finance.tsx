@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import type { FinanceSummary, FinancialCategory, FinancialEntry, Page } from "../../../../packages/merchant-ops/src/types.ts";
 import { PageHead } from "../features/store-admin/admin-shell.tsx";
 import { AdminFeatureUnavailable, AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
@@ -60,6 +60,11 @@ function FinancePage(): React.JSX.Element {
   const data = Route.useLoaderData();
   return <div className="k-page">
     <PageHead title="Visão financeira" description="Acompanhe contas a receber, contas a pagar e o resultado gerencial registrado na loja." />
+    <nav className="adminFinanceTabs" aria-label="Áreas financeiras">
+      <Link to="/admin/finance" activeOptions={{ exact: true }}>Lançamentos</Link>
+      <Link to="/admin/purchases">Compras e despesas</Link>
+      <Link to="/admin/suppliers">Fornecedores</Link>
+    </nav>
     {data.enabled
       ? <MerchantFinanceManager initial={data.finance} initialSummary={data.summary} categories={data.categories} />
       : <AdminFeatureUnavailable title="Financeiro indisponível" description="Este recurso não está habilitado para o plano atual da loja." />}

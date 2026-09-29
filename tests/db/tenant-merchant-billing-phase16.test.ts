@@ -170,7 +170,7 @@ describe("phase 16 tenant_billing core", () => {
     expect(new Set(results.map((item) => item.subscriptionId)).size).toBe(1);
     const rows = await h.db.query(
       `select count(*) filter (where status in ('trialing','active','past_due','suspended'))::int current_count,
-         max(current_period_ends_at)::text period_end
+         (max(current_period_ends_at) at time zone 'UTC')::text period_end
        from public.store_subscriptions where tenant_id=$1::uuid and store_id=$2::uuid`,
       [f.tenantId, f.storeId],
     );

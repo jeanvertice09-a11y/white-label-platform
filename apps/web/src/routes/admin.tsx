@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { AdminShell } from "../features/store-admin/admin-shell.tsx";
+import { AdminShell } from "../admin/shell/AdminShell.tsx";
 import "../admin/admin-entry.ts";
 import { loadStoreAdminContext } from "../lib/client-guard.ts";
 import { getMerchantStorefrontStatus } from "../lib/server/catalog.functions.ts";
