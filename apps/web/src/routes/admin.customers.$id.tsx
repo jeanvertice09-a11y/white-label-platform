@@ -9,36 +9,29 @@ import { getMerchantCustomer } from "../lib/server/operations-customers.function
 import { getMerchantCustomerInsights } from "../lib/server/customer-insights.functions.ts";
 import type { MerchantCustomerInsights } from "../lib/server/customer-insights.functions.ts";
 
-const EMPTY_INSIGHTS: MerchantCustomerInsights = {
-  completedOrders: 0,
-  totalSpentCents: 0,
-  averageTicketCents: 0,
-  firstPurchaseAt: null,
-  lastPurchaseAt: null,
-  recencyDays: null,
-  averageDaysBetweenPurchases: null,
-  products: [],
-};
+const EMPTY_INSIGHTS: MerchantCustomerInsights = { completedOrders: 0, totalSpentCents: 0, averageTicketCents: 0, firstPurchaseAt: null, lastPurchaseAt: null, recencyDays: null, averageDaysBetweenPurchases: null, products: [] };
 
 export const Route = createFileRoute("/admin/customers/$id")({
   loader: async ({ params }) => {
     const customer = await getMerchantCustomer({ data: { id: params.id } });
     if (!customer) throw new Error("Cliente não encontrado");
-
-    // Insights enrich the customer record, but must never make the primary
-    // customer page unavailable when an aggregate/query is temporarily bad.
-    const insights = await getMerchantCustomerInsights({ data: { id: params.id } })
-      .catch(() => EMPTY_INSIGHTS);
-
+    const insights = await getMerchantCustomerInsights({ data: { id: params.id } }).catch(() => EMPTY_INSIGHTS);
     return { customer, insights };
   },
   component: CustomerDetailPage,
 });
 
 function CustomerOrders({ customer }: Readonly<{ customer: CustomerDetail }>): React.JSX.Element {
-  return <section className="k-document-section">
-    <header className="k-document-section__head"><div><span className="k-section-kicker">Histórico</span><h2>Pedidos</h2></div><span>{customer.orders.length} registro(s)</span></header>
-    {!customer.orders.length ? <div className="k-inline-state">Nenhum pedido relacionado.</div> : <div className="k-table-wrap k-table-wrap--flush"><table className="k-table"><thead><tr><th>Pedido</th><th>Status</th><th>Pagamento</th><th>Itens</th><th className="k-align-right">Total</th><th>Data</th><th aria-label="Ações" /></tr></thead><tbody>{customer.orders.map((order) => <tr key={order.id}><td><strong>{formatOrderNumber(order.orderNumber)}</strong></td><td><span className={`k-status-pill k-status-pill--${order.status}`}>{order.status}</span></td><td>{order.paymentStatus}</td><td>{order.itemSummary ?? `${String(order.itemCount)} item(ns)`}</td><td className="k-align-right k-money">{formatMoney(order.totalCents)}</td><td>{new Date(order.createdAt).toLocaleString("pt-BR")}</td><td><Link className="k-text-action" to="/admin/orders/$id" params={{ id: order.id }}>Abrir</Link></td></tr>)}</tbody></table></div>}
+  return <section className="k-customer-history">
+    <header className="k-customer-history__head"><div><span className="k-section-kicker">Histórico</span><h2>Pedidos</h2></div><span>{customer.orders.length} registro(s)</span></header>
+    {!customer.orders.length ? <div className="k-inline-state">Nenhum pedido relacionado.</div> : <div className="k-customer-order-list">{customer.orders.map((order) => <article className="k-customer-order" key={order.id}>
+      <div className="k-customer-order__primary"><Link to="/admin/orders/$id" params={{ id: order.id }}>{formatOrderNumber(order.orderNumber)}</Link><span className={`k-status-pill k-status-pill--${order.status}`}>{order.status}</span></div>
+      <div className="k-customer-order__item"><span>Itens</span><strong>{order.itemSummary ?? `${String(order.itemCount)} item(ns)`}</strong></div>
+      <div className="k-customer-order__meta"><span>Pagamento</span><strong>{order.paymentStatus}</strong></div>
+      <div className="k-customer-order__meta"><span>Data</span><strong>{new Date(order.createdAt).toLocaleDateString("pt-BR")}</strong></div>
+      <div className="k-customer-order__total"><span>Total</span><strong>{formatMoney(order.totalCents)}</strong></div>
+      <Link className="k-text-action" to="/admin/orders/$id" params={{ id: order.id }}>Ver pedido →</Link>
+    </article>)}</div>}
   </section>;
 }
 
@@ -51,15 +44,8 @@ function CustomerSidebar({ customer }: Readonly<{ customer: CustomerDetail }>): 
 
 function CustomerDetailPage(): React.JSX.Element {
   const { customer, insights } = Route.useLoaderData();
-  return <div className="k-page">
+  return <div className="k-page k-customer-detail">
     <PageHead title={customer.name} description="Cadastro, relacionamento, métricas reais e histórico de compras em uma única ficha." />
-    <div className="k-document-layout">
-      <main className="k-document-main">
-        <CustomerEditForm customer={customer} />
-        <CustomerInsightsPanel insights={insights} />
-        <CustomerOrders customer={customer} />
-      </main>
-      <CustomerSidebar customer={customer} />
-    </div>
+    <div className="k-document-layout"><main className="k-document-main"><CustomerEditForm customer={customer} /><CustomerInsightsPanel insights={insights} /><CustomerOrders customer={customer} /></main><CustomerSidebar customer={customer} /></div>
   </div>;
 }
