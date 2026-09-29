@@ -1,0 +1,241 @@
+/* Internal page composition shared by Master, Control and Merchant Admin. */
+.master-main,
+.control-content,
+.k-admin__content {
+  background: #f5f7fb;
+}
+
+.master-page-header > div::before,
+.k-page__head > div::before,
+.control-section__head::before {
+  display: block;
+  margin-bottom: 7px;
+  color: #7d8aa3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.master-page-header > div::before { content: "Super Admin"; }
+.k-page__head > div::before { content: "Painel da loja"; }
+.control-section__head::before { content: "White Label"; }
+
+.master-page-header h1,
+.k-page__head h1,
+.control-section__head h2 {
+  font-size: clamp(24px, 2.5vw, 30px) !important;
+  font-weight: 760;
+  letter-spacing: -.035em !important;
+}
+
+.master-page-header p,
+.k-page__head p,
+.control-section__head p {
+  color: #8792a7 !important;
+  font-size: 12.5px !important;
+}
+
+/* Cards */
+.master-card,
+.control-card,
+.k-card {
+  border-color: #e8edf5 !important;
+  border-radius: 15px !important;
+}
+
+.master-panel,
+.control-card,
+.k-card:not(.k-stat) {
+  box-shadow: 0 10px 28px rgba(31, 49, 82, .045) !important;
+}
+
+.master-panel h2,
+.control-card h3,
+.k-card h2,
+.k-card h3 {
+  color: #28344b;
+  font-weight: 760;
+}
+
+/* Tables */
+.master-table-wrap,
+.control-table-wrap,
+.k-table-wrap {
+  overflow: hidden auto;
+  border: 1px solid #e7ecf4 !important;
+  border-radius: 15px !important;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(31, 49, 82, .04);
+}
+
+.master-table th,
+.control-table th,
+.k-table th {
+  height: 44px;
+  padding: 11px 16px !important;
+  background: #f8faff !important;
+  color: #8994a8 !important;
+  border-bottom: 1px solid #e9eef5 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: .075em !important;
+}
+
+.master-table td,
+.control-table td,
+.k-table td {
+  padding: 15px 16px !important;
+  border-bottom-color: #edf1f6 !important;
+  color: #435069;
+}
+
+.master-table td strong,
+.control-table td strong,
+.k-table td strong { color: #27334a; }
+
+.master-table tbody tr,
+.control-table tbody tr,
+.k-table tbody tr { transition: background .14s ease; }
+
+.master-table tbody tr:hover,
+.control-table tbody tr:hover,
+.k-table tbody tr:hover { background: #f8faff !important; }
+
+/* Inputs and forms */
+.k-form {
+  padding: 22px !important;
+}
+
+.k-field label,
+.k-field > span {
+  color: #4a5871 !important;
+  font-size: 11.5px !important;
+}
+
+.k-field input,
+.k-field textarea,
+.k-field select,
+.k-row input,
+.k-row select {
+  min-height: 44px;
+  border: 1px solid #dfe5ef !important;
+  border-radius: 11px !important;
+  background: #fbfcfe !important;
+  color: #27334a !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+.k-field input:focus,
+.k-field textarea:focus,
+.k-field select:focus,
+.k-row input:focus,
+.k-row select:focus {
+  border-color: #91a5f9 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(78, 115, 248, .10) !important;
+}
+
+/* Buttons */
+.master-button,
+.k-button {
+  border-radius: 10px !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+}
+
+.master-button--primary,
+.k-button--primary {
+  background: #4d70f5 !important;
+  border-color: #4d70f5 !important;
+  box-shadow: 0 7px 16px rgba(77,112,245,.17) !important;
+}
+
+.master-button--primary:hover,
+.k-button--primary:hover {
+  background: #3e60e8 !important;
+  border-color: #3e60e8 !important;
+}
+
+/* Badges */
+.control-badge,
+.k-badge,
+.master-list__row > span {
+  border-radius: 7px !important;
+  padding: 5px 8px !important;
+  background: #eef3ff !important;
+  color: #526bdb !important;
+  font-size: 10.5px !important;
+  font-weight: 750 !important;
+}
+.k-badge--on { background: #eaf8f1 !important; color: #21865f !important; }
+
+/* Empty states */
+.master-empty,
+.control-empty,
+.k-empty {
+  position: relative;
+  min-height: 150px;
+  border: 1px dashed #d5dce8 !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, #fcfdff, #f8faff) !important;
+  color: #8d98ab !important;
+}
+
+.k-empty p { margin: 0 0 14px; }
+
+/* Rows and detail groups */
+.control-row,
+.k-row,
+.master-list__row {
+  min-height: 58px;
+}
+
+.control-row + .control-row,
+.master-list__row + .master-list__row {
+  border-top: 0;
+}
+
+/* Details used by marketing and configuration screens */
+details.k-card {
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+details.k-card > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 17px 20px;
+  color: #35425b;
+  font-size: 12.5px;
+  border-bottom: 1px solid transparent;
+}
+
+details.k-card[open] > summary {
+  background: #f8faff;
+  border-bottom-color: #e9eef5;
+}
+
+details.k-card > .k-form { padding: 20px !important; }
+
+/* Page rhythm */
+.master-stack,
+.k-page { gap: 18px !important; }
+.control-content { gap: 30px !important; }
+.control-section { gap: 14px !important; }
+
+/* Settings/preview panels */
+.k-preview {
+  border-color: #e7ecf4 !important;
+  border-radius: 15px !important;
+  box-shadow: 0 12px 30px rgba(31,49,82,.05) !important;
+}
+
+.k-preview__body { padding: 24px !important; }
+
+/* Mobile */
+@media (max-width: 680px) {
+  .k-form { padding: 17px !important; }
+  .master-page-header > div::before,
+  .k-page__head > div::before,
+  .control-section__head::before { margin-bottom: 5px; }
+}

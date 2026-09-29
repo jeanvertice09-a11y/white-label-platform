@@ -1,0 +1,35 @@
+.section {
+  padding: 32px 0;
+  border-top: 1px solid var(--line);
+}
+.section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.title {
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.description {
+  margin-top: 5px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+@media (max-width: 640px) {
+  .section {
+    padding: 24px 0;
+  }
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+}

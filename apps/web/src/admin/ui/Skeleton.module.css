@@ -1,0 +1,20 @@
+.skeleton {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f3f2ef 20%, #faf9f7 45%, #f3f2ef 70%);
+  background-size: 220% 100%;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

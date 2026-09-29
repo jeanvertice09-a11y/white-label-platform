@@ -1,0 +1,108 @@
+.control-plan-management-shell {
+  background: var(--control-bg);
+  color: var(--control-text);
+  font-family: Inter, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 18px 22px 64px;
+}
+.control-plan-management { max-width: 1180px; margin: 0 auto; }
+.control-plan-management > header { margin-bottom: 20px; }
+.control-plan-management > header > span {
+  display: block;
+  color: var(--control-primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.control-plan-management h2 { margin: 7px 0 8px; font-size: clamp(24px, 3vw, 34px); }
+.control-plan-management header p { margin: 0; max-width: 720px; color: var(--control-muted); line-height: 1.6; }
+.control-plan-list { display: grid; gap: 18px; }
+.control-plan-card { padding: 22px; }
+.control-plan-card__head { display: flex; gap: 20px; justify-content: space-between; align-items: flex-start; }
+.control-plan-card__head h3 { margin: 5px 0 5px; font-size: 20px; }
+.control-plan-card__head p { margin: 0; color: var(--control-muted); }
+.control-plan-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--control-border);
+}
+.control-plan-form label,
+.control-plan-limit {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #59647a;
+}
+.control-plan-form input,
+.control-plan-form textarea,
+.control-plan-form select,
+.control-plan-limit input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #dfe4ee;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--control-text);
+  padding: 9px 11px;
+  font: inherit;
+  outline: none;
+}
+.control-plan-form input:focus,
+.control-plan-form textarea:focus,
+.control-plan-form select:focus,
+.control-plan-limit input:focus { border-color: #9aa7ff; box-shadow: 0 0 0 3px rgba(84,104,255,.1); }
+.control-plan-form textarea { min-height: 82px; resize: vertical; }
+.control-plan-form__wide { grid-column: span 3; }
+.control-plan-check { display: flex !important; grid-auto-flow: column; justify-content: start; align-items: center; gap: 8px !important; min-height: 42px; }
+.control-plan-check input { width: 16px; min-height: 16px; }
+.control-plan-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--control-primary);
+  color: #fff;
+  padding: 0 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.control-plan-button:disabled { opacity: .55; cursor: wait; }
+.control-plan-message { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--control-primary-soft); color: #4051d3; font-size: 12px; font-weight: 700; }
+.control-plan-entitlements { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--control-border); display: grid; gap: 10px; }
+.control-plan-entitlements h4 { margin: 0 0 4px; }
+.control-plan-feature,
+.control-plan-limit {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 11px;
+  background: #fbfcff;
+}
+.control-plan-feature input { width: 16px; height: 16px; }
+.control-plan-feature strong,
+.control-plan-feature small,
+.control-plan-limit strong,
+.control-plan-limit small { display: block; }
+.control-plan-feature small,
+.control-plan-limit small { margin-top: 3px; color: var(--control-muted); font-weight: 500; }
+.control-plan-feature em { color: var(--control-muted); font-size: 11px; font-style: normal; }
+.control-plan-limit { grid-template-columns: minmax(0, 1fr) 160px; }
+.control-plan-entitlements > .control-plan-button { justify-self: start; margin-top: 4px; }
+
+@media (min-width: 980px) {
+  .control-plan-management-shell { padding-left: calc(var(--control-sidebar) + 38px); }
+}
+@media (max-width: 760px) {
+  .control-plan-form { grid-template-columns: 1fr; }
+  .control-plan-form__wide { grid-column: auto; }
+  .control-plan-card__head { display: grid; }
+  .control-plan-limit { grid-template-columns: 1fr; }
+  .control-plan-feature { grid-template-columns: auto 1fr; }
+  .control-plan-feature em { grid-column: 2; }
+}

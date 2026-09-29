@@ -1,0 +1,11 @@
+/* Final QA fixes layered after responsive-merchant.css. */
+@media (max-width: 979px) {
+  .k-admin__sidebar {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .k-admin__sidebar.is-open {
+    visibility: visible;
+    pointer-events: auto;
+  }
+}

@@ -1,0 +1,110 @@
+.console-route-state {
+  min-height: 100vh;
+  background: #f7f8fa;
+  color: #202633;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.console-state-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.console-route-state--pending { display: grid; grid-template-columns: 236px minmax(0, 1fr); }
+.console-route-state__sidebar {
+  padding: 20px 16px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  border-right: 1px solid #e2e6ec;
+  background: #fff;
+}
+.console-route-state__sidebar > span,
+.console-route-state__header,
+.console-route-state__title,
+.console-route-state__subtitle,
+.console-route-state__summary > span,
+.console-route-state__panel {
+  border-radius: 7px;
+  background: #e9edf2;
+  animation: console-state-pulse 1.2s ease-in-out infinite alternate;
+}
+.console-route-state__sidebar > span { width: 74%; height: 30px; }
+.console-route-state__sidebar > .console-route-state__brand { width: 90%; height: 40px; margin-bottom: 18px; }
+.console-route-state__main { min-width: 0; }
+.console-route-state__header { height: 64px; border-radius: 0; border-bottom: 1px solid #e2e6ec; background: #fff; animation: none; }
+.console-route-state__content { width: min(calc(100% - 64px), 1320px); margin: 0 auto; padding: 34px 0 48px; }
+.console-route-state__title { display: block; width: min(260px, 55%); height: 30px; }
+.console-route-state__subtitle { display: block; width: min(460px, 75%); height: 14px; margin-top: 10px; }
+.console-route-state__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin-top: 28px; border: 1px solid #e2e6ec; border-radius: 12px; overflow: hidden; background: #e2e6ec; }
+.console-route-state__summary > span { height: 108px; border-radius: 0; background: #f0f2f5; }
+.console-route-state__panel { height: 270px; margin-top: 20px; border: 1px solid #e2e6ec; background: #eef1f4; }
+
+.console-route-state--error { display: grid; place-items: center; padding: 28px; }
+.console-route-error {
+  width: min(100%, 520px);
+  padding: 28px;
+  border: 1px solid #e2e6ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(25, 33, 47, .08);
+}
+.console-route-error__eyebrow { color: #697386; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.console-route-error h1 { margin: 8px 0 0; color: #151a23; font-size: 24px; line-height: 1.2; letter-spacing: -.03em; }
+.console-route-error p { margin: 9px 0 0; color: #697386; font-size: 13px; line-height: 1.55; }
+.console-route-error__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.console-route-error button,
+.console-route-error a {
+  min-height: 38px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d3d9e2;
+  border-radius: 8px;
+  background: #fff;
+  color: #202633;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+.console-route-error button { border-color: #315efb; background: #315efb; color: #fff; }
+.console-route-error button:hover { background: #244ed9; }
+.console-route-error a:hover { background: #f3f5f7; }
+.console-route-error button:focus-visible,
+.console-route-error a:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(49, 94, 251, .16); }
+
+@keyframes console-state-pulse {
+  from { opacity: .72; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-route-state__sidebar > span,
+  .console-route-state__title,
+  .console-route-state__subtitle,
+  .console-route-state__summary > span,
+  .console-route-state__panel { animation: none; }
+}
+
+@media (max-width: 900px) {
+  .console-route-state--pending { grid-template-columns: 1fr; }
+  .console-route-state__sidebar { display: none; }
+  .console-route-state__content { width: min(calc(100% - 32px), 1320px); }
+  .console-route-state__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .console-route-state__summary { grid-template-columns: 1fr; }
+  .console-route-error { padding: 22px; }
+  .console-route-error__actions { flex-direction: column; }
+  .console-route-error button,
+  .console-route-error a { width: 100%; }
+}

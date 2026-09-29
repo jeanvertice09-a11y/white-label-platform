@@ -1,0 +1,38 @@
+{
+  "name": "@white-label/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "@tanstack/react-router": "^1.95.1",
+    "@tanstack/react-start": "^1.95.1",
+    "@white-label/auth": "0.1.0",
+    "@white-label/billing": "0.1.0",
+    "@white-label/catalog": "0.1.0",
+    "@white-label/domains": "0.1.0",
+    "@white-label/tenant": "0.1.0",
+    "@white-label/validation": "0.1.0",
+    "nitro": "3.0.260903-beta",
+    "postgres": "^3.4.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.23.8",
+    "@white-label/orders": "0.1.0",
+    "@white-label/inventory": "0.1.0",
+    "@white-label/customers": "0.1.0",
+    "@white-label/marketing": "0.1.0",
+    "@white-label/storage": "0.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "vite": "^7.1.7"
+  }
+}

@@ -1,0 +1,4 @@
+.k-inline-editor__message--error {
+  color: var(--k-danger, #b42318);
+  font-weight: 600;
+}

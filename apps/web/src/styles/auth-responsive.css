@@ -1,0 +1,194 @@
+/* Responsive auth/onboarding layer. Scoped so storefront/public marketing remains unchanged. */
+
+.public-auth,
+.onboarding-page {
+  --public-accent: #7B5EA7;
+  --auth-secondary: #A78BCC;
+  --auth-text: #2D2B4E;
+  --auth-soft: #EFE9FA;
+  --auth-green: #C8F7A6;
+  min-width: 0;
+  overflow-x: clip;
+  color: var(--auth-text);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.public-auth {
+  min-height: 100dvh;
+  padding:
+    max(32px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(32px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+  background: #F8F6FC;
+}
+
+.public-auth__card {
+  width: min(520px, 100%);
+  min-width: 0;
+  padding: clamp(28px, 4vw, 44px);
+  border-color: #E2DAEC;
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(45, 43, 78, .09);
+}
+
+.public-auth__brand { margin-bottom: clamp(30px, 7vh, 54px); }
+
+.public-auth__intro,
+.public-auth__notice,
+.public-auth__message,
+.public-auth form,
+.public-auth fieldset { min-width: 0; }
+
+.public-auth__intro h1,
+.onboarding-shell h1 {
+  color: var(--auth-text);
+  font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, sans-serif;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.public-auth__intro h1 {
+  margin-top: 14px;
+  font-size: clamp(30px, 7vw, 40px);
+  line-height: 1.08;
+}
+
+.public-auth__intro p,
+.public-auth__message,
+.public-auth__notice,
+.onboarding-item,
+.onboarding-note { overflow-wrap: anywhere; }
+
+.public-auth input {
+  min-width: 0;
+  min-height: 48px;
+  border-color: #D9CFE6;
+}
+
+.public-auth input:focus-visible,
+.public-auth button:focus-visible,
+.public-auth a:focus-visible,
+.onboarding-page a:focus-visible,
+.onboarding-page button:focus-visible,
+.onboarding-page input:focus-visible,
+.onboarding-page select:focus-visible,
+.onboarding-page textarea:focus-visible {
+  outline: none;
+  border-color: #7B5EA7;
+  box-shadow: 0 0 0 3px rgba(123, 94, 167, .22);
+}
+
+.public-auth .public-button {
+  min-height: 48px;
+  border-radius: 11px;
+}
+
+.public-auth .public-button--primary {
+  background: #7B5EA7;
+  border-color: #7B5EA7;
+}
+
+.public-auth .public-button--primary:hover { background: #684C94; border-color: #684C94; }
+
+.public-auth__notice,
+.public-auth__message { background: #F4EFF9; color: #615A70; }
+.public-auth__notice strong { color: #2D2B4E; }
+
+.public-auth img {
+  display: block;
+  max-width: min(220px, 100%);
+  height: auto;
+  margin-inline: auto;
+}
+
+.onboarding-page {
+  min-height: 100dvh;
+  padding:
+    max(44px, env(safe-area-inset-top))
+    max(22px, env(safe-area-inset-right))
+    max(72px, env(safe-area-inset-bottom))
+    max(22px, env(safe-area-inset-left));
+  background: #F8F6FC;
+}
+
+.onboarding-shell {
+  width: min(960px, 100%);
+  min-width: 0;
+}
+
+.onboarding-shell > header { max-width: 760px; }
+.onboarding-shell h1 { font-size: clamp(34px, 5vw, 58px); }
+.onboarding-progress { border-color: #E2DAEC; background: #fff; }
+.onboarding-progress__track { background: #E9E1F1; }
+.onboarding-progress__track span { background: #7B5EA7; }
+.onboarding-item { grid-template-columns: 30px minmax(0, 1fr); border-bottom-color: #E2DAEC; }
+.onboarding-list { border-top-color: #E2DAEC; }
+.onboarding-item__status { border-color: #CBBEDC; }
+.onboarding-item.is-done .onboarding-item__status { background: #7B5EA7; border-color: #7B5EA7; }
+.onboarding-item__title { min-width: 0; flex-wrap: wrap; }
+.onboarding-item__title strong { overflow-wrap: anywhere; }
+.onboarding-item__title small { background: #EFE9FA; color: #655079; }
+.onboarding-note { border-left-color: #A78BCC; background: #F0EBF6; }
+
+@media (max-width: 640px) {
+  .public-auth {
+    align-items: start;
+    padding:
+      max(20px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+  .public-auth__card {
+    width: 100%;
+    padding: 28px 22px;
+    border-radius: 16px;
+  }
+  .public-auth__brand { margin-bottom: 32px; }
+  .public-auth__intro h1 { font-size: clamp(29px, 9vw, 36px); }
+  .public-auth__intro p { margin-bottom: 24px; }
+
+  .onboarding-page {
+    padding:
+      max(28px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(48px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+  .onboarding-back { margin-bottom: 30px; min-height: 44px; align-items: center; }
+  .onboarding-shell h1 { font-size: clamp(31px, 10vw, 42px); }
+  .onboarding-progress { margin-top: 30px; padding: 17px 16px; }
+  .onboarding-progress > div:first-child { flex-wrap: wrap; gap: 8px; }
+  .onboarding-item { padding-block: 20px; }
+  .onboarding-item__title { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .onboarding-item a { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
+@media (max-width: 390px) {
+  .public-auth { padding-inline: 12px; }
+  .public-auth__card { padding: 24px 18px; }
+  .public-auth__brand { margin-bottom: 26px; }
+  .public-auth__intro h1 { font-size: 29px; }
+  .public-auth__notice,
+  .public-auth__message { padding: 12px 13px; }
+  .onboarding-page { padding-inline: 14px; }
+}
+
+@media (max-width: 320px) {
+  .public-auth { padding-inline: 10px; }
+  .public-auth__card { padding: 22px 16px; }
+  .public-auth__intro h1 { font-size: 27px; }
+  .onboarding-page { padding-inline: 12px; }
+  .onboarding-item { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; }
+}
+
+@media (min-width: 1440px) {
+  .public-auth__card { width: min(540px, 100%); }
+  .onboarding-shell { width: min(1040px, 100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-auth *,
+  .onboarding-page * { scroll-behavior: auto !important; }
+}

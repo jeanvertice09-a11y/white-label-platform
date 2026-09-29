@@ -1,0 +1,32 @@
+.field {
+  display: grid;
+  gap: 7px;
+}
+.label {
+  font-size: 13px;
+  font-weight: 650;
+}
+.hint {
+  color: var(--quiet);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.control {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--ink);
+  padding: 0 12px;
+  transition: border-color 140ms var(--ease);
+}
+.control:hover {
+  border-color: #d7d5cf;
+}
+.textarea {
+  min-height: 120px;
+  padding-block: 11px;
+  resize: vertical;
+  line-height: 1.5;
+}
