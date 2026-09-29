@@ -1,39 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { MerchantTask } from "../../../../packages/merchant-ops/src/types.ts";
-import { PageHead } from "../features/store-admin/admin-shell.tsx";
-import { AdminFeatureUnavailable, AdminRouteError, AdminRoutePending } from "../features/store-admin/admin-route-state.tsx";
+import { EmptyState } from "../admin/ui/EmptyState.tsx";
+import { PageHeader } from "../admin/ui/PageHeader.tsx";
 import { MerchantTasksManager } from "../features/store-admin/merchant-tasks-manager.tsx";
-import {
-  getMerchantOperationsAccess,
-  listMerchantTaskAssignees,
-  listMerchantTasks,
-} from "../lib/server/operations-merchant.functions.ts";
+import { getMerchantOperationsAccess, listMerchantTaskAssignees, listMerchantTasks } from "../lib/server/operations-merchant.functions.ts";
 import type { MerchantTaskAssigneeOption } from "../lib/server/operations-merchant.functions.ts";
 
-interface TasksLoaderData {
-  enabled: boolean;
-  tasks: MerchantTask[];
-  assignees: MerchantTaskAssigneeOption[];
-}
-
+interface TasksLoaderData { enabled: boolean; tasks: MerchantTask[]; assignees: MerchantTaskAssigneeOption[] }
 export const Route = createFileRoute("/admin/tasks")({
-  loader: async (): Promise<TasksLoaderData> => {
-    const access = await getMerchantOperationsAccess();
-    if (!access.tasks) return { enabled: false, tasks: [], assignees: [] };
-    const [tasks, assignees] = await Promise.all([listMerchantTasks(), listMerchantTaskAssignees()]);
-    return { enabled: true, tasks, assignees };
-  },
-  pendingComponent: AdminRoutePending,
-  errorComponent: AdminRouteError,
+  loader: async (): Promise<TasksLoaderData> => { const access = await getMerchantOperationsAccess(); if (!access.tasks) return { enabled: false, tasks: [], assignees: [] }; const [tasks, assignees] = await Promise.all([listMerchantTasks(), listMerchantTaskAssignees()]); return { enabled: true, tasks, assignees }; },
+  pendingComponent: () => <EmptyState title="Carregando tarefas" description="Buscando pendências, responsáveis e prazos." />,
+  errorComponent: ({ error }) => <EmptyState title="Não foi possível carregar as tarefas" description={error instanceof Error ? error.message : "Tente novamente em instantes."} />,
   component: TasksPage,
 });
-
-function TasksPage(): React.JSX.Element {
-  const data = Route.useLoaderData();
-  return <div className="k-page">
-    <PageHead title="Tarefas" description="Organize pendências operacionais, responsáveis, prioridades e prazos da loja." />
-    {data.enabled
-      ? <MerchantTasksManager initial={data.tasks} assignees={data.assignees} />
-      : <AdminFeatureUnavailable title="Tarefas indisponíveis" description="Este recurso não está disponível para a loja atual." />}
-  </div>;
-}
+function TasksPage(): React.JSX.Element { const data = Route.useLoaderData(); return <><PageHeader title="Tarefas" description="Organize pendências operacionais, responsáveis, prioridades e prazos da loja." />{data.enabled ? <MerchantTasksManager initial={data.tasks} assignees={data.assignees} /> : <EmptyState title="Tarefas indisponíveis" description="Este recurso não está disponível para a loja atual." />}</>; }
