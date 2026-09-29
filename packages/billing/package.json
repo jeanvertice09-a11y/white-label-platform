@@ -1,0 +1,15 @@
+﻿{
+    "version":  "0.1.0",
+    "types":  "./src/index.ts",
+    "type":  "module",
+    "name":  "@white-label/billing",
+    "private":  true,
+    "scripts":  {
+                    "typecheck":  "tsc --noEmit -p ../../tsconfig.json",
+                    "build":  "echo build @white-label/billing ok"
+                },
+    "exports":  {
+                    ".":  "./src/index.ts"
+                },
+    "main":  "./src/index.ts"
+}

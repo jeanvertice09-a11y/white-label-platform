@@ -1,0 +1,18 @@
+{
+    "version": "0.1.0",
+    "types": "./src/index.ts",
+    "type": "module",
+    "name": "@white-label/validation",
+    "private": true,
+    "scripts": {
+        "typecheck": "tsc --noEmit -p ../../tsconfig.json",
+        "build": "echo build @white-label/validation ok"
+    },
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "main": "./src/index.ts",
+    "dependencies": {
+        "zod": "^3.23.8"
+    }
+}
