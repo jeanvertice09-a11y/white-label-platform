@@ -1,15 +1,6 @@
-export function AdminRoutePending(): React.JSX.Element {
-  return <div className="k-empty">Carregando dados da loja…</div>;
-}
+import { EmptyState } from "../../admin/ui/EmptyState.tsx";
+import { Skeleton } from "../../admin/ui/Skeleton.tsx";
 
-export function AdminRouteError(props: Readonly<{ error: unknown }>): React.JSX.Element {
-  const message = props.error instanceof Error ? props.error.message : "Não foi possível carregar esta área.";
-  return <div className="k-empty"><strong>Área indisponível</strong><span>{message}</span></div>;
-}
-
-export function AdminFeatureUnavailable(props: Readonly<{
-  title: string;
-  description: string;
-}>): React.JSX.Element {
-  return <div className="k-empty"><strong>{props.title}</strong><span>{props.description}</span></div>;
-}
+export function AdminRoutePending(): React.JSX.Element { return <div aria-label="Carregando dados da loja"><Skeleton height={18} /><Skeleton height={72} /><Skeleton height={72} /></div>; }
+export function AdminRouteError(props: Readonly<{ error: unknown }>): React.JSX.Element { const message = props.error instanceof Error ? props.error.message : "Não foi possível carregar esta área."; return <EmptyState title="Área indisponível" description={message} />; }
+export function AdminFeatureUnavailable(props: Readonly<{ title: string; description: string }>): React.JSX.Element { return <EmptyState title={props.title} description={props.description} />; }
