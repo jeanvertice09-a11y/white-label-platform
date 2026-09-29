@@ -7,14 +7,29 @@ import { CustomerInsightsPanel } from "../features/store-admin/customer-insights
 import { formatMoney } from "../features/store-admin/format.ts";
 import { getMerchantCustomer } from "../lib/server/operations-customers.functions.ts";
 import { getMerchantCustomerInsights } from "../lib/server/customer-insights.functions.ts";
+import type { MerchantCustomerInsights } from "../lib/server/customer-insights.functions.ts";
+
+const EMPTY_INSIGHTS: MerchantCustomerInsights = {
+  completedOrders: 0,
+  totalSpentCents: 0,
+  averageTicketCents: 0,
+  firstPurchaseAt: null,
+  lastPurchaseAt: null,
+  recencyDays: null,
+  averageDaysBetweenPurchases: null,
+  products: [],
+};
 
 export const Route = createFileRoute("/admin/customers/$id")({
   loader: async ({ params }) => {
-    const [customer, insights] = await Promise.all([
-      getMerchantCustomer({ data: { id: params.id } }),
-      getMerchantCustomerInsights({ data: { id: params.id } }),
-    ]);
+    const customer = await getMerchantCustomer({ data: { id: params.id } });
     if (!customer) throw new Error("Cliente não encontrado");
+
+    // Insights enrich the customer record, but must never make the primary
+    // customer page unavailable when an aggregate/query is temporarily bad.
+    const insights = await getMerchantCustomerInsights({ data: { id: params.id } })
+      .catch(() => EMPTY_INSIGHTS);
+
     return { customer, insights };
   },
   component: CustomerDetailPage,
