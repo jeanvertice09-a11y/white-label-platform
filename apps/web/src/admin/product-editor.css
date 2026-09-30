@@ -1,0 +1,79 @@
+.admin .createWizard :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+.admin .createWizardSteps button.isActive {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+.admin .createWizardSteps button.isActive span {
+  color: #fff;
+}
+.admin .createWizardSteps button.isActive b {
+  background: #fff;
+  color: #1d4ed8;
+}
+.admin .productStepShort {
+  display: none;
+}
+.admin .createWizardPanel {
+  min-width: 0;
+  margin: 0;
+  padding-bottom: 40px;
+}
+.admin .createWizardPanel label small {
+  color: #475467;
+}
+.admin .createWizardFooter {
+  position: sticky;
+  z-index: 10;
+}
+.admin .k-toolbar label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.admin .createWizardSteps button:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 3px;
+}
+@media (max-width: 1023px) {
+  .admin .createWizardFooter {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 640px) {
+  .admin .createWizardSteps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .admin .createWizardSteps button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 2px;
+    min-width: 0;
+    font-size: 11px;
+  }
+  .admin .productStepFull {
+    display: none;
+  }
+  .admin .productStepShort {
+    display: inline;
+  }
+  .admin .createWizardPanel {
+    padding: 18px 14px 32px;
+  }
+  .admin .variantOptionRow {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .admin .createWizardFooter {
+    gap: 6px;
+  }
+  .admin .createWizardFooter .k-button {
+    padding-inline: 10px;
+  }
+}

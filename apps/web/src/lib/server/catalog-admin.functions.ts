@@ -98,8 +98,7 @@ export const setMerchantProductStatus = createServerFn({ method: "POST" }).valid
     `with changed as (
        update public.products set active=$4,updated_at=now()
        where tenant_id=$1 and store_id=$2 and id=$3::uuid
-       returning id
-     ), audited as (
+       returning id), audited as (
        insert into public.audit_logs (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
        select $5::uuid,$1,$2,'product.status_changed','product',id,
          jsonb_build_object('active',$4::boolean) from changed
@@ -114,7 +113,7 @@ export const setMerchantProductStatus = createServerFn({ method: "POST" }).valid
 export const duplicateMerchantProduct = createServerFn({ method: "POST" }).validator(z.object({ productId: uuid })).handler(async ({ data }) => {
   const context = await adminContext(); await assertProductMutationEntitlements(context.sql, context.scope, "create");
   const sourceRows = await context.sql.query(
-    `select name,slug from public.products where tenant_id=$1 and store_id=$2 and id=$3::uuid limit 1`,
+    `select name,slug from public.products where tenant_id=$1 and store_id=$2 and id=$3::uuid and deleted_at is null limit 1`,
     [context.scope.tenantId, context.scope.storeId, data.productId],
   );
   if (sourceRows.length === 0) throw new Error("Produto não encontrado nesta loja");
@@ -127,16 +126,20 @@ export const duplicateMerchantProduct = createServerFn({ method: "POST" }).valid
   const copySlug = `${source["slug"].slice(0, 170)}-${suffix}`;
   const rows = await context.sql.query(
     `with source as (
-       select * from public.products where tenant_id=$1 and store_id=$2 and id=$3::uuid
+       select * from public.products where tenant_id=$1 and store_id=$2 and id=$3::uuid and deleted_at is null
      ), copied as (
        insert into public.products (
          tenant_id,store_id,name,slug,description,sku,category_id,price_cents,
-         compare_at_price_cents,cost_cents,active,track_inventory,stock_quantity,position,updated_at
+         compare_at_price_cents,cost_cents,pix_discount_percent,active,track_inventory,stock_quantity,position,updated_at
        )
        select tenant_id,store_id,$4,$5,description,null,category_id,price_cents,
-         compare_at_price_cents,cost_cents,false,track_inventory,0,position+1,now()
-       from source returning id
-     ), copied_variants as (
+         compare_at_price_cents,cost_cents,pix_discount_percent,false,track_inventory,0,position+1,now()
+       from source returning id), copied_categories as (
+       insert into public.product_categories(tenant_id,store_id,product_id,category_id)
+       select pc.tenant_id,pc.store_id,c.id,pc.category_id
+       from public.product_categories pc cross join copied c
+       where pc.tenant_id=$1 and pc.store_id=$2 and pc.product_id=$3::uuid
+       returning product_id), copied_variants as (
        insert into public.product_variants (
          tenant_id,store_id,product_id,name,sku,attributes,price_cents,
          compare_at_price_cents,cost_cents,active,stock_quantity,position,updated_at
@@ -145,16 +148,14 @@ export const duplicateMerchantProduct = createServerFn({ method: "POST" }).valid
          v.compare_at_price_cents,v.cost_cents,false,0,v.position,now()
        from public.product_variants v cross join copied c
        where v.tenant_id=$1 and v.store_id=$2 and v.product_id=$3::uuid
-       returning id,attributes
-     ), copied_images as (
+       returning id,attributes), copied_images as (
        insert into public.product_images (tenant_id,store_id,product_id,variant_id,object_key,alt_text,position)
        select i.tenant_id,i.store_id,c.id,case when i.variant_id is null then null else cv.id end,i.object_key,i.alt_text,i.position
        from public.product_images i cross join copied c
        left join public.product_variants source_variant on source_variant.tenant_id=i.tenant_id and source_variant.store_id=i.store_id and source_variant.product_id=i.product_id and source_variant.id=i.variant_id
        left join copied_variants cv on cv.attributes is not distinct from source_variant.attributes
        where i.tenant_id=$1 and i.store_id=$2 and i.product_id=$3::uuid and (i.variant_id is null or cv.id is not null)
-       returning id
-     ), audited as (
+       returning id), audited as (
        insert into public.audit_logs (actor_user_id,tenant_id,store_id,action,resource_type,resource_id,metadata)
        select $6::uuid,$1,$2,'product.duplicated','product',c.id,
          jsonb_build_object('source_product_id',$3::uuid,'variants',(select count(*) from copied_variants),'images',(select count(*) from copied_images))

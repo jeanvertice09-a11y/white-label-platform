@@ -1,21 +1,43 @@
 import type { Category } from "@white-label/catalog";
-import { slugify } from "./format.ts";
-
-export interface ProductDraft { name:string; slug:string; description:string; sku:string; categoryId:string; price:string; compareAt:string; cost:string; stock:string; position:string; active:boolean; trackInventory:boolean; }
-type SetField=<K extends keyof ProductDraft>(key:K,value:ProductDraft[K])=>void;
-
-function Field(p:Readonly<{label:string;hint?:string;children:React.ReactNode}>){return <label className="productField"><span>{p.label}</span>{p.children}{p.hint?<small>{p.hint}</small>:null}</label>;}
-function Toggle(p:Readonly<{checked:boolean;title:string;description:string;onChange:(v:boolean)=>void}>){return <label className="productToggle"><span><strong>{p.title}</strong><small>{p.description}</small></span><input type="checkbox" checked={p.checked} onChange={e=>{p.onChange(e.target.checked);}}/></label>;}
-
-export function ProductEditorLayout({draft,categories,hasVariants,setField}:Readonly<{draft:ProductDraft;categories:Category[];hasVariants:boolean;setField:SetField}>):React.JSX.Element{
-  return <div className="productStudio"><main className="productStudioMain">
-    <section className="productCard"><div className="productCardTitle"><span>01</span><div><h2>Sobre o produto</h2><p>Preencha só o que o cliente precisa para entender o produto.</p></div></div><div className="productFields">
-      <Field label="Nome do produto"><input id="product-name" value={draft.name} onChange={e=>{const n=e.target.value;setField("name",n);if(!draft.slug)setField("slug",slugify(n));}} required autoFocus placeholder="Ex.: Tênis Runner Pro"/></Field>
-      <Field label="Descrição" hint="Explique os principais detalhes, materiais e diferenciais."><textarea value={draft.description} onChange={e=>{setField("description",e.target.value);}} placeholder="Conte para o cliente sobre este produto…"/></Field>
-      <Field label="Categoria"><select value={draft.categoryId} onChange={e=>{setField("categoryId",e.target.value);}}><option value="">Selecionar categoria</option>{categories.map(c=><option key={c.id} value={c.id}>{c.name}{c.active?"":" (inativa)"}</option>)}</select></Field>
-    </div></section>
-    <section className="productCard"><div className="productCardTitle"><span>02</span><div><h2>Preço</h2><p>{hasVariants?"Preço padrão do produto. Cada variação pode ter seu próprio preço.":"Informe o preço que o cliente verá na loja."}</p></div></div><div className="productPriceGrid"><Field label="Preço de venda"><div className="moneyInput"><b>R$</b><input inputMode="decimal" value={draft.price} onChange={e=>{setField("price",e.target.value);}} required placeholder="0,00"/></div></Field><Field label="Preço anterior (opcional)" hint="Use para mostrar uma promoção."><div className="moneyInput"><b>R$</b><input inputMode="decimal" value={draft.compareAt} onChange={e=>{setField("compareAt",e.target.value);}} placeholder="0,00"/></div></Field></div></section>
-    <section className="productCard"><div className="productCardTitle"><span>03</span><div><h2>Estoque</h2><p>{hasVariants?"A quantidade fica em cada variação abaixo.":"Controle a quantidade disponível aqui, junto do produto."}</p></div></div>{hasVariants?<p className="k-inline-state">Este produto possui variações. Edite a quantidade de cada combinação na seção de variações.</p>:<div className="productFields"><Toggle checked={draft.trackInventory} title="Controlar estoque" description="A Kataluu reduz a quantidade conforme os pedidos são confirmados." onChange={v=>{setField("trackInventory",v);}}/>{draft.trackInventory?<Field label="Quantidade disponível"><input type="number" min="0" step="1" inputMode="numeric" value={draft.stock} onChange={e=>{setField("stock",e.target.value);}}/></Field>:null}</div>}</section>
-    <details className="productCard productAdvanced"><summary><div><strong>Informações avançadas</strong><small>SKU, custo, URL e ordem. A maioria das lojas não precisa alterar isso.</small></div><b>Mostrar</b></summary><div className="productAdvancedGrid"><Field label="SKU / código"><input value={draft.sku} onChange={e=>{setField("sku",e.target.value);}}/></Field><Field label="Custo interno"><input inputMode="decimal" value={draft.cost} onChange={e=>{setField("cost",e.target.value);}}/></Field><Field label="URL do produto"><input value={draft.slug} onChange={e=>{setField("slug",slugify(e.target.value));}} required/></Field><Field label="Ordem no catálogo"><input type="number" min="0" value={draft.position} onChange={e=>{setField("position",e.target.value);}}/></Field></div></details>
-  </main><aside className="productStudioSide"><section className="productPublishCard"><div className="productPublishHead"><span className={draft.active?"productLiveDot isLive":"productLiveDot"}/><div><strong>{draft.active?"Visível na loja":"Oculto da loja"}</strong><small>Você pode mudar isso quando quiser.</small></div></div><Toggle checked={draft.active} title="Mostrar no catálogo" description="O cliente consegue encontrar este produto." onChange={v=>{setField("active",v);}}/><div className="productInventoryNotice"><strong>Estoque no produto</strong><p>{hasVariants?"Edite as quantidades nas variações deste produto.":draft.trackInventory?`${draft.stock||"0"} unidade(s) disponível(is).`:"Controle de estoque desativado."}</p></div></section><section className="productHelpCard"><span>PRODUTO COMPLETO</span><strong>Tudo em um só lugar</strong><p>Informações, preço, estoque, fotos e variações ficam no cadastro e na edição do produto.</p></section></aside></div>;
+import type { ProductDraft } from "./product-editor-draft.ts";
+import { moneyToCents, formatMoney, slugify } from "./format.ts";
+export type SetProductField = <K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) => void;
+type Fields = Readonly<{ draft: ProductDraft; setField: SetProductField }>;
+export function ProductInformation({ draft: d, setField, categories, existingVariants, editing }: Fields & Readonly<{ categories: Category[]; existingVariants: boolean; editing: boolean }>) {
+  function toggleCategory(id: string) { setField("categoryIds",d.categoryIds.includes(id) ? d.categoryIds.filter(c => c !== id) : [...d.categoryIds,id]); }
+  return <div className="wizardFields">
+    <label>Nome *<input value={d.name} maxLength={160} onChange={e => { setField("name",e.target.value); if (!editing) setField("slug",slugify(e.target.value)); }} /></label>
+    <label>Endereço do produto<input value={d.slug} onChange={e => { setField("slug",slugify(e.target.value)); }} /><small>É criado automaticamente a partir do nome.</small></label>
+    <label>Descrição<textarea rows={4} maxLength={5000} value={d.description} onChange={e => { setField("description",e.target.value); }} /></label>
+    <fieldset className="commercialBox"><legend>Categorias</legend><p>Selecione uma ou mais categorias.</p>{categories.map(c => <label className="checkRow" key={c.id}><input type="checkbox" checked={d.categoryIds.includes(c.id)} onChange={() => { toggleCategory(c.id); }} /><span>{c.name}</span></label>)}{!categories.length ? <p>Nenhuma categoria cadastrada.</p> : null}</fieldset>
+    <label className="checkRow"><input type="checkbox" checked={d.hasVariants} disabled={existingVariants} onChange={e => { setField("hasVariants",e.target.checked); }} /><span>Este produto tem tamanhos, cores ou outras opções?</span></label>
+    <p className="k-muted">Ative quando o cliente precisar escolher tamanho, cor, número ou voltagem. Cada opção pode ter preço e estoque próprios.</p>
+  </div>;
+}
+function safeMoney(value: string): number { try { return moneyToCents(value); } catch { return 0; } }
+export function ProductPrices({ draft: d, setField }: Fields) {
+  const price = safeMoney(d.promotion || d.price), cost = safeMoney(d.cost);
+  return <div className="wizardFields"><div className="wizardGrid">
+    <label>Preço (R$) *<input inputMode="decimal" value={d.price} placeholder="0,00" onChange={e => { setField("price",e.target.value); }} /></label>
+    <label>Preço promocional (R$)<input inputMode="decimal" value={d.promotion} placeholder="Opcional" onChange={e => { setField("promotion",e.target.value); }} /></label>
+    {!d.hasVariants ? <label>Quanto você pagou (R$)<input inputMode="decimal" value={d.cost} placeholder="0,00" onChange={e => { setField("cost",e.target.value); }} /><small>Opcional. Não aparece para o cliente.</small></label> : null}
+  </div>{!d.hasVariants && cost > 0 ? <p>Lucro estimado por unidade: <strong>{formatMoney(price-cost)}</strong></p> : null}
+    <label className="checkRow"><input type="checkbox" checked={Number(d.pixDiscount)>0} onChange={e => { setField("pixDiscount",e.target.checked ? "5" : "0"); }} /><span>Dar desconto no Pix</span></label>
+    {Number(d.pixDiscount)>0 ? <label>Desconto no Pix (%)<input type="number" min="0" max="100" step="0.01" value={d.pixDiscount} onChange={e => { setField("pixDiscount",e.target.value); }} /><small>Preço no Pix: {formatMoney(Math.round(price*(1-Number(d.pixDiscount)/100)))}</small></label> : null}
+  </div>;
+}
+export function ProductStock({ draft: d, setField }: Fields) {
+  return <div className="wizardFields"><div className="wizardGrid">
+    <label>Quantidade em estoque<input type="number" min="0" max="1000000" step="1" value={d.stock} onChange={e => { setField("stock",e.target.value); }} /><small>Quantas unidades você tem disponíveis para vender.</small></label>
+    <label>Código do produto<input value={d.sku} onChange={e => { setField("sku",e.target.value); }} placeholder="Ex.: COPO-PRETO" /></label>
+    <label>Código de barras<input value={d.barcode} onChange={e => { setField("barcode",e.target.value); }} placeholder="EAN / GTIN" /></label>
+  </div><p className="k-muted">Edite a quantidade aqui sempre que precisar. Vendas confirmadas descontam o estoque automaticamente.</p></div>;
+}
+export function ProductPublishing({ draft: d, setField }: Fields) {
+  return <div className="wizardFields"><h2>Como este produto aparece na sua loja</h2>
+    <label className="checkRow"><input type="checkbox" checked={d.active} onChange={e => { setField("active",e.target.checked); }} /><span>Mostrar na loja</span></label>
+    <p className="k-muted">Quando desligado, o produto fica salvo no painel, mas não aparece para os clientes.</p>
+    <label className="checkRow"><input type="checkbox" checked={d.featured} onChange={e => { setField("featured",e.target.checked); }} /><span>Destacar este produto</span></label>
+    <details><summary>Mais opções</summary><label>Ordem na loja<input type="number" min="0" value={d.position} onChange={e => { setField("position",e.target.value); }} /><small>Números menores aparecem primeiro.</small></label></details>
+  </div>;
 }

@@ -17,7 +17,8 @@ import { createAdminSqlExecutor } from "./supabase-admin.server.ts";
 const querySchema = z.object({
   page: z.number().int().min(1).default(1), pageSize: z.number().int().min(1).max(48).default(24),
   search: z.string().trim().max(120).optional(), categoryId: z.string().uuid().optional(),
-  sort: z.enum(["position", "name", "price_asc", "price_desc"]).default("position"),
+  active: z.boolean().optional(),
+  sort: z.enum(["position", "name", "price_asc", "price_desc", "newest"]).default("position"),
 });
 const slugSchema = z.object({ slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(180) });
 const idSchema = z.object({ id: z.string().uuid() });

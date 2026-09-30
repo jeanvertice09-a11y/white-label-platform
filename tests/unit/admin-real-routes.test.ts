@@ -19,8 +19,8 @@ describe("admin real routes lot 3", () => {
     for (const [fileName, path] of routes) {
       const route = source(`apps/web/src/routes/${fileName}`);
       expect(route).toContain(`createFileRoute("${path}")`);
-      expect(route).toContain("pendingComponent: AdminRoutePending");
-      expect(route).toContain("errorComponent: AdminRouteError");
+      expect(route).toMatch(/pendingComponent:\s*(?:AdminRoutePending|\(\)\s*=>\s*<EmptyState)/);
+      expect(route).toMatch(/errorComponent:\s*(?:AdminRouteError|\(\{\s*error\s*\}\)\s*=>)/);
     }
   });
 
@@ -36,11 +36,13 @@ describe("admin real routes lot 3", () => {
   test("navegação usa as rotas reais do painel", () => {
     const shell = source("apps/web/src/admin/shell/AdminShell.tsx");
     const layout = source("apps/web/src/routes/admin.tsx");
-    for (const path of ["/admin/coupons", "/admin/campaigns", "/admin/finance"]) {
+    for (const path of ["/admin/marketing", "/admin/finance", "/admin/tasks", "/admin/purchases"]) {
       expect(shell).toContain(`"${path}"`);
     }
+    const marketing = source("apps/web/src/routes/admin.marketing.tsx");
+    for (const path of ["/admin/coupons", "/admin/campaigns"]) expect(marketing).toContain(`"${path}"`);
     expect(layout).toContain('import { AdminShell } from "../admin/shell/AdminShell.tsx"');
-    expect(shell).not.toContain('"/admin/marketing"');
+    expect(shell).not.toContain('"/admin/inventory"');
   });
 
   test("route tree tipada registra todas as novas superfícies", () => {

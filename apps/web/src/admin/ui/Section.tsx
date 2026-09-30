@@ -16,9 +16,7 @@ export function Section({
       <header className={styles.header}>
         <div>
           <h2 className={styles.title}>{title}</h2>
-          {description ? (
-            <p className={styles.description}>{description}</p>
-          ) : null}
+          {description ? <p className={styles.description}>{description}</p> : null}
         </div>
         {action}
       </header>

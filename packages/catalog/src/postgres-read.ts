@@ -38,7 +38,7 @@ function strip(p: Product): Product {
   return s as Product;
 }
 const COLS =
-  "p.id,p.tenant_id,p.store_id,p.name,p.slug,p.description,p.sku,p.category_id,p.price_cents,p.compare_at_price_cents,p.cost_cents,p.discount_type,p.discount_value,p.pix_discount_percent,p.free_shipping,p.active,p.track_inventory,p.stock_quantity,p.position";
+  "p.id,p.tenant_id,p.store_id,p.name,p.slug,p.description,p.sku,p.category_id,p.price_cents,p.compare_at_price_cents,p.cost_cents,p.discount_type,p.discount_value,p.pix_discount_percent,p.free_shipping,p.active,p.track_inventory,p.stock_quantity,p.position,p.barcode,p.featured";
 async function hydrate(
   sql: CatalogSqlExecutor,
   s: CatalogScope,
@@ -93,7 +93,7 @@ async function getProduct(
       COLS +
       " from public.products p where p.tenant_id=$1 and p.store_id=$2 and p." +
       field +
-      "=$3" +
+      "=$3 and p.deleted_at is null" +
       (pub ? " and " + publicFilter() : "") +
       " limit 1",
     [s.tenantId, s.storeId, value],
@@ -150,8 +150,9 @@ async function listBanners(
   return r.map(mapBanner);
 }
 function where(q: CatalogQuery, pub: boolean) {
-  const w = ["p.tenant_id=$1", "p.store_id=$2"];
+  const w = ["p.tenant_id=$1", "p.store_id=$2", "p.deleted_at is null"];
   const p: unknown[] = [q.tenantId, q.storeId];
+  if (q.active !== undefined) { p.push(q.active); w.push(`p.active=$${String(p.length)}`); }
   if (pub) w.push(publicFilter());
   if (q.inStockOnly) w.push(stockFilter());
   if (q.search?.trim()) {
@@ -180,6 +181,7 @@ async function listProducts(
   const orders = {
     position: "p.position asc,p.name asc",
     name: "p.name asc",
+    newest: "p.created_at desc,p.id asc",
     price_asc: "p.price_cents asc,p.name asc",
     price_desc: "p.price_cents desc,p.name asc",
   } as const;

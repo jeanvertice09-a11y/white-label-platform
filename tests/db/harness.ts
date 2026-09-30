@@ -59,6 +59,7 @@ const MIGRATIONS = [
   "0043_authenticated_store_admin_destination.sql",
   "0044_membership_self_read_operational_scope.sql",
   "0045_product_commercial_rules.sql",
+  "20260930123814_katalu_product_editor_fields.sql",
 ];
 
 class PGliteDb implements TestDb {

@@ -9,7 +9,14 @@ describe("admin workflows lot 4", () => {
   test("produto expõe workflow de imagens real", () => {
     const route = source("apps/web/src/routes/admin.products.$id.tsx");
     const manager = source("apps/web/src/features/store-admin/product-image-manager.tsx");
-    expect(route).toMatch(/<ProductImageManager\s+product=\{data\.product\}\s*\/>/);
+    expect(route).toContain("<ProductForm");
+    const form = source("apps/web/src/features/store-admin/product-form.tsx");
+    expect(form).toContain("<ProductImageManager");
+    expect(form).toContain('activeTab !== "photos"');
+    expect(form).toContain("uploadMerchantMedia");
+    const editor = source("apps/web/src/lib/server/product-editor.server.ts");
+    expect(editor).toContain("requireMediaAsset");
+    expect(editor).toContain("insert into public.product_images");
     expect(manager).toContain("uploadMerchantMedia");
     expect(manager).toContain("createUploadedProductImage");
     expect(manager).toContain("updateUploadedProductImage");

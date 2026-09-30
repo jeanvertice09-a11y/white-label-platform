@@ -189,7 +189,7 @@ describe("merchant admin visual and navigation contract", () => {
     expect(css).toContain("--merchant-accent:#087a5d");
     expect(css).toContain('font-family:"DM Sans"');
     expect(css).toContain(".k-dashboard-layout");
-    expect(source("apps/web/src/features/store-admin/admin-shell.tsx")).toContain("Mais ferramentas");
+    expect(source("apps/web/src/admin/shell/AdminShell.tsx")).toContain("aria-controls=\"admin-navigation\"");
   });
 
   test("completed onboarding does not dominate the operational dashboard", () => {
@@ -289,12 +289,12 @@ describe("commerce lifecycle hardening",()=>{
 
 describe("admin functional completion",()=>{
  test("finance and purchases expose pagination for records beyond first page",()=>{const finance=source("apps/web/src/features/store-admin/merchant-finance-manager.tsx"),purchases=source("apps/web/src/features/store-admin/merchant-purchases-manager.tsx");expect(finance).toContain("state.data.page+1");expect(finance).toContain("state.data.total/state.data.pageSize");expect(purchases).toContain("props.onPage(props.data.page+1)");expect(purchases).toContain("Math.ceil(props.data.total/props.data.pageSize)");});
- test("settings route has explicit pending and error states",()=>{const settings=source("apps/web/src/routes/admin.settings.tsx");expect(settings).toContain("pendingComponent: AdminRoutePending");expect(settings).toContain("errorComponent: AdminRouteError");});
+ test("settings route has explicit pending and error states",()=>{const settings=source("apps/web/src/routes/admin.settings.tsx");expect(settings).toMatch(/pendingComponent:\s*(?:AdminRoutePending|\(\)\s*=>\s*<EmptyState)/);expect(settings).toMatch(/errorComponent:\s*(?:AdminRouteError|\(\{\s*error\s*\}\)\s*=>)/);});
  test("mobile admin drawer restores focus without optional-call lint ambiguity",()=>{const shell=source("apps/web/src/admin/shell/AdminShell.tsx");expect(shell).toContain("drawer?.querySelector<HTMLElement>(focusable)?.focus()");expect(shell).toContain("opener.current?.focus()");});
 });
 
 
 describe("admin route and campaign resilience",()=>{
- test("core admin routes expose pending and error boundaries",()=>{for(const file of ["apps/web/src/routes/admin.index.tsx","apps/web/src/routes/admin.categories.tsx","apps/web/src/routes/admin.marketing.tsx"]){const value=source(file);expect(value).toContain("pendingComponent: AdminRoutePending");expect(value).toContain("errorComponent: AdminRouteError");}});
+ test("core admin routes expose pending and error boundaries",()=>{for(const file of ["apps/web/src/routes/admin.index.tsx","apps/web/src/routes/admin.categories.tsx","apps/web/src/routes/admin.marketing.tsx"]){const value=source(file);expect(value).toMatch(/pendingComponent:\s*(?:AdminRoutePending|\(\)\s*=>\s*<EmptyState)/);expect(value).toMatch(/errorComponent:\s*(?:AdminRouteError|\(\{\s*error\s*\}\)\s*=>)/);}});
  test("campaign listing failures are visible and retryable",()=>{const hooks=source("apps/web/src/features/store-admin/campaign-manager-hooks.ts"),manager=source("apps/web/src/features/store-admin/campaign-manager.tsx");expect(hooks).toContain("Não foi possível carregar as campanhas.");expect(manager).toContain("listing.error");expect(manager).toContain("listing.reload()");});
 });

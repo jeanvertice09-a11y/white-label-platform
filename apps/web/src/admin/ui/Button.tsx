@@ -12,11 +12,7 @@ export function Button({
   children: ReactNode;
 }) {
   const toneClass =
-    tone === "primary"
-      ? styles.primary
-      : tone === "danger"
-        ? styles.danger
-        : "";
+    tone === "primary" ? styles.primary : tone === "danger" ? styles.danger : "";
   return (
     <button className={`${styles.button} ${toneClass} ${className}`} {...props}>
       {children}

@@ -1,129 +1,68 @@
 import { useState } from "react";
-import type { SyntheticEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
-import type { Category, Product, ProductMutationInput } from "@white-label/catalog";
-import {
-  createMerchantProduct,
-  updateMerchantProduct,
-} from "../../lib/server/catalog-admin.functions.ts";
-import { centsToInput, moneyToCents } from "./format.ts";
-import {
-  ProductEditorLayout,
-  type ProductDraft,
-} from "./product-form-layout.tsx";
+import type { Category, Product } from "@white-label/catalog";
+import { saveMerchantProductEditor } from "../../lib/server/product-editor.functions.ts";
+import { uploadMerchantMedia, discardUploadedMerchantMedia } from "../../lib/media-upload.ts";
+import { initialProductDraft, initialVariantDraft, productEditorInput } from "./product-editor-draft.ts";
+import type { ProductDraft } from "./product-editor-draft.ts";
+import { ProductInformation, ProductPrices, ProductStock, ProductPublishing } from "./product-form-layout.tsx";
+import { ProductOptionsDraft } from "./product-options-draft.tsx";
+import { ProductImageManager } from "./product-image-manager.tsx";
+import { ProductPendingPhotos } from "./product-pending-photos.tsx";
+import type { PendingPhoto } from "./product-pending-photos.tsx";
 
-interface ProductFormProps {
-  product: Product | null;
-  categories: Category[];
-}
-
-function initialDraft(product: Product | null): ProductDraft {
-  return {
-    name: product?.name ?? "",
-    slug: product?.slug ?? "",
-    description: product?.description ?? "",
-    sku: product?.sku ?? "",
-    categoryId: product?.categoryId ?? "",
-    price: centsToInput(product?.priceCents ?? 0),
-    compareAt: centsToInput(product?.compareAtPriceCents ?? null),
-    cost: centsToInput(product?.costCents ?? null),
-    stock: String(product?.stockQuantity ?? 0),
-    position: String(product?.position ?? 0),
-    active: product?.active ?? true,
-    trackInventory: product?.trackInventory ?? false,
-  };
-}
-
-function optionalCents(value: string): number | null {
-  return value.trim() ? moneyToCents(value) : null;
-}
-
-function nonNegativeInteger(value: string, label: string): number {
-  const parsed = Number.parseInt(value || "0", 10);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
-    throw new Error(`${label} inválido`);
-  }
-  return parsed;
-}
-
-function toInput(draft: ProductDraft): ProductMutationInput {
-  return {
-    name: draft.name.trim(),
-    slug: draft.slug.trim(),
-    description: draft.description.trim() || null,
-    sku: draft.sku.trim() || null,
-    categoryId: draft.categoryId || null,
-    priceCents: moneyToCents(draft.price),
-    compareAtPriceCents: optionalCents(draft.compareAt),
-    costCents: optionalCents(draft.cost),
-    active: draft.active,
-    trackInventory: draft.trackInventory,
-    stockQuantity: nonNegativeInteger(draft.stock, "Estoque"),
-    position: nonNegativeInteger(draft.position, "Posição"),
-  };
-}
-
-function ProductSaveBar(props: Readonly<{
-  status: string;
-  saving: boolean;
-}>): React.JSX.Element {
-  return (
-    <footer className="k-editor-savebar">
-      {props.status ? <span className="k-status" role="status">{props.status}</span> : null}
-      <button className="k-button k-button--primary" type="submit" disabled={props.saving}>
-        {props.saving ? "Salvando…" : "Salvar produto"}
-      </button>
-    </footer>
-  );
-}
-
-export function ProductForm({
-  product,
-  categories,
-}: ProductFormProps): React.JSX.Element {
+type Tab = "info" | "photos" | "prices" | "stock" | "options" | "publish";
+export function ProductForm({ product, categories }: Readonly<{ product: Product | null; categories: Category[] }>) {
   const router = useRouter();
-  const [draft, setDraft] = useState(() => initialDraft(product));
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState("");
-
-  function setField<K extends keyof ProductDraft>(
-    key: K,
-    value: ProductDraft[K],
-  ): void {
-    setDraft((current) => ({ ...current, [key]: value }));
-  }
-
-  async function submit(event: SyntheticEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    setSaving(true);
-    setStatus("");
+  const [saved,setSaved] = useState(product);
+  const [draft,setDraft] = useState(() => initialProductDraft(product));
+  const [variants,setVariants] = useState(() => product?.variants.map(initialVariantDraft) ?? []);
+  const [photos,setPhotos] = useState<PendingPhoto[]>([]);
+  const [tab,setTab] = useState<Tab>("info");
+  const [saving,setSaving] = useState(false), [status,setStatus] = useState("");
+  const tabs: {key: Tab; label: string}[] = [{key:"info",label:"Informações"},{key:"photos",label:"Fotos"},{key:"prices",label:"Preços"},
+    draft.hasVariants ? {key:"options",label:"Tamanhos, cores e opções"} : {key:"stock",label:"Estoque"},{key:"publish",label:"Publicar"}];
+  const index = Math.max(0,tabs.findIndex(t => t.key === tab));
+  const activeTab = tabs[index].key;
+  function setField<K extends keyof ProductDraft>(key: K, value: ProductDraft[K]) { setDraft(old => ({...old,[key]:value})); }
+  async function save() {
+    if (saving) return;
+    setSaving(true); setStatus("");
+    const assets: string[] = [];
     try {
-      const input = toInput(draft);
-      if (product) {
-        const updated = await updateMerchantProduct({ data: { id: product.id, input } });
-        if (!updated) throw new Error("Produto não encontrado nesta loja");
-        setStatus("Produto salvo.");
-        await router.invalidate();
-      } else {
-        const created = await createMerchantProduct({ data: input });
-        await router.navigate({ to: "/admin/products/$id", params: { id: created.id } });
+      const input = productEditorInput(draft,variants,saved);
+      for (const [index,photo] of photos.entries()) {
+        setStatus(`Enviando foto ${String(index+1)} de ${String(photos.length)}…`);
+        const asset = await uploadMerchantMedia(photo.file,"product"); assets.push(asset.id);
+        input.photos.push({assetId:asset.id,position:(product?.images.length ?? 0)+index});
       }
+      const next = await saveMerchantProductEditor({data:input});
+      assets.length = 0; setPhotos([]);
+      setSaved(next); setDraft(old => ({...old,stock:String(next.stockQuantity)})); setVariants(next.variants.map(initialVariantDraft));
+      setStatus("Produto salvo.");
+      if (!product) await router.navigate({to:"/admin/products/$id",params:{id:next.id}});
+      else await router.invalidate();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Não foi possível salvar.");
-    } finally {
-      setSaving(false);
+      await Promise.allSettled(assets.map(id => discardUploadedMerchantMedia(id)));
+      setStatus(error instanceof Error ? error.message : "Não foi possível salvar o produto.");
     }
+    finally { setSaving(false); }
   }
-
-  return (
-    <form className="k-editor-form" onSubmit={(event) => { void submit(event); }}>
-      <ProductEditorLayout
-        draft={draft}
-        categories={categories}
-        hasVariants={Boolean(product?.variants.length)}
-        setField={setField}
-      />
-      <ProductSaveBar status={status} saving={saving} />
-    </form>
-  );
+  const fields = {draft,setField};
+  return <div className="createWizard">
+    <nav className="createWizardSteps" aria-label="Cadastro e edição de produto">{tabs.map((t,i) => <button type="button" key={t.key} disabled={saving} aria-label={t.label} aria-current={activeTab === t.key ? "step" : undefined} className={activeTab === t.key ? "isActive" : ""} onClick={() => { setTab(t.key); }}><b>{i+1}</b><span className="productStepFull">{t.label}</span><span className="productStepShort">{t.key === "info" ? "Básico" : t.key === "prices" ? "Preço" : t.key === "options" ? "Opções" : t.label}</span></button>)}</nav>
+    <fieldset disabled={saving} className="createWizardPanel">
+      <div hidden={activeTab !== "info"}><ProductInformation {...fields} categories={categories} editing={Boolean(product)} existingVariants={Boolean(product?.variants.length)} /></div>
+      <div hidden={activeTab !== "photos"}><>{product ? <ProductImageManager product={product} /> : <ProductPendingPhotos photos={photos} setPhotos={setPhotos} disabled={saving} />}</></div>
+      <div hidden={activeTab !== "prices"}><ProductPrices {...fields} /></div>
+      <div hidden={activeTab !== "stock"}><ProductStock {...fields} /></div>
+      <div hidden={activeTab !== "options"}><ProductOptionsDraft variants={variants} setVariants={setVariants} basePrice={draft.price} disabled={saving} /></div>
+      <div hidden={activeTab !== "publish"}><ProductPublishing {...fields} /></div>
+    </fieldset>
+    {status ? <p role="status" className="k-status">{status}</p> : null}
+    <footer className="createWizardFooter"><button type="button" className="k-button" disabled={saving || index === 0} onClick={() => { setTab(tabs[index-1].key); }}>Voltar</button>
+      {index < tabs.length-1 ? <button type="button" className="k-button" disabled={saving} onClick={() => { setTab(tabs[index+1].key); }}>Continuar</button> : null}
+      <button type="button" className="k-button k-button--primary" disabled={saving} onClick={() => { void save(); }}>{saving ? "Salvando…" : "Salvar produto"}</button>
+    </footer>
+  </div>;
 }

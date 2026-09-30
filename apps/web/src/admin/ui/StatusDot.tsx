@@ -7,9 +7,7 @@ export function StatusDot({
   tone?: "default" | "ok" | "warning" | "danger";
 }>) {
   return (
-    <span
-      className={`${styles.status} ${tone === "default" ? "" : styles[tone]}`}
-    >
+    <span className={`${styles.status} ${tone === "default" ? "" : styles[tone]}`}>
       <span className={styles.dot} />
       {label}
     </span>

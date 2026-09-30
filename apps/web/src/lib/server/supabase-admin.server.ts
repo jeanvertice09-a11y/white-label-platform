@@ -77,3 +77,20 @@ export async function closeAdminSql(): Promise<void> {
     cachedSql = null;
   }
 }
+
+/** Atomic catalog writes share the same bounded connection queue as other admin queries. */
+export async function withAdminTransaction<T>(work: (sql: SqlExecutor) => Promise<T>): Promise<T> {
+  let active: ReturnType<typeof postgres> | null = null;
+  return adminQueryGuard.run(async () => {
+    const connection = getSql(); active = connection;
+    return connection.begin(async (transaction) => {
+      await transaction.unsafe("set local statement_timeout = '10s'").execute();
+      const executor: SqlExecutor = {
+        async query(statement, params) {
+          return await transaction.unsafe(statement, params as never[]).execute() as Record<string, unknown>[];
+        },
+      };
+      return work(executor);
+    }) as Promise<T>;
+  }, () => { if (active) retireTimedOutSql(active); });
+}

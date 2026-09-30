@@ -65,10 +65,10 @@ function Dashboard() {
               <small>Confira os pedidos que precisam de atendimento.</small></span>
             <span className={styles.action}>Abrir pedidos</span>
           </Link> : null}
-          {lowStock > 0 ? <Link className={styles.attention} to="/admin/inventory">
+          {lowStock > 0 ? <Link className={styles.attention} to="/admin/products">
             <span className={styles.warningDot} aria-hidden="true" />
             <span><strong>Estoque baixo</strong><small>Revise os produtos antes que acabem.</small></span>
-            <span className={styles.action}>Repor estoque</span>
+            <span className={styles.action}>Editar produtos</span>
           </Link> : null}
           {!pending && !lowStock ? <p className={styles.quiet}>Nada esperando por você agora.</p> : null}
         </div>

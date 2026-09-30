@@ -79,7 +79,7 @@ async function productCount(
   scope: CatalogScope,
 ): Promise<number> {
   const rows = await sql.query(
-    "select count(*)::integer as count from public.products where tenant_id=$1 and store_id=$2",
+    "select count(*)::integer as count from public.products where tenant_id=$1 and store_id=$2 and deleted_at is null",
     [scope.tenantId, scope.storeId],
   );
   const count = Number(rows[0]?.["count"] ?? 0);

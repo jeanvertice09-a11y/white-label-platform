@@ -9,9 +9,7 @@ export function PageHeader({
     <header className={styles.header}>
       <div className={styles.copy}>
         <h1 className={styles.title}>{title}</h1>
-        {description ? (
-          <p className={styles.description}>{description}</p>
-        ) : null}
+        {description ? <p className={styles.description}>{description}</p> : null}
       </div>
       {action ? <div className={styles.action}>{action}</div> : null}
     </header>

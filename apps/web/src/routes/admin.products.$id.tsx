@@ -2,9 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { EmptyState } from "../admin/ui/EmptyState.tsx";
 import { PageHeader } from "../admin/ui/PageHeader.tsx";
 import { ProductForm } from "../features/store-admin/product-form.tsx";
-import { ProductImageManager } from "../features/store-admin/product-image-manager.tsx";
-import { VariantEditor } from "../features/store-admin/variant-editor.tsx";
-import { VariantGenerator } from "../features/store-admin/variant-generator.tsx";
 import { getMerchantProduct, listMerchantCategories } from "../lib/server/catalog.functions.ts";
 
 export const Route = createFileRoute("/admin/products/$id")({
@@ -20,5 +17,5 @@ export const Route = createFileRoute("/admin/products/$id")({
 
 function EditProductPage(): React.JSX.Element {
   const data = Route.useLoaderData();
-  return <><PageHeader title={data.product.name} description="Edite informações, fotos, opções, variações e estoque sem recriar o produto." action={<Link className="k-button" to="/admin/products">Voltar aos produtos</Link>} /><ProductForm product={data.product} categories={data.categories} /><ProductImageManager product={data.product} /><VariantGenerator productId={data.product.id} variants={data.product.variants} basePriceCents={data.product.priceCents} /><VariantEditor productId={data.product.id} variants={data.product.variants} /></>;
+  return <><PageHeader title={data.product.name} description="Edite informações, fotos, opções, variações e estoque sem recriar o produto." action={<Link className="k-button" to="/admin/products">Voltar aos produtos</Link>} /><ProductForm key={data.product.id} product={data.product} categories={data.categories} /></>;
 }

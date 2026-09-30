@@ -1,2 +1,140 @@
-@font-face{font-family:"DM Sans";src:url("/fonts/dm-sans-variable.ttf") format("truetype");font-weight:100 1000;font-style:normal;font-display:swap}
-.admin,.admin *{box-sizing:border-box}.admin{min-height:100vh;background:var(--page);color:var(--ink);font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif;line-height:1.5}.admin :where(h1,h2,h3,h4,p,ul,ol){margin:0}.admin :where(button,input,select,textarea){font:inherit}.admin :where(button,a,input,select,textarea){-webkit-tap-highlight-color:transparent}.admin a{color:inherit;text-decoration:none}.admin img{display:block;max-width:100%}.admin :focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 28%,transparent);outline-offset:2px}.admin :where(input,select,textarea){min-height:44px;border:1px solid var(--line-strong);border-radius:var(--radius-control);background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(16,24,40,.03);transition:border-color .15s ease,box-shadow .15s ease}.admin :where(input,select,textarea):hover{border-color:#b8c0cc}.admin :where(input,select,textarea):focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 12%,transparent);outline:0}.admin :where(input,select,textarea)::placeholder{color:var(--quiet)}.admin :where(input,select,textarea):disabled,.admin button:disabled{cursor:not-allowed;opacity:.56}.admin :where(.k-button,button){min-height:44px;transition:background-color .15s ease,border-color .15s ease,box-shadow .15s ease,transform .15s ease}.admin :where(.k-button,button):active:not(:disabled){transform:translateY(1px)}.admin :where(table){font-variant-numeric:tabular-nums}.admin .adminSkip{position:fixed;left:16px;top:-64px;z-index:1000;padding:10px 14px;background:var(--ink);color:#fff;border-radius:10px}.admin .adminSkip:focus{top:16px}.admin .adminFinanceTabs{display:flex;gap:6px;overflow-x:auto;padding:4px;border:1px solid var(--line);border-radius:12px;background:var(--surface-subtle);scrollbar-width:thin}.admin .adminFinanceTabs a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:8px;white-space:nowrap;color:var(--muted);font-weight:650}.admin .adminFinanceTabs a[data-status="active"],.admin .adminFinanceTabs a[aria-current="page"]{background:#fff;color:var(--ink);box-shadow:var(--shadow-soft)}.admin :where(.k-inline-state,[role="alert"]){overflow-wrap:anywhere}@media(max-width:640px){.admin :where(input,select,textarea){font-size:16px}.admin :where(.k-table){min-width:680px}}@media(prefers-reduced-motion:reduce){.admin *,.admin *::before,.admin *::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/dm-sans-variable.ttf") format("truetype");
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: swap;
+}
+.admin,
+.admin * {
+  box-sizing: border-box;
+}
+.admin {
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.5;
+}
+.admin :where(h1, h2, h3, h4, p, ul, ol) {
+  margin: 0;
+}
+.admin :where(button, input, select, textarea) {
+  font: inherit;
+}
+.admin :where(button, a, input, select, textarea) {
+  -webkit-tap-highlight-color: transparent;
+}
+.admin a {
+  color: inherit;
+  text-decoration: none;
+}
+.admin img {
+  display: block;
+  max-width: 100%;
+}
+.admin :focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 2px;
+}
+.admin :where(input, select, textarea) {
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.admin :where(input, select, textarea):hover {
+  border-color: #b8c0cc;
+}
+.admin :where(input, select, textarea):focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+  outline: 0;
+}
+.admin :where(input, select, textarea)::placeholder {
+  color: var(--quiet);
+}
+.admin :where(input, select, textarea):disabled,
+.admin button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+.admin :where(.k-button, button) {
+  min-height: 44px;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.admin :where(.k-button, button):active:not(:disabled) {
+  transform: translateY(1px);
+}
+.admin :where(table) {
+  font-variant-numeric: tabular-nums;
+}
+.admin .adminSkip {
+  position: fixed;
+  left: 16px;
+  top: -64px;
+  z-index: 1000;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: 10px;
+}
+.admin .adminSkip:focus {
+  top: 16px;
+}
+.admin .adminFinanceTabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  scrollbar-width: thin;
+}
+.admin .adminFinanceTabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 8px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-weight: 650;
+}
+.admin .adminFinanceTabs a[data-status="active"],
+.admin .adminFinanceTabs a[aria-current="page"] {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+.admin :where(.k-inline-state, [role="alert"]) {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .admin :where(input, select, textarea) {
+    font-size: 16px;
+  }
+  .admin :where(.k-table) {
+    min-width: 680px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin *,
+  .admin *::before,
+  .admin *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
